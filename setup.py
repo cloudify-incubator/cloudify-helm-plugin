@@ -25,7 +25,7 @@ setup(
     license='LICENSE',
     install_requires=[
         "cloudify-common>=4.5.5",
-        "cloudify-utilities-plugins-sdk==0.0.28",  # Shared Resource Downloader
+        "cloudify-utilities-plugins-sdk==0.0.28",  # obfuscate_passwords
     ],
     test_requires=[
         "cloudify-common>=4.5.5",
