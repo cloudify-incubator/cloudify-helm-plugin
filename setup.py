@@ -13,8 +13,21 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 
-class CloudifyHelmSDKError(Exception):
-    """Generic Error for handling issues preparing
-    Helm command.
-    """
-    pass
+from setuptools import setup
+
+setup(
+    name='cloudify-terraform-plugin',
+    version='0.1.0',
+    author='Cloudify',
+    author_email='hello@cloudify.co',
+    description='Enables Cloudify support Helm',
+    packages=['helm_sdk', 'cloudify_helm'],
+    license='LICENSE',
+    install_requires=[
+        "cloudify-common>=4.5.5",
+        "cloudify-utilities-plugins-sdk==0.0.28",  # Shared Resource Downloader
+    ],
+    test_requires=[
+        "cloudify-common>=4.5.5",
+    ]
+)

@@ -1,5 +1,5 @@
 ########
-# Copyright (c) 2018-2020 GigaSpaces Technologies Ltd. All rights reserved
+# Copyright (c) 2019 Cloudify Platform Ltd. All rights reserved
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -9,14 +9,14 @@
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
+#    * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#    * See the License for the specific language governing permissions and
+#    * limitations under the License.
 
+import json
 
 from helm_sdk.utils import (run_subprocess, prepare_set_parameter,
                             prepare_parameter)
-import json
 
 
 class Helm(object):
@@ -61,16 +61,16 @@ class Helm(object):
         cmd = ['uninstall', release_name]
         flags = flags or []
         cmd.extend(map(prepare_parameter, flags))
-        return self.execute(self._helm_command(cmd))
+        self.execute(self._helm_command(cmd))
 
     def repo_add(self, repo_name, repo_url, flags=None):
         cmd = ['repo', 'add', repo_name, repo_url]
         flags = flags or []
         cmd.extend(map(prepare_parameter, flags))
-        return self.execute(self._helm_command(cmd))
+        self.execute(self._helm_command(cmd))
 
     def repo_remove(self, repo_name, flags=None):
         cmd = ['repo', 'remove', repo_name]
         flags = flags or []
         cmd.extend(map(prepare_parameter, flags))
-        return self.execute(self._helm_command(cmd))
+        self.execute(self._helm_command(cmd))
