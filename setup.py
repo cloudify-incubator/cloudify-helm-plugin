@@ -16,8 +16,8 @@
 from setuptools import setup
 
 setup(
-    name='cloudify-terraform-plugin',
-    version='0.1.0',
+    name='cloudify-helm-plugin',
+    version='0.0.1',
     author='Cloudify',
     author_email='hello@cloudify.co',
     description='Enables Cloudify support Helm',
