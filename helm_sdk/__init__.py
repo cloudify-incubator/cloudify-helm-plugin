@@ -83,6 +83,11 @@ class Helm(object):
         :param chart: chart name to install.
         :param flags: list of flags to add to the install command.
         :param set_values: list of variables and their values for --set.
+        :param kubeconfig: path to kubeconfig file.
+        :param values_file: values file path.
+        :param token: bearer token used for authentication.
+        :param apiserver: the address and the port for the Kubernetes API
+        server.
         :return output of install command.
         """
         cmd = ['install', name, chart, '--wait', '--output=json']
