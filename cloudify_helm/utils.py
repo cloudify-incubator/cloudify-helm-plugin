@@ -14,17 +14,18 @@
 #    * limitations under the License.
 
 import os
+import tempfile
+from contextlib import contextmanager
 
 from cloudify.exceptions import NonRecoverableError
 
 from helm_sdk import Helm
-
-
-CONFIG_DIR_ENV_VAR = 'XDG_CONFIG_HOME'
-CACHE_DIR_ENV_VAR = 'XDG_CACHE_HOME'
-DATA_DIR_ENV_VAR = 'XDG_DATA_HOME'
-
-
+from constants import (HOME_DIR_ENV_VAR,
+                       CONFIG_DIR_ENV_VAR,
+                       CACHE_DIR_ENV_VAR,
+                       DATA_DIR_ENV_VAR,
+                       CLIENT_CONFIG,
+                       RESOURCE_CONFIG)
 
 
 def helm_from_ctx(ctx):
@@ -42,7 +43,6 @@ def helm_from_ctx(ctx):
         executable_path,
         environment_variables=env_variables)
     return helm
-
 
 
 def is_using_existing(ctx):
@@ -68,3 +68,35 @@ def get_helm_local_files_dirs():
                                  'share', 'helm')
 
     return [cache_path, config_path, data_path]
+
+
+@contextmanager
+def get_kubeconfig_file(ctx):
+    if ctx.node.properties.get(CLIENT_CONFIG).get('kube_config'):
+        with tempfile.NamedTemporaryFile(delete=False) as f:
+            f.close()
+            ctx.download_resource(
+                ctx.node.properties.get(CLIENT_CONFIG).get('kube_config'),
+                target_path=f.name)
+            try:
+                yield f.name
+            finally:
+                os.remove(f.name)
+    else:
+        yield None
+
+
+@contextmanager
+def get_values_file(ctx):
+    if ctx.node.properties.get(RESOURCE_CONFIG).get('values_file'):
+        with tempfile.NamedTemporaryFile(delete=False) as f:
+            f.close()
+            ctx.download_resource(
+                ctx.node.properties.get(RESOURCE_CONFIG).get('values_file'),
+                target_path=f.name)
+            try:
+                yield f.name
+            finally:
+                os.remove(f.name)
+    else:
+        yield None

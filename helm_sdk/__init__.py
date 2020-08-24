@@ -49,8 +49,17 @@ class Helm(object):
         cmd.extend(args)
         return cmd
 
-    def install(self, release_name, chart, flags, set_values=None):
-        cmd = ['install', release_name, chart, '--wait', '--output=json']
+    def install(self, name, chart, flags, set_values=None):
+        """
+        Execute helm install command.
+        :param name: name for the created release.
+        :param chart: chart name to install.
+        :param flags: list of flags to add to the install command.
+        :param set_values: list of variables and their values for --set.
+        :return output of install command.
+
+        """
+        cmd = ['install', name, chart, '--wait', '--output=json']
         cmd.extend(map(prepare_parameter, flags))
         set_arguments = set_values or []
         cmd.extend(map(prepare_set_parameter, set_arguments))

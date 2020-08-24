@@ -1,16 +1,24 @@
 from functools import wraps
 
-from utils import helm_from_ctx
+
+
 from tasks import is_using_existing
+from utils import (helm_from_ctx,
+                   get_kubeconfig_file,
+                   get_values_file)
 
 
 def with_helm(func):
     @wraps(func)
     def f(*args, **kwargs):
         ctx = kwargs['ctx']
-        helm = helm_from_ctx(ctx)
-        kwargs['helm'] = helm
-        return func(*args, **kwargs)
+        with get_kubeconfig_file(ctx) as kubeconfig:
+            with get_values_file(ctx) as values_file:
+                helm = helm_from_ctx(ctx)
+                kwargs['helm'] = helm
+                kwargs['kubeconfig']= kubeconfig
+                kwargs['values_file'] = values_file
+                return func(*args, **kwargs)
 
     return f
 

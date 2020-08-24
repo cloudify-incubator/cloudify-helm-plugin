@@ -1,0 +1,13 @@
+FLAGS_FIELD = 'flags'
+CLIENT_CONFIG = 'client_config'
+RESOURCE_CONFIG = 'resource_config'
+HOME_DIR_ENV_VAR = 'HOME'
+CONFIG_DIR_ENV_VAR = 'XDG_CONFIG_HOME'
+CACHE_DIR_ENV_VAR = 'XDG_CACHE_HOME'
+DATA_DIR_ENV_VAR = 'XDG_DATA_HOME'
+
+# HELM cli flags names
+HELM_KUBECONFIG_FLAG = 'kubeconfig'
+HELM_KUBE_API_SERVER_FLAG = 'kube-apiserver'
+HELM_KUBE_TOKEN_FLAG = 'kube-token'
+HELM_VALUES_FLAG = 'values'
