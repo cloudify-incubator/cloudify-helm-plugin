@@ -101,7 +101,6 @@ def _validate_helm_client_config(client_config):
     In order to use helm client, the user need to provide kubernetes endpoint and bearer token
     or kube config file path.
     :param client_config:client config dictionary that the user provided.
-
     """
     if not ((client_config.get('kube_token') and client_config.get('kube_api_server') ) or client_config.get('kube_config')) :
         raise NonRecoverableError("must provide kube_token and kube_api_server or kube_config")
@@ -121,6 +120,7 @@ def _prepare_release_install_args(ctx, flags=None, kubeconfig=None,
     args_dict = {}
     args_dict.update(ctx.node.properties.get('resource_config', {}))
     args_dict[FLAGS_FIELD] = args_dict[FLAGS_FIELD] + flags
+    _validate_helm_client_config(ctx.node.properties.get('client_config'))
     if ctx.node.properties.get('client_config').get(
             'kube_token') and ctx.node.properties.get('client_config').get(
             'kube_api_server'):
@@ -140,6 +140,7 @@ def _prepare_release_install_args(ctx, flags=None, kubeconfig=None,
 
     return args_dict
 
+
 @operation
 @with_helm
 def install_release(ctx, helm, kubeconfig, values_file, **kwargs):
@@ -151,11 +152,10 @@ def install_release(ctx, helm, kubeconfig, values_file, **kwargs):
     """
     try:
 
-                _prepare_release_install_args(ctx,kwargs.get('flags'),kubeconfig,values_file)
-                output = helm.install(
-
-                    )
-                ctx.instance.runtime_properties['install_output'] = output
+        args_dict = _prepare_release_install_args(ctx, kwargs.get('flags'),
+                                                  kubeconfig, values_file)
+        output = helm.install(**args_dict)
+        ctx.instance.runtime_properties['install_output'] = output
     except Exception as ex:
         _, _, tb = sys.exc_info()
         raise NonRecoverableError(
