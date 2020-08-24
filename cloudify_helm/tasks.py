@@ -108,10 +108,10 @@ def _validate_helm_client_config(client_config):
             "must provide kube_token and kube_api_server or kube_config")
 
 
-def _prepare_release_install_args(ctx, flags=None, kubeconfig=None,
+def _prepare_release_args(ctx, flags=None, kubeconfig=None,
                                   values_file=None):
     """
-    Prepare arguments to helm.install function.
+    Prepare arguments to helm.install/helm.uninstall function.
     :param ctx: cloudify context.
     :param flags: flags that user passed -unique for install operation.
     :param: kubeconfig: kubeconfig path.
@@ -154,7 +154,7 @@ def install_release(ctx, helm, kubeconfig, values_file, **kwargs):
     """
     try:
 
-        args_dict = _prepare_release_install_args(ctx, kwargs.get('flags'),
+        args_dict = _prepare_release_args(ctx, kwargs.get('flags'),
                                                   kubeconfig, values_file)
         output = helm.install(**args_dict)
         ctx.instance.runtime_properties['install_output'] = output
@@ -163,3 +163,5 @@ def install_release(ctx, helm, kubeconfig, values_file, **kwargs):
         raise NonRecoverableError(
             "Failed installing release",
             causes=[exception_to_error_cause(ex, tb)])
+
+
