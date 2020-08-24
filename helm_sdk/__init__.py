@@ -15,9 +15,17 @@
 
 import json
 
-from helm_sdk.utils import (run_subprocess, prepare_set_parameter,
+from exceptions import CloudifyHelmSDKError
+from helm_sdk.utils import (run_subprocess,
+                            prepare_set_parameter,
                             prepare_parameter)
 
+# Helm cli flags names
+HELM_KUBECONFIG_FLAG = 'kubeconfig'
+HELM_KUBE_API_SERVER_FLAG = 'kube-apiserver'
+HELM_KUBE_TOKEN_FLAG = 'kube-token'
+HELM_VALUES_FLAG = 'values'
+APPEND_FLAG_STRING = '--{name}={value}'
 
 class Helm(object):
 
@@ -38,7 +46,8 @@ class Helm(object):
 
     def execute(self, command, return_output=False):
         return run_subprocess(
-            command, self.logger,
+            command,
+            self.logger,
             cwd=None,
             additional_env=self.env,
             additional_args=None,
@@ -49,7 +58,25 @@ class Helm(object):
         cmd.extend(args)
         return cmd
 
-    def install(self, name, chart, flags, set_values=None):
+    @staticmethod
+    def handle_auth_params(cmd, kubeconfig=None, token=None,
+                           apiserver=None):
+        if token and apiserver:
+            cmd.append(APPEND_FLAG_STRING.format(name=HELM_KUBE_TOKEN_FLAG,
+                                                 value=token))
+            cmd.append(
+                APPEND_FLAG_STRING.format(name=HELM_KUBE_API_SERVER_FLAG,
+                                          value=apiserver))
+        elif kubeconfig:
+            cmd.append(APPEND_FLAG_STRING.format(name=HELM_KUBECONFIG_FLAG,
+                                                 value=kubeconfig))
+        else:
+            raise CloudifyHelmSDKError(
+                'Must provide kubernetes token and kube_api_server or '
+                'kube_config file path.')
+
+    def install(self, name, chart, flags=None, set_values=None,
+                values_file=None, kubeconfig=None, token=None, apiserver=None):
         """
         Execute helm install command.
         :param name: name for the created release.
@@ -57,17 +84,27 @@ class Helm(object):
         :param flags: list of flags to add to the install command.
         :param set_values: list of variables and their values for --set.
         :return output of install command.
-
         """
         cmd = ['install', name, chart, '--wait', '--output=json']
+        self.handle_auth_params(cmd, kubeconfig, token, apiserver)
+        if values_file:
+            cmd.append(APPEND_FLAG_STRING.format(name=HELM_VALUES_FLAG,
+                                                 value=values_file))
+        flags = flags or []
         cmd.extend(map(prepare_parameter, flags))
         set_arguments = set_values or []
         cmd.extend(map(prepare_set_parameter, set_arguments))
         output = self.execute(self._helm_command(cmd), True)
         return json.loads(output)
 
-    def uninstall(self, release_name, flags=None):
+    def uninstall(self,
+                  release_name,
+                  flags=None,
+                  kubeconfig=None,
+                  token=None,
+                  apiserver=None):
         cmd = ['uninstall', release_name]
+        self.handle_auth_params(cmd, kubeconfig, token, apiserver)
         flags = flags or []
         cmd.extend(map(prepare_parameter, flags))
         self.execute(self._helm_command(cmd))
@@ -83,5 +120,3 @@ class Helm(object):
         flags = flags or []
         cmd.extend(map(prepare_parameter, flags))
         self.execute(self._helm_command(cmd))
-
-
