@@ -49,10 +49,10 @@ class Helm(object):
         cmd.extend(args)
         return cmd
 
-    def install(self, release_name, chart, flags, set_arguments=None):
+    def install(self, release_name, chart, flags, set_values=None):
         cmd = ['install', release_name, chart, '--wait', '--output=json']
         cmd.extend(map(prepare_parameter, flags))
-        set_arguments = set_arguments or []
+        set_arguments = set_values or []
         cmd.extend(map(prepare_set_parameter, set_arguments))
         output = self.execute(self._helm_command(cmd), True)
         return json.loads(output)
@@ -74,3 +74,5 @@ class Helm(object):
         flags = flags or []
         cmd.extend(map(prepare_parameter, flags))
         self.execute(self._helm_command(cmd))
+
+
