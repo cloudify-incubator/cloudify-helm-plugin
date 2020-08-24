@@ -4,9 +4,9 @@ import shutil
 import sys
 import zipfile
 
+from cloudify.decorators import operation
 from cloudify.exceptions import NonRecoverableError
 from cloudify.utils import exception_to_error_cause
-from cloudify.decorators import operation
 
 from helm_sdk.utils import run_subprocess
 from decorators import skip_if_existing, with_helm
@@ -16,6 +16,7 @@ from constants import (FLAGS_FIELD,
                        HELM_KUBE_TOKEN_FLAG,
                        HELM_KUBECONFIG_FLAG,
                        HELM_VALUES_FLAG)
+
 
 @operation
 def install(ctx, **_):
@@ -74,8 +75,6 @@ def install(ctx, **_):
             shutil.rmtree(installation_temp_dir)
 
 
-
-
 @operation
 @skip_if_existing
 def uninstall(ctx, **_):
@@ -98,12 +97,15 @@ def uninstall(ctx, **_):
 def _validate_helm_client_config(client_config):
     """
     Validate helm client_config.
-    In order to use helm client, the user need to provide kubernetes endpoint and bearer token
+    In order to use helm client, the user need to provide kubernetes
+    endpoint and bearer token
     or kube config file path.
     :param client_config:client config dictionary that the user provided.
     """
-    if not ((client_config.get('kube_token') and client_config.get('kube_api_server') ) or client_config.get('kube_config')) :
-        raise NonRecoverableError("must provide kube_token and kube_api_server or kube_config")
+    if not ((client_config.get('kube_token') and client_config.get(
+            'kube_api_server')) or client_config.get('kube_config')):
+        raise NonRecoverableError(
+            "must provide kube_token and kube_api_server or kube_config")
 
 
 def _prepare_release_install_args(ctx, flags=None, kubeconfig=None,
@@ -123,7 +125,7 @@ def _prepare_release_install_args(ctx, flags=None, kubeconfig=None,
     _validate_helm_client_config(ctx.node.properties.get('client_config'))
     if ctx.node.properties.get('client_config').get(
             'kube_token') and ctx.node.properties.get('client_config').get(
-            'kube_api_server'):
+        'kube_api_server'):
         args_dict[FLAGS_FIELD].append({'name': HELM_KUBE_TOKEN_FLAG,
                                        'value': ctx.node.properties.get(
                                            'client_config').get('kube_token')})
