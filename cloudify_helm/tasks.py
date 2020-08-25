@@ -69,7 +69,7 @@ def install(ctx, **_):
                 _untar_and_set_permissions(installation_tar,
                                            installation_temp_dir)
                 executable_dir = os.path.dirname(executable_path)
-                # need to find helm binary in the extracted files
+                # Need to find helm binary in the extracted files
                 find_binary_and_copy(installation_temp_dir, executable_dir)
 
         ctx.instance.runtime_properties['executable_path'] = executable_path
