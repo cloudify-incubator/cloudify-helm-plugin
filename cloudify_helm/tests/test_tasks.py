@@ -77,9 +77,26 @@ class TestTasks(unittest.TestCase):
         shutil.rmtree(os.path.dirname(ctx.instance.runtime_properties.get(
             "executable_path")))
 
+    def test_uninstall_use_existing(self):
+        fake_executable = tempfile.NamedTemporaryFile(delete=True)
+        properties = {
+            "helm_config": {
+                "executable_path": fake_executable.name
+            },
+            "use_existing_resource": True,
+            "installation_source":
+                "https://get.helm.sh/helm-v3.3.0-linux-s390x.tar.gz",
+
+        }
+        ctx = self.mock_ctx(properties)
+        kwargs = {
+            'ctx': ctx
+        }
+        uninstall(**kwargs)
+        self.assertEqual(os.path.isfile(fake_executable.name), True)
+
     def test_uninstall(self):
         fake_executable = tempfile.NamedTemporaryFile(delete=False)
-        name = fake_executable.name
         properties = {
             "helm_config": {
                 "executable_path": fake_executable.name
@@ -94,7 +111,7 @@ class TestTasks(unittest.TestCase):
             'ctx': ctx
         }
         uninstall(**kwargs)
-        self.assertEqual(os.path.isfile(name), False)
+        self.assertEqual(os.path.isfile(fake_executable.name), False)
 
 
 if __name__ == "__main__":
