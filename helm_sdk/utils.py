@@ -24,9 +24,12 @@ from helm_sdk._compat import StringIO, text_type
 from helm_sdk.exceptions import CloudifyHelmSDKError
 
 
-def run_subprocess(command, logger, cwd=None,
+def run_subprocess(command,
+                   logger,
+                   cwd=None,
                    additional_env=None,
-                   additional_args=None, return_output=False):
+                   additional_args=None,
+                   return_output=False):
     if additional_args is None:
         additional_args = {}
     args_to_pass = copy.deepcopy(additional_args)
@@ -36,7 +39,8 @@ def run_subprocess(command, logger, cwd=None,
         passed_env.update(additional_env)
 
     logger.info("Running: command=%s, cwd=%s, additional_args=%s",
-                obfuscate_passwords(command), cwd, obfuscate_passwords(args_to_pass))
+                obfuscate_passwords(command), cwd,
+                obfuscate_passwords(args_to_pass))
     process = subprocess.Popen(
         args=command,
         stdout=subprocess.PIPE,
@@ -63,7 +67,8 @@ def run_subprocess(command, logger, cwd=None,
 
     output = stdout_consumer.buffer.getvalue() if return_output else None
     logger.info("Returning output:\n%s",
-                obfuscate_passwords(output) if output is not None else '<None>')
+                obfuscate_passwords(
+                    output) if output is not None else '<None>')
     return output
 
 
@@ -97,7 +102,8 @@ class LoggingOutputConsumer(OutputConsumer):
     def handle_line(self, line):
         self.logger.info(
             "{0}{1}".format(text_type(self.prefix),
-                            obfuscate_passwords(line.decode('utf-8').rstrip('\n'))))
+                            obfuscate_passwords(
+                                line.decode('utf-8').rstrip('\n'))))
 
 
 class CapturingOutputConsumer(OutputConsumer):

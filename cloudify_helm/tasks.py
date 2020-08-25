@@ -1,8 +1,9 @@
 import os
-import tempfile
-import shutil
 import sys
+import shutil
 import zipfile
+import tarfile
+import tempfile
 
 from cloudify.decorators import operation
 from cloudify.exceptions import NonRecoverableError
@@ -16,18 +17,29 @@ from constants import FLAGS_FIELD
 
 @operation
 def install(ctx, **_):
-    def _unzip_and_set_permissions(zip_file, target_dir):
-        ctx.logger.info("Unzipping into %s", target_dir)
-        with zipfile.ZipFile(zip_file, 'r') as zip_ref:
-            for name in zip_ref.namelist():
-                zip_ref.extract(name, target_dir)
-                target_file = os.path.join(target_dir, name)
-                ctx.logger.info("Setting executable permission on %s",
-                                target_file)
-                run_subprocess(
-                    ['chmod', 'u+x', target_file],
-                    ctx.logger
-                )
+    def _untar_and_set_permissions(tar_file, target_dir):
+        ctx.logger.info("Untarring into %s", target_dir)
+        with tarfile.open(tar_file, 'r') as tar_ref:
+            for name in tar_ref.getnames():
+                if 'helm' in name:
+                    tar_ref.extract(name, target_dir)
+                    target_file = os.path.join(target_dir, name)
+                    ctx.logger.info("Setting permission on %s",
+                                    target_file)
+                    run_subprocess(
+                        ['chmod', 'u+x', target_file],
+                        ctx.logger
+                    )
+
+    def find_binary_and_copy(source_dir, target_dir):
+        for root, dir, f in os.walk(source_dir):
+            for file in f:
+                if file.endswith('helm'):
+                    print "moving{0} to {1}".format(os.path.join(root, file),
+                                                    target_dir)
+                    if not os.path.isdir(target_dir):
+                        os.makedirs(target_dir)
+                    shutil.move(os.path.join(root, file), target_dir)
 
     executable_path = ctx.node.properties.get(
         'helm_config', {}).get('executable_path', "")
@@ -45,17 +57,20 @@ def install(ctx, **_):
                         'installation_source', "")
                 if not installation_source:
                     raise NonRecoverableError("invalid installation_source")
-                installation_zip = \
-                    os.path.join(installation_temp_dir, 'helm.zip')
+                installation_tar = \
+                    os.path.join(installation_temp_dir, 'helm.tar.gz')
 
                 ctx.logger.info("Downloading Helm from %s into %s",
-                                installation_source, installation_zip)
+                                installation_source, installation_tar)
                 run_subprocess(
-                    ['curl', '-o', installation_zip, installation_source],
+                    ['curl', '-o', installation_tar, installation_source],
                     ctx.logger
                 )
+                _untar_and_set_permissions(installation_tar,
+                                           installation_temp_dir)
                 executable_dir = os.path.dirname(executable_path)
-                _unzip_and_set_permissions(installation_zip, executable_dir)
+                # need to find helm binary in the extracted files
+                find_binary_and_copy(installation_temp_dir, executable_dir)
 
         ctx.instance.runtime_properties['executable_path'] = executable_path
     finally:
@@ -71,15 +86,15 @@ def uninstall(ctx, **_):
     if os.path.isfile(executable_path):
         ctx.logger.info("Removing executable: %s", executable_path)
         os.remove(executable_path)
-    helm_local_files_dirs = get_helm_local_files_dirs()
-    for dir_to_delete in helm_local_files_dirs:
-        if os.path.isdir(dir_to_delete):
-            ctx.logger.info("Removing: {}".format(dir_to_delete))
-
-            shutil.rmtree(dir_to_delete)
-        else:
-            ctx.logger.info("Directory %s doesn't exist; skipping",
-                            dir_to_delete)
+    # helm_local_files_dirs = get_helm_local_files_dirs()
+    # for dir_to_delete in helm_local_files_dirs:
+    #     if os.path.isdir(dir_to_delete):
+    #         ctx.logger.info("Removing: {}".format(dir_to_delete))
+    #
+    #         shutil.rmtree(dir_to_delete)
+    #     else:
+    #         ctx.logger.info("Directory %s doesn't exist; skipping",
+    #                         dir_to_delete)
 
 
 def _prepare_release_args(ctx, flags=None):

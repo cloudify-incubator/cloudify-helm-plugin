@@ -59,7 +59,9 @@ class Helm(object):
         return cmd
 
     @staticmethod
-    def handle_auth_params(cmd, kubeconfig=None, token=None,
+    def handle_auth_params(cmd,
+                           kubeconfig=None,
+                           token=None,
                            apiserver=None):
         if token and apiserver:
             cmd.append(APPEND_FLAG_STRING.format(name=HELM_KUBE_TOKEN_FLAG,
@@ -75,8 +77,15 @@ class Helm(object):
                 'Must provide kubernetes token and kube_api_server or '
                 'kube_config file path.')
 
-    def install(self, name, chart, flags=None, set_values=None,
-                values_file=None, kubeconfig=None, token=None, apiserver=None):
+    def install(self,
+                name,
+                chart,
+                flags=None,
+                set_values=None,
+                values_file=None,
+                kubeconfig=None,
+                token=None,
+                apiserver=None):
         """
         Execute helm install command.
         :param name: name for the created release.
@@ -114,13 +123,18 @@ class Helm(object):
         cmd.extend(map(prepare_parameter, flags))
         self.execute(self._helm_command(cmd))
 
-    def repo_add(self, repo_name, repo_url, flags=None):
+    def repo_add(self,
+                 repo_name,
+                 repo_url,
+                 flags=None):
         cmd = ['repo', 'add', repo_name, repo_url]
         flags = flags or []
         cmd.extend(map(prepare_parameter, flags))
         self.execute(self._helm_command(cmd))
 
-    def repo_remove(self, repo_name, flags=None):
+    def repo_remove(self,
+                    repo_name,
+                    flags=None):
         cmd = ['repo', 'remove', repo_name]
         flags = flags or []
         cmd.extend(map(prepare_parameter, flags))

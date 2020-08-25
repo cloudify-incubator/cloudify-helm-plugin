@@ -37,7 +37,9 @@ else:
     from io import StringIO
 
 
-    def reraise(exception_type, value, traceback):
+    def reraise(exception_type,
+                value,
+                traceback):
         raise value.with_traceback(traceback)
 
 

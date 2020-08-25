@@ -122,10 +122,6 @@ cloudify.nodes.helm.Binary:
       default: ''
       description: >
         Location to download the Helm installation from. Ignored if 'use_existing_resource' is true.
-#    plugins:
-#      default: []
-#      description: >
-#        List of plugins to install.
   interfaces:
     cloudify.interfaces.lifecycle:
       create:

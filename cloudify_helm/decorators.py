@@ -1,9 +1,9 @@
 from functools import wraps
 
-from tasks import is_using_existing
 from utils import (helm_from_ctx,
                    get_kubeconfig_file,
-                   get_values_file)
+                   get_values_file,
+                   is_using_existing)
 
 
 def with_helm(func):
