@@ -143,6 +143,36 @@ class TestTasks(unittest.TestCase):
                              ".com/",
                     flags=[])
 
+    def test_add_repo_use_external_resource(self):
+        properties = {
+            "helm_config": {
+                "executable_path": "/path/to/helm"
+            },
+            "use_external_resource": True,
+            "resource_config": {
+                "name": "stable",
+                "repo_url":
+                    "https://kubernetes-charts.storage.googleapis.com/",
+                "flags": []
+
+            }
+        }
+
+        ctx = self.mock_ctx(properties)
+        kwargs = {
+            'ctx': ctx
+        }
+        mock_client_repo_list_response = \
+            [{"name": "stable",
+              "url": "https://kubernetes-charts.storage.googleapis.com/"}]
+        with mock.patch('helm_sdk.Helm.repo_list',
+                        return_value=mock_client_repo_list_response):
+            with mock.patch('helm_sdk.Helm.repo_add') as fake_repo_add:
+                with mock.patch('cloudify_helm.utils.os.path.exists',
+                                return_value=True):
+                    add_repo(**kwargs)
+                    fake_repo_add.assert_not_called()
+
     def test_remove_repo(self):
         properties = {
             "helm_config": {

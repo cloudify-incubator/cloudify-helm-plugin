@@ -28,7 +28,8 @@ from .constants import (HOME_DIR_ENV_VAR,
                         CACHE_DIR_ENV_VAR,
                         DATA_DIR_ENV_VAR,
                         CLIENT_CONFIG,
-                        RESOURCE_CONFIG)
+                        RESOURCE_CONFIG,
+                        USE_EXTERNAL_RESOURCE)
 
 
 def helm_from_ctx(ctx):
@@ -133,7 +134,7 @@ def find_binary_and_copy(source_dir, executable_path):
                         "failed to copy binary: {}".format(e))
 
 
-def check_if_repo_exists_on_helm(ctx, helm):
+def check_if_use_existing_repo_on_helm(ctx, helm):
     """
     Check if a repo that user asked for in resource_config exists on helm
     client.
@@ -142,12 +143,13 @@ def check_if_repo_exists_on_helm(ctx, helm):
     :return Nothing, raises NonRecoverableError exception if repository
     doesen't exist.
     """
-    repos_list = helm.repo_list()
-    resource_config = ctx.node.properties.get('resource_config', {})
-    for repo in repos_list:
-        if repo.get('name') == resource_config.get('name') and \
-                repo.get('url') == resource_config.get('repo_url'):
-            return
-    raise NonRecoverableError(
-        "cant find repository:{0} with url: {1} on helm clinet!".format(
-            resource_config.get('name'), resource_config.get('repo_url')))
+    if ctx.node.properties.get(USE_EXTERNAL_RESOURCE):
+        repos_list = helm.repo_list()
+        resource_config = ctx.node.properties.get('resource_config', {})
+        for repo in repos_list:
+            if repo.get('name') == resource_config.get('name') and \
+                    repo.get('url') == resource_config.get('repo_url'):
+                return True
+        raise NonRecoverableError(
+            "cant find repository:{0} with url: {1} on helm clinet!".format(
+                resource_config.get('name'), resource_config.get('repo_url')))

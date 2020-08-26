@@ -17,7 +17,7 @@ from .utils import (
     find_binary_and_copy,
     get_helm_local_files_dirs,
     untar_and_set_permissions,
-    check_if_repo_exists_on_helm)
+    check_if_use_existing_repo_on_helm)
 
 
 @operation
@@ -119,9 +119,7 @@ def install_release(ctx, helm, kubeconfig=None, values_file=None, **kwargs):
 @operation
 @with_helm
 def add_repo(ctx, helm, **kwargs):
-    if ctx.node.properties.get(USE_EXTERNAL_RESOURCE):
-        check_if_repo_exists_on_helm(ctx, helm)
-    else:
+    if not check_if_use_existing_repo_on_helm(ctx, helm):
         args_dict = prepare_args(ctx, kwargs.get('flags'))
         helm.repo_add(**args_dict)
 
@@ -129,9 +127,6 @@ def add_repo(ctx, helm, **kwargs):
 @operation
 @with_helm
 def remove_repo(ctx, helm, **kwargs):
-    if ctx.node.properties.get(USE_EXTERNAL_RESOURCE):
-        # Use external resource means we don`t want to remove it from helm.
-        pass
-    else:
+    if not ctx.node.properties.get(USE_EXTERNAL_RESOURCE):
         args_dict = prepare_args(ctx, kwargs.get('flags'))
         helm.repo_remove(**args_dict)
