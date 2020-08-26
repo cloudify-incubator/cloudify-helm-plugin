@@ -7,16 +7,17 @@ import tempfile
 from cloudify.decorators import operation
 from cloudify.exceptions import NonRecoverableError
 
-
-from .constants import FLAGS_FIELD
 from helm_sdk.utils import run_subprocess
 from .decorators import skip_if_existing, with_helm
+from .constants import (
+    FLAGS_FIELD,
+    USE_EXTERNAL_RESOURCE)
 from .utils import (
     is_using_existing,
+    find_binary_and_copy,
     get_helm_local_files_dirs,
     untar_and_set_permissions,
-    find_binary_and_copy)
-
+    check_if_repo_exists_on_helm)
 
 
 @operation
@@ -47,8 +48,8 @@ def install(ctx, **_):
                     ['curl', '-o', installation_tar, installation_source],
                     ctx.logger
                 )
-                untar_and_set_permissions(ctx,installation_tar,
-                                           installation_temp_dir)
+                untar_and_set_permissions(ctx, installation_tar,
+                                          installation_temp_dir)
                 # Need to find helm binary in the extracted files
                 find_binary_and_copy(installation_temp_dir, executable_path)
 
@@ -78,9 +79,10 @@ def uninstall(ctx, **_):
     #
 
 
-def _prepare_release_args(ctx, flags=None):
+def prepare_args(ctx, flags=None):
     """
-    Prepare arguments to helm.install/helm.uninstall function.
+    Prepare arguments dictionary to helm  sdk function(like:helm.install,
+    helm.repo_add).
     :param ctx: cloudify context.
     :param flags: flags that user passed -unique for install operation.
     :return arguments dictionary for helm.install function
@@ -103,7 +105,7 @@ def install_release(ctx, helm, kubeconfig=None, values_file=None, **kwargs):
     :param values_file: values file path
     :return output of `helm install` command
     """
-    args_dict = _prepare_release_args(ctx, kwargs.get('flags'))
+    args_dict = prepare_args(ctx, kwargs.get('flags'))
     output = helm.install(
         values_file=values_file,
         kubeconfig=kubeconfig,
@@ -113,3 +115,26 @@ def install_release(ctx, helm, kubeconfig=None, values_file=None, **kwargs):
             'client_config', {}).get('kube_api_server'), **args_dict)
     ctx.instance.runtime_properties['install_output'] = output
 
+
+
+
+
+@operation
+@with_helm
+def add_repo(ctx, helm, **kwargs):
+    if ctx.node.properties.get(USE_EXTERNAL_RESOURCE):
+        check_if_repo_exists_on_helm(ctx, helm)
+    else:
+        args_dict = prepare_args(ctx,kwargs.get('flags'))
+        helm.repo_add(**args_dict)
+
+
+@operation
+@with_helm
+def remove_repo(ctx, helm, **kwargs):
+    if ctx.node.properties.get(USE_EXTERNAL_RESOURCE):
+        # Use external resource means we don`t want to remove it from helm.
+        pass
+    else:
+        args_dict = prepare_args(ctx, kwargs.get('flags'))
+        helm.repo_remove(**args_dict)

@@ -124,18 +124,23 @@ class Helm(object):
         self.execute(self._helm_command(cmd))
 
     def repo_add(self,
-                 repo_name,
+                 name,
                  repo_url,
                  flags=None):
-        cmd = ['repo', 'add', repo_name, repo_url]
+        cmd = ['repo', 'add', name, repo_url]
         flags = flags or []
         cmd.extend(map(prepare_parameter, flags))
         self.execute(self._helm_command(cmd))
 
     def repo_remove(self,
-                    repo_name,
+                    name,
                     flags=None):
-        cmd = ['repo', 'remove', repo_name]
+        cmd = ['repo', 'remove', name]
         flags = flags or []
         cmd.extend(map(prepare_parameter, flags))
         self.execute(self._helm_command(cmd))
+
+    def repo_list(self):
+        cmd = ['repo', 'list', '--output=json']
+        output = self.execute(self._helm_command(cmd), True)
+        return json.loads(output)
