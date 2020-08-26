@@ -116,16 +116,13 @@ def install_release(ctx, helm, kubeconfig=None, values_file=None, **kwargs):
     ctx.instance.runtime_properties['install_output'] = output
 
 
-
-
-
 @operation
 @with_helm
 def add_repo(ctx, helm, **kwargs):
     if ctx.node.properties.get(USE_EXTERNAL_RESOURCE):
         check_if_repo_exists_on_helm(ctx, helm)
     else:
-        args_dict = prepare_args(ctx,kwargs.get('flags'))
+        args_dict = prepare_args(ctx, kwargs.get('flags'))
         helm.repo_add(**args_dict)
 
 
