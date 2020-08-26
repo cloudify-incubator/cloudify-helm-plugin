@@ -1,4 +1,5 @@
 import os
+import mock
 import shutil
 import tempfile
 import unittest
@@ -9,7 +10,9 @@ from cloudify.mocks import (MockContext, MockCloudifyContext,
 
 from cloudify_helm.tasks import (install,
                                  uninstall,
-                                 install_release)
+                                 install_release,
+                                 add_repo,
+                                 remove_repo)
 
 
 class TestTasks(unittest.TestCase):
@@ -112,6 +115,32 @@ class TestTasks(unittest.TestCase):
         }
         uninstall(**kwargs)
         self.assertEqual(os.path.isfile(fake_executable.name), False)
+
+    def test_add_repo(self):
+        properties = {
+            "helm_config": {
+                "executable_path": "/tmp/helm_3/helm"
+            },
+            "use_external_resource": False,
+            "resource_config": {
+                "name": "stable",
+                "repo_url":
+                    "https://kubernetes-charts.storage.googleapis.com/",
+                "flags": []
+
+            }
+        }
+
+        ctx = self.mock_ctx(properties)
+        kwargs = {
+            'ctx': ctx
+        }
+        with mock.patch('cloudify_helm.decorators.helm_from_ctx') as fake_helm:
+            add_repo(**kwargs)
+            fake_helm.repo_add.assert_called_once_with(
+                name="stable",
+                repo_url="https://kubernetes-charts.storage.googleapis.com/",
+                flags=[])
 
 
 if __name__ == "__main__":
