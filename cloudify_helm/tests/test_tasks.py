@@ -4,9 +4,7 @@ import shutil
 import tempfile
 import unittest
 
-from cloudify.mocks import (MockContext, MockCloudifyContext,
-                            MockNodeInstanceContext,
-                            MockNodeContext)
+from cloudify.mocks import MockCloudifyContext
 
 from cloudify_helm.tasks import (install,
                                  uninstall,
@@ -119,7 +117,7 @@ class TestTasks(unittest.TestCase):
     def test_add_repo(self):
         properties = {
             "helm_config": {
-                "executable_path": "/tmp/helm_3/helm"
+                "executable_path": "/path/to/helm"
             },
             "use_external_resource": False,
             "resource_config": {
@@ -135,13 +133,41 @@ class TestTasks(unittest.TestCase):
         kwargs = {
             'ctx': ctx
         }
-        with mock.patch('cloudify_helm.decorators.helm_from_ctx') as fake_helm:
-            add_repo(**kwargs)
-            fake_helm.repo_add.assert_called_once_with(
-                name="stable",
-                repo_url="https://kubernetes-charts.storage.googleapis.com/",
-                flags=[])
+        with mock.patch('helm_sdk.Helm.repo_add') as fake_repo_add:
+            with mock.patch('cloudify_helm.utils.os.path.exists',
+                            return_value=True):
+                add_repo(**kwargs)
+                fake_repo_add.assert_called_once_with(
+                    name="stable",
+                    repo_url="https://kubernetes-charts.storage.googleapis"
+                             ".com/",
+                    flags=[])
 
+    def test_remove_repo(self):
+        properties = {
+            "helm_config": {
+                "executable_path": "/path/to/helm"
+            },
+            "use_external_resource": False,
+            "resource_config": {
+                "name": "stable",
+                "repo_url":
+                    "https://kubernetes-charts.storage.googleapis.com/",
+                "flags": []
 
-if __name__ == "__main__":
-    unittest.main()
+            }
+        }
+
+        ctx = self.mock_ctx(properties)
+        kwargs = {
+            'ctx': ctx
+        }
+        with mock.patch('helm_sdk.Helm.repo_remove') as fake_repo_add:
+            with mock.patch('cloudify_helm.utils.os.path.exists',
+                            return_value=True):
+                remove_repo(**kwargs)
+                fake_repo_add.assert_called_once_with(
+                    name="stable",
+                    repo_url="https://kubernetes-charts.storage.googleapis"
+                             ".com/",
+                    flags=[])
