@@ -46,8 +46,8 @@ class TestTasks(unittest.TestCase):
             'ctx': ctx
         }
         install(**kwargs)
-        self.assertEqual(ctx.instance.runtime_properties.get(
-            "executable_path"),
+        self.assertEqual(
+            ctx.node.properties.get("helm_config").get("executable_path"),
             properties.get("helm_config").get("executable_path"))
 
     def test_install(self):

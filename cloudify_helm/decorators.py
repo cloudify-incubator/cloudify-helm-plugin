@@ -1,9 +1,16 @@
+import sys
 from functools import wraps
 
-from utils import (helm_from_ctx,
-                   get_kubeconfig_file,
-                   get_values_file,
-                   is_using_existing)
+from cloudify.exceptions import NonRecoverableError
+from cloudify.utils import exception_to_error_cause
+
+from helm_sdk._compat import text_type
+
+from .utils import (
+    helm_from_ctx,
+    get_kubeconfig_file,
+    get_values_file,
+    is_using_existing)
 
 
 def with_helm(func):
@@ -16,7 +23,13 @@ def with_helm(func):
                 kwargs['helm'] = helm
                 kwargs['kubeconfig'] = kubeconfig
                 kwargs['values_file'] = values_file
-                return func(*args, **kwargs)
+                try:
+                    return func(*args, **kwargs)
+                except Exception as e:
+                    _, _, tb = sys.exc_info()
+                    raise NonRecoverableError(
+                        '{0}'.format(text_type(e),
+                                     causes=[exception_to_error_cause(e, tb)]))
 
     return f
 

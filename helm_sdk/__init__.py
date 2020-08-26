@@ -15,7 +15,7 @@
 
 import json
 
-from exceptions import CloudifyHelmSDKError
+from .exceptions import CloudifyHelmSDKError
 from helm_sdk.utils import (run_subprocess,
                             prepare_set_parameter,
                             prepare_parameter)

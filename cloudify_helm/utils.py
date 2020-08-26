@@ -14,18 +14,21 @@
 #    * limitations under the License.
 
 import os
+import shutil
+import tarfile
 import tempfile
 from contextlib import contextmanager
 
 from cloudify.exceptions import NonRecoverableError
 
 from helm_sdk import Helm
-from constants import (HOME_DIR_ENV_VAR,
-                       CONFIG_DIR_ENV_VAR,
-                       CACHE_DIR_ENV_VAR,
-                       DATA_DIR_ENV_VAR,
-                       CLIENT_CONFIG,
-                       RESOURCE_CONFIG)
+from helm_sdk.utils import run_subprocess
+from .constants import (HOME_DIR_ENV_VAR,
+                        CONFIG_DIR_ENV_VAR,
+                        CACHE_DIR_ENV_VAR,
+                        DATA_DIR_ENV_VAR,
+                        CLIENT_CONFIG,
+                        RESOURCE_CONFIG)
 
 
 def helm_from_ctx(ctx):
@@ -100,3 +103,30 @@ def get_values_file(ctx):
                 os.remove(f.name)
     else:
         yield None
+
+
+def untar_and_set_permissions(ctx, tar_file, target_dir):
+    ctx.logger.info("Untarring into {0}".format(target_dir))
+    with tarfile.open(tar_file, 'r') as tar_ref:
+        for name in tar_ref.getnames():
+            tar_ref.extract(name, target_dir)
+            target_file = os.path.join(target_dir, name)
+            ctx.logger.info(
+                "Setting permission on {0}".format(target_file))
+            run_subprocess(
+                ['chmod', 'u+x', target_file],
+                ctx.logger
+            )
+
+
+def find_binary_and_copy(source_dir, executable_path):
+    for root, dir, filenames in os.walk(source_dir):
+        for file in filenames:
+            if file.endswith('helm'):
+                if not os.path.isdir(os.path.dirname(executable_path)):
+                    os.makedirs(os.path.dirname(executable_path))
+                try:
+                    shutil.copy2(os.path.join(root, file), executable_path)
+                except Exception as e:
+                    raise NonRecoverableError(
+                        "failed to copy binary: {}".format(e))

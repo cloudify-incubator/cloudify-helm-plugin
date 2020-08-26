@@ -38,9 +38,12 @@ def run_subprocess(command,
         passed_env.update(os.environ)
         passed_env.update(additional_env)
 
-    logger.info("Running: command=%s, cwd=%s, additional_args=%s",
-                obfuscate_passwords(command), cwd,
-                obfuscate_passwords(args_to_pass))
+    logger.info(
+        "Running: command={cmd}, cwd={cwd}, additional_args={args}".format(
+            cmd=obfuscate_passwords(command),
+            cwd=cwd,
+            args=obfuscate_passwords(args_to_pass)))
+
     process = subprocess.Popen(
         args=command,
         stdout=subprocess.PIPE,
@@ -66,9 +69,9 @@ def run_subprocess(command,
         raise subprocess.CalledProcessError(return_code, command)
 
     output = stdout_consumer.buffer.getvalue() if return_output else None
-    logger.info("Returning output:\n%s",
-                obfuscate_passwords(
-                    output) if output is not None else '<None>')
+    logger.info("Returning output:\n{0}".format(
+        obfuscate_passwords(output) if output is not None else '<None>'))
+
     return output
 
 
