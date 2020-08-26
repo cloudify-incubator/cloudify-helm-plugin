@@ -17,7 +17,7 @@ from .utils import (
     find_binary_and_copy,
     get_helm_local_files_dirs,
     untar_and_set_permissions,
-    check_if_use_existing_repo_on_helm)
+    use_existing_repo_on_helm)
 
 
 @operation
@@ -119,7 +119,7 @@ def install_release(ctx, helm, kubeconfig=None, values_file=None, **kwargs):
 @operation
 @with_helm
 def add_repo(ctx, helm, **kwargs):
-    if not check_if_use_existing_repo_on_helm(ctx, helm):
+    if not use_existing_repo_on_helm(ctx, helm):
         args_dict = prepare_args(ctx, kwargs.get('flags'))
         helm.repo_add(**args_dict)
 

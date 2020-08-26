@@ -134,7 +134,7 @@ def find_binary_and_copy(source_dir, executable_path):
                         "failed to copy binary: {}".format(e))
 
 
-def check_if_use_existing_repo_on_helm(ctx, helm):
+def use_existing_repo_on_helm(ctx, helm):
     """
     Check if a repo that user asked for in resource_config exists on helm
     client.
