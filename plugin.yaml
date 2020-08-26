@@ -116,7 +116,7 @@ cloudify.nodes.helm.Binary:
     use_existing_resource:
       type: boolean
       description: If true, use an existing helm installation rather than installing it.
-      default: true
+      default: false
     installation_source:
       type: string
       default: ''

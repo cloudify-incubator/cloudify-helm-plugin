@@ -28,12 +28,14 @@ from .constants import (HOME_DIR_ENV_VAR,
                         CACHE_DIR_ENV_VAR,
                         DATA_DIR_ENV_VAR,
                         CLIENT_CONFIG,
-                        RESOURCE_CONFIG)
+                        RESOURCE_CONFIG,
+                        USE_EXTERNAL_RESOURCE)
 
 
 def helm_from_ctx(ctx):
+    # Look for executable path in default place.
     executable_path = \
-        ctx.instance.runtime_properties.get('executable_path', "")
+        ctx.node.properties.get('helm_config', {}).get('executable_path', "")
     if not os.path.exists(executable_path):
         raise NonRecoverableError(
             "Helm's executable not found in {0}. Please set the "
@@ -75,7 +77,7 @@ def get_helm_local_files_dirs():
 
 @contextmanager
 def get_kubeconfig_file(ctx):
-    if ctx.node.properties.get(CLIENT_CONFIG).get('kube_config'):
+    if ctx.node.properties.get(CLIENT_CONFIG, {}).get('kube_config'):
         with tempfile.NamedTemporaryFile(delete=False) as f:
             f.close()
             ctx.download_resource(
@@ -91,7 +93,7 @@ def get_kubeconfig_file(ctx):
 
 @contextmanager
 def get_values_file(ctx):
-    if ctx.node.properties.get(RESOURCE_CONFIG).get('values_file'):
+    if ctx.node.properties.get(RESOURCE_CONFIG,{}).get('values_file'):
         with tempfile.NamedTemporaryFile(delete=False) as f:
             f.close()
             ctx.download_resource(
@@ -130,3 +132,24 @@ def find_binary_and_copy(source_dir, executable_path):
                 except Exception as e:
                     raise NonRecoverableError(
                         "failed to copy binary: {}".format(e))
+
+
+def use_existing_repo_on_helm(ctx, helm):
+    """
+    Check if a repo that user asked for in resource_config exists on helm
+    client.
+    :param ctx: cloudify context.
+    :param helm: helm client object.
+    :return Nothing, raises NonRecoverableError exception if repository
+    doesen't exist.
+    """
+    if ctx.node.properties.get(USE_EXTERNAL_RESOURCE):
+        repos_list = helm.repo_list()
+        resource_config = ctx.node.properties.get('resource_config', {})
+        for repo in repos_list:
+            if repo.get('name') == resource_config.get('name') and \
+                    repo.get('url') == resource_config.get('repo_url'):
+                return True
+        raise NonRecoverableError(
+            "cant find repository:{0} with url: {1} on helm clinet!".format(
+                resource_config.get('name'), resource_config.get('repo_url')))
