@@ -30,6 +30,7 @@ from .constants import (
     DATA_DIR_ENV_VAR,
     CACHE_DIR_ENV_VAR,
     CONFIG_DIR_ENV_VAR,
+    HELM_ENV_VARS_LIST,
     USE_EXTERNAL_RESOURCE)
 
 
@@ -53,8 +54,7 @@ def helm_from_ctx(ctx):
 
 def get_helm_env_vars_dict(ctx):
     env_vars = {}
-    for property_name in [CONFIG_DIR_ENV_VAR, CACHE_DIR_ENV_VAR,
-                          DATA_DIR_ENV_VAR]:
+    for property_name in HELM_ENV_VARS_LIST:
         env_var_value = ctx.instance.runtime_properties.get(property_name, "")
         if not env_var_value:
             raise NonRecoverableError(
@@ -198,8 +198,7 @@ def create_temporary_env_of_helm(ctx):
 
 
 def delete_temporary_env_of_helm(ctx):
-    for dir_property_name in [CONFIG_DIR_ENV_VAR, CACHE_DIR_ENV_VAR,
-                              DATA_DIR_ENV_VAR]:
+    for dir_property_name in HELM_ENV_VARS_LIST:
         dir_to_delete = ctx.instance.runtime_properties.get(
             dir_property_name, "")
         if os.path.isdir(dir_to_delete):

@@ -7,9 +7,7 @@ from .constants import (
     FLAGS_FIELD,
     CLIENT_CONFIG,
     EXECUTABLE_PATH,
-    DATA_DIR_ENV_VAR,
-    CACHE_DIR_ENV_VAR,
-    CONFIG_DIR_ENV_VAR,
+    HELM_ENV_VARS_LIST,
     USE_EXTERNAL_RESOURCE)
 from .utils import (
     get_binary,
@@ -111,11 +109,10 @@ def remove_repo(ctx, helm, **kwargs):
 
 @operation
 def inject_env_properties(ctx, **_):
-    for property in [EXECUTABLE_PATH, DATA_DIR_ENV_VAR, CACHE_DIR_ENV_VAR,
-                     CONFIG_DIR_ENV_VAR]:
-        value = ctx.target.instance.runtime_properties.get(property, "")
+    for dir_property_name in [EXECUTABLE_PATH]+HELM_ENV_VARS_LIST:
+        value = ctx.target.instance.runtime_properties.get(dir_property_name, "")
         ctx.logger.info(
-            "setting {property} to {value}".format(property=property,
+            "setting {property} to {value}".format(property=dir_property_name,
                                                    value=value))
         ctx.source.instance.runtime_properties[
-            property] = value
+            dir_property_name] = value
