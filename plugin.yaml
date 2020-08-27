@@ -187,7 +187,7 @@ cloudify.nodes.helm.Repo:
 
 relationships:
 
-  cloudify.terraform.relationships.run_on_host:
+  cloudify.helm.relationships.run_on_host:
     derived_from: cloudify.relationships.connected_to
     source_interfaces:
       cloudify.interfaces.relationship_lifecycle:
