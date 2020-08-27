@@ -5,12 +5,10 @@ from cloudify.exceptions import NonRecoverableError
 from cloudify.utils import exception_to_error_cause
 
 from helm_sdk._compat import text_type
-
 from .utils import (
     helm_from_ctx,
-    get_kubeconfig_file,
     get_values_file,
-    is_using_existing)
+    get_kubeconfig_file)
 
 
 def with_helm(func):
@@ -30,15 +28,5 @@ def with_helm(func):
                     raise NonRecoverableError(
                         '{0}'.format(text_type(e),
                                      causes=[exception_to_error_cause(e, tb)]))
-
-    return f
-
-
-def skip_if_existing(func):
-    @wraps(func)
-    def f(*args, **kwargs):
-        ctx = kwargs['ctx']
-        if not is_using_existing(ctx):
-            return func(*args, **kwargs)
 
     return f

@@ -6,11 +6,17 @@ import unittest
 
 from cloudify.mocks import MockCloudifyContext
 
-from cloudify_helm.tasks import (install,
-                                 uninstall,
-                                 install_release,
-                                 add_repo,
-                                 remove_repo)
+from cloudify_helm.tasks import (
+    add_repo,
+    remove_repo,
+    install_binary,
+    install_release,
+    uninstall_binary)
+from cloudify_helm.constants import (
+    DATA_DIR_ENV_VAR,
+    CACHE_DIR_ENV_VAR,
+    CONFIG_DIR_ENV_VAR
+    )
 
 
 class TestTasks(unittest.TestCase):
@@ -20,6 +26,14 @@ class TestTasks(unittest.TestCase):
 
     def tearDown(self):
         super(TestTasks, self).tearDown()
+
+    def mock_runtime_properties(self):
+        runtime_properties = {
+            CONFIG_DIR_ENV_VAR: '/path/to/config',
+            CACHE_DIR_ENV_VAR: '/path/to/cache',
+            DATA_DIR_ENV_VAR: '/path/to/data'
+        }
+        return runtime_properties
 
     def mock_ctx(self,
                  test_properties,
@@ -33,7 +47,7 @@ class TestTasks(unittest.TestCase):
         )
         return ctx
 
-    def test_install_use_existing(self):
+    def test_install_binary_use_existing(self):
         properties = {
             "helm_config": {
                 "executable_path": "/tmp/helm_3/helm"
@@ -41,14 +55,13 @@ class TestTasks(unittest.TestCase):
             "use_existing_resource": True,
             "installation_source": "https://fake_link",
         }
-
         ctx = self.mock_ctx(properties)
         kwargs = {
             'ctx': ctx
         }
-        install(**kwargs)
+        install_binary(**kwargs)
         self.assertEqual(
-            ctx.node.properties.get("helm_config").get("executable_path"),
+            ctx.instance.runtime_properties.get("executable_path"),
             properties.get("helm_config").get("executable_path"))
 
     def test_install(self):
@@ -66,7 +79,7 @@ class TestTasks(unittest.TestCase):
         kwargs = {
             'ctx': ctx
         }
-        install(**kwargs)
+        install_binary(**kwargs)
         self.assertEqual(ctx.instance.runtime_properties.get(
             "executable_path"),
             properties.get("helm_config").get("executable_path"))
@@ -93,7 +106,7 @@ class TestTasks(unittest.TestCase):
         kwargs = {
             'ctx': ctx
         }
-        uninstall(**kwargs)
+        uninstall_binary(**kwargs)
         self.assertEqual(os.path.isfile(fake_executable.name), True)
 
     def test_uninstall(self):
@@ -111,7 +124,7 @@ class TestTasks(unittest.TestCase):
         kwargs = {
             'ctx': ctx
         }
-        uninstall(**kwargs)
+        uninstall_binary(**kwargs)
         self.assertEqual(os.path.isfile(fake_executable.name), False)
 
     def test_add_repo(self):
@@ -129,7 +142,8 @@ class TestTasks(unittest.TestCase):
             }
         }
 
-        ctx = self.mock_ctx(properties)
+        ctx = self.mock_ctx(properties,
+                            self.mock_runtime_properties())
         kwargs = {
             'ctx': ctx
         }
@@ -158,7 +172,8 @@ class TestTasks(unittest.TestCase):
             }
         }
 
-        ctx = self.mock_ctx(properties)
+        ctx = self.mock_ctx(properties,
+                            self.mock_runtime_properties())
         kwargs = {
             'ctx': ctx
         }
@@ -188,7 +203,8 @@ class TestTasks(unittest.TestCase):
             }
         }
 
-        ctx = self.mock_ctx(properties)
+        ctx = self.mock_ctx(properties,
+                            self.mock_runtime_properties())
         kwargs = {
             'ctx': ctx
         }
@@ -201,3 +217,7 @@ class TestTasks(unittest.TestCase):
                     repo_url="https://kubernetes-charts.storage.googleapis"
                              ".com/",
                     flags=[])
+
+
+if __name__ == '__main__':
+    unittest.main()

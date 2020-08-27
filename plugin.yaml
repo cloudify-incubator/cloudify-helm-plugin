@@ -125,9 +125,9 @@ cloudify.nodes.helm.Binary:
   interfaces:
     cloudify.interfaces.lifecycle:
       create:
-        implementation: helm.cloudify_helm.tasks.install
+        implementation: helm.cloudify_helm.tasks.install_binary
       delete:
-        implementation: helm.cloudify_helm.tasks.uninstall
+        implementation: helm.cloudify_helm.tasks.uninstall_binary
 
 
 cloudify.nodes.helm.Release:
@@ -143,7 +143,7 @@ cloudify.nodes.helm.Release:
       required: true
   interfaces:
     cloudify.interfaces.lifecycle:
-      create:
+      start:
         implementation: helm.cloudify_helm.tasks.install_release
         inputs:
           flags:
@@ -169,7 +169,7 @@ cloudify.nodes.helm.Repo:
       required: true
   interfaces:
     cloudify.interfaces.lifecycle:
-      create:
+      start:
         implementation: helm.cloudify_helm.tasks.add_repo
         inputs:
           flags:
@@ -185,3 +185,11 @@ cloudify.nodes.helm.Repo:
             default: []
 
 
+relationships:
+
+  cloudify.terraform.relationships.run_on_host:
+    derived_from: cloudify.relationships.connected_to
+    source_interfaces:
+      cloudify.interfaces.relationship_lifecycle:
+        preconfigure:
+          implementation: helm.cloudify_helm.tasks.inject_env_properties
