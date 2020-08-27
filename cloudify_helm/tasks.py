@@ -90,6 +90,10 @@ def install_release(ctx, helm, kubeconfig=None, values_file=None, **kwargs):
             CLIENT_CONFIG, {}).get('kube_api_server'), **args_dict)
     ctx.instance.runtime_properties['install_output'] = output
 
+@operation
+@with_helm
+def uninstall_release(ctx, helm, kubeconfig=None, values_file=None, **kwargs):
+    pass
 
 @operation
 @with_helm
