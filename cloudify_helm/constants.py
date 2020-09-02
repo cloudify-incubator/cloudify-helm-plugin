@@ -1,9 +1,26 @@
+########
+# Copyright (c) 2019 Cloudify Platform Ltd. All rights reserved
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#        http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+#    * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#    * See the License for the specific language governing permissions and
+#    * limitations under the License.
+
 FLAGS_FIELD = 'flags'
 CLIENT_CONFIG = 'client_config'
 RESOURCE_CONFIG = 'resource_config'
+EXECUTABLE_PATH = 'executable_path'
 USE_EXTERNAL_RESOURCE = 'use_external_resource'
-HOME_DIR_ENV_VAR = 'HOME'
-CONFIG_DIR_ENV_VAR = 'XDG_CONFIG_HOME'
-CACHE_DIR_ENV_VAR = 'XDG_CACHE_HOME'
-DATA_DIR_ENV_VAR = 'XDG_DATA_HOME'
+CONFIG_DIR_ENV_VAR = "HELM_CONFIG_HOME"
+CACHE_DIR_ENV_VAR = "HELM_CACHE_HOME"
+DATA_DIR_ENV_VAR = "HELM_DATA_HOME"
 
+HELM_ENV_VARS_LIST = [DATA_DIR_ENV_VAR, CACHE_DIR_ENV_VAR,
+                      CONFIG_DIR_ENV_VAR]

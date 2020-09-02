@@ -1,82 +1,74 @@
+########
+# Copyright (c) 2019 Cloudify Platform Ltd. All rights reserved
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#        http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+#    * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#    * See the License for the specific language governing permissions and
+#    * limitations under the License.
+
 import os
-import sys
-import shutil
-import tarfile
-import tempfile
 
 from cloudify.decorators import operation
 from cloudify.exceptions import NonRecoverableError
 
-from helm_sdk.utils import run_subprocess
-from .decorators import skip_if_existing, with_helm
+
+from .decorators import with_helm
 from .constants import (
     FLAGS_FIELD,
+    CLIENT_CONFIG,
+    EXECUTABLE_PATH,
+    HELM_ENV_VARS_LIST,
     USE_EXTERNAL_RESOURCE)
 from .utils import (
+    get_binary,
+    copy_binary,
     is_using_existing,
-    find_binary_and_copy,
-    get_helm_local_files_dirs,
-    untar_and_set_permissions,
-    use_existing_repo_on_helm)
+    use_existing_repo_on_helm,
+    create_temporary_env_of_helm,
+    delete_temporary_env_of_helm)
 
 
 @operation
-@skip_if_existing
-def install(ctx, **_):
+def install_binary(ctx, **_):
     executable_path = ctx.node.properties.get(
-        'helm_config', {}).get('executable_path', "")
-    installation_temp_dir = tempfile.mkdtemp()
-    try:
-        if not is_using_existing(ctx):
-            if os.path.isfile(executable_path):
-                ctx.logger.info(
-                    "Helm executable already found at {0}; " +
-                    "skipping installation of executable".format(
-                        executable_path))
-            else:
-                installation_source = \
-                    ctx.node.properties.get(
-                        'installation_source', "")
-                if not installation_source:
-                    raise NonRecoverableError("invalid installation_source")
-                installation_tar = \
-                    os.path.join(installation_temp_dir, 'helm.tar.gz')
-
-                ctx.logger.info("Downloading Helm from {0} into {1}".format(
-                    installation_source, installation_tar))
-                run_subprocess(
-                    ['curl', '-o', installation_tar, installation_source],
-                    ctx.logger
-                )
-                untar_and_set_permissions(ctx, installation_tar,
-                                          installation_temp_dir)
-                # Need to find helm binary in the extracted files
-                find_binary_and_copy(installation_temp_dir, executable_path)
-
-        ctx.instance.runtime_properties['executable_path'] = executable_path
-    finally:
-        if installation_temp_dir:
-            shutil.rmtree(installation_temp_dir)
+        'helm_config', {}).get(EXECUTABLE_PATH, "")
+    if is_using_existing(ctx):
+        if not os.path.isfile(executable_path):
+            raise NonRecoverableError(
+                "Helm executable not found at {0}, cant use existing "
+                "binary!".format(executable_path))
+    else:
+        if os.path.isfile(executable_path):
+            ctx.logger.info(
+                "Helm executable already found at {0}; " +
+                "skipping installation of executable".format(
+                    executable_path))
+        else:
+            with get_binary(ctx) as binary:
+                copy_binary(binary, executable_path)
+    create_temporary_env_of_helm(ctx)
+    ctx.instance.runtime_properties[
+        EXECUTABLE_PATH] = executable_path
 
 
 @operation
-@skip_if_existing
-def uninstall(ctx, **_):
-    executable_path = ctx.node.properties.get('helm_config', {}).get(
-        'executable_path', "")
-    if os.path.isfile(executable_path):
+def uninstall_binary(ctx, **_):
+    executable_path = ctx.instance.runtime_properties.get(EXECUTABLE_PATH,
+                                                          "") or \
+                      ctx.node.properties.get(
+                          'helm_config', {}).get(
+                          EXECUTABLE_PATH, "")
+    if os.path.isfile(executable_path) and not is_using_existing(ctx):
         ctx.logger.info("Removing executable: {0}".format(executable_path))
         os.remove(executable_path)
-    # helm_local_files_dirs = get_helm_local_files_dirs()
-    # for dir_to_delete in helm_local_files_dirs:
-    #     if os.path.isdir(dir_to_delete):
-    #         ctx.logger.info("Removing: {}".format(dir_to_delete))
-    #
-    #         shutil.rmtree(dir_to_delete)
-    #     else:
-    #         ctx.logger.info("Directory {0} doesn't exist;
-    #         skipping".format(dir_to_delete))
-    #
+    delete_temporary_env_of_helm(ctx)
 
 
 def prepare_args(ctx, flags=None):
@@ -109,11 +101,17 @@ def install_release(ctx, helm, kubeconfig=None, values_file=None, **kwargs):
     output = helm.install(
         values_file=values_file,
         kubeconfig=kubeconfig,
-        token=ctx.node.properties.get('client_config', {}).get(
+        token=ctx.node.properties.get(CLIENT_CONFIG, {}).get(
             'kube_token'),
         apiserver=ctx.node.properties.get(
-            'client_config', {}).get('kube_api_server'), **args_dict)
+            CLIENT_CONFIG, {}).get('kube_api_server'), **args_dict)
     ctx.instance.runtime_properties['install_output'] = output
+
+
+@operation
+@with_helm
+def uninstall_release(ctx, helm, kubeconfig=None, values_file=None, **kwargs):
+    pass
 
 
 @operation
@@ -130,3 +128,15 @@ def remove_repo(ctx, helm, **kwargs):
     if not ctx.node.properties.get(USE_EXTERNAL_RESOURCE):
         args_dict = prepare_args(ctx, kwargs.get('flags'))
         helm.repo_remove(**args_dict)
+
+
+@operation
+def inject_env_properties(ctx, **_):
+    for dir_property_name in [EXECUTABLE_PATH] + HELM_ENV_VARS_LIST:
+        value = ctx.target.instance.runtime_properties.get(dir_property_name,
+                                                           "")
+        ctx.logger.info(
+            "setting {property} to {value}".format(property=dir_property_name,
+                                                   value=value))
+        ctx.source.instance.runtime_properties[
+            dir_property_name] = value
