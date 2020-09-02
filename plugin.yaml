@@ -6,12 +6,9 @@ plugins:
 
 dsl_definitions:
 
-  helm_config: &helm_config
-    executable_path:
-      type: string
-      default: '/usr/bin/helm'
-      description: Helm binary path.
-      required: false
+  helm_configuration: &helm_config
+    helm_config:
+      type: cloudify.types.helm.HelmConfig
 
   use_external_resource_desc: &use_external_resource_desc >
     Indicate whether the resource exists or if Cloudify should create the resource,
@@ -25,7 +22,16 @@ dsl_definitions:
 
 data_types:
 
-  cloudify.helm.types.ClientConfig:
+  cloudify.types.helm.HelmConfig:
+    properties:
+      executable_path:
+        type: string
+        default: '/usr/bin/helm'
+        description: >
+          Helm binary path.
+        required: false
+
+  cloudify.types.helm.ClientConfig:
     description: >
       Configuration properties for Helm to interact with kubernetes cluster.
       if kube_config file not provided then kube_token and kube_api_server should provided.
@@ -38,15 +44,15 @@ data_types:
       kube_api_server:
         type: string
 #          default: ''
-          description: the address and the port for the Kubernetes API server(endpoint).
-          required: false
+        description: the address and the port for the Kubernetes API server(endpoint).
+        required: false
       kube_config:
         type: string
 #          default: ''
-          description: path to the kubeconfig file
-          required: false
+        description: path to the kubeconfig file
+        required: false
 
-  cloudify.helm.types.ReleaseConfig:
+  cloudify.types.helm.ReleaseConfig:
     description: >
       configuration properties for release node type.
     properties:
@@ -83,7 +89,7 @@ data_types:
           If the flag not requieres value, omit "value" and specify only the name as element in the list.
         default: []
 
-  cloudify.helm.types.RepoConfig:
+  cloudify.types.helm.RepoConfig:
     description: >
       configuration properties for repo node type.
     properties:
@@ -109,80 +115,80 @@ data_types:
 
 node_types:
 
-cloudify.nodes.helm.Binary:
-  derived_from: cloudify.nodes.SoftwareComponent
-  properties:
-    <<: *helm_config
-    use_existing_resource:
-      type: boolean
-      description: If true, use an existing helm installation rather than installing it.
-      default: false
-    installation_source:
-      type: string
-      default: ''
-      description: >
-        Location to download the Helm installation from. Ignored if 'use_existing_resource' is true.
-  interfaces:
-    cloudify.interfaces.lifecycle:
-      create:
-        implementation: helm.cloudify_helm.tasks.install_binary
-      delete:
-        implementation: helm.cloudify_helm.tasks.uninstall_binary
+  cloudify.nodes.helm.Binary:
+    derived_from: cloudify.nodes.SoftwareComponent
+    properties:
+      <<: *helm_config
+      use_existing_resource:
+        type: boolean
+        description: If true, use an existing helm installation rather than installing it.
+        default: false
+      installation_source:
+        type: string
+        default: ''
+        description: >
+          Location to download the Helm installation from. Ignored if 'use_existing_resource' is true.
+    interfaces:
+      cloudify.interfaces.lifecycle:
+        create:
+          implementation: helm.cloudify_helm.tasks.install_binary
+        delete:
+          implementation: helm.cloudify_helm.tasks.uninstall_binary
 
 
-cloudify.nodes.helm.Release:
-  derived_from: cloudify.nodes.Root
-  properties:
-    <<: *helm_config
-    <<: *external_resource
-    client_config:
-      type: cloudify.helm.types.ClientConfig
-      required: true
-    resource_config:
-      type: cloudify.helm.types.ReleaseConfig
-      required: true
-  interfaces:
-    cloudify.interfaces.lifecycle:
-      start:
-        implementation: helm.cloudify_helm.tasks.install_release
-        inputs:
-          flags:
-            description: >
-               Flags to add only to `helm install` command.The format is the same as "flags".
-            default: []
-      delete:
-        implementation: helm.cloudify_helm.tasks.uninstall_release
-        inputs:
-          flags:
-            description: >
-              Flags to add only to `helm uninstall` command.The format is the same as "flags".
-            default: []
+  cloudify.nodes.helm.Release:
+    derived_from: cloudify.nodes.Root
+    properties:
+      <<: *helm_config
+      <<: *external_resource
+      client_config:
+        type: cloudify.types.helm.ClientConfig
+        required: true
+      resource_config:
+        type: cloudify.types.helm.ReleaseConfig
+        required: true
+    interfaces:
+      cloudify.interfaces.lifecycle:
+        start:
+          implementation: helm.cloudify_helm.tasks.install_release
+          inputs:
+            flags:
+              description: >
+                 Flags to add only to `helm install` command.The format is the same as "flags".
+              default: []
+        delete:
+          implementation: helm.cloudify_helm.tasks.uninstall_release
+          inputs:
+            flags:
+              description: >
+                Flags to add only to `helm uninstall` command.The format is the same as "flags".
+              default: []
 
 
-cloudify.nodes.helm.Repo:
-  derived_from: cloudify.nodes.Root
-  properties:
-    <<: *helm_config
-    <<: *external_resource
-    resource_config:
-      type: cloudify.helm.types.RepoConfig
-      required: true
-  interfaces:
-    cloudify.interfaces.lifecycle:
-      start:
-        implementation: helm.cloudify_helm.tasks.add_repo
-        inputs:
-          flags:
-            description: >
-              Flags to add only to `helm install` command.The format is the same as "flags".
-            default: []
-      delete:
-        implementation: helm.cloudify_helm.tasks.remove_repo
-        inputs:
-          flags:
-            description: >
-              Flags to add only to `helm uninstall` command.The format is the same as "flags".
-            default: []
+  cloudify.nodes.helm.Repo:
+    derived_from: cloudify.nodes.Root
+    properties:
+      <<: *helm_config
+      <<: *external_resource
+      resource_config:
+        type: cloudify.types.helm.RepoConfig
+        required: true
+    interfaces:
+      cloudify.interfaces.lifecycle:
+        start:
+          implementation: helm.cloudify_helm.tasks.add_repo
+          inputs:
+            flags:
+              description: >
+                Flags to add only to `helm install` command.The format is the same as "flags".
+              default: []
+        delete:
+          implementation: helm.cloudify_helm.tasks.remove_repo
+          inputs:
+            flags:
+              description: >
+                Flags to add only to `helm uninstall` command.The format is the same as "flags".
+              default: []
 
 
 relationships:
@@ -193,3 +199,4 @@ relationships:
       cloudify.interfaces.relationship_lifecycle:
         preconfigure:
           implementation: helm.cloudify_helm.tasks.inject_env_properties
+

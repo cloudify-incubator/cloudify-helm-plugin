@@ -16,6 +16,8 @@
 import os
 
 from cloudify.decorators import operation
+from cloudify.exceptions import NonRecoverableError
+
 
 from .decorators import with_helm
 from .constants import (
@@ -39,8 +41,8 @@ def install_binary(ctx, **_):
         'helm_config', {}).get(EXECUTABLE_PATH, "")
     if is_using_existing(ctx):
         if not os.path.isfile(executable_path):
-            ctx.logger.info(
-                "Helm executable not found at {0}!, cant use existing "
+            raise NonRecoverableError(
+                "Helm executable not found at {0}, cant use existing "
                 "binary!".format(executable_path))
     else:
         if os.path.isfile(executable_path):
@@ -105,10 +107,12 @@ def install_release(ctx, helm, kubeconfig=None, values_file=None, **kwargs):
             CLIENT_CONFIG, {}).get('kube_api_server'), **args_dict)
     ctx.instance.runtime_properties['install_output'] = output
 
+
 @operation
 @with_helm
 def uninstall_release(ctx, helm, kubeconfig=None, values_file=None, **kwargs):
     pass
+
 
 @operation
 @with_helm
@@ -128,8 +132,9 @@ def remove_repo(ctx, helm, **kwargs):
 
 @operation
 def inject_env_properties(ctx, **_):
-    for dir_property_name in [EXECUTABLE_PATH]+HELM_ENV_VARS_LIST:
-        value = ctx.target.instance.runtime_properties.get(dir_property_name, "")
+    for dir_property_name in [EXECUTABLE_PATH] + HELM_ENV_VARS_LIST:
+        value = ctx.target.instance.runtime_properties.get(dir_property_name,
+                                                           "")
         ctx.logger.info(
             "setting {property} to {value}".format(property=dir_property_name,
                                                    value=value))

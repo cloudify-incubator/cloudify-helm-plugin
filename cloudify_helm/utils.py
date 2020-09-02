@@ -181,7 +181,7 @@ def use_existing_repo_on_helm(ctx, helm):
                     repo.get('url') == resource_config.get('repo_url'):
                 return True
         raise NonRecoverableError(
-            "cant find repository:{0} with url: {1} on helm clinet!".format(
+            "cant find repository:{0} with url: {1} on helm client!".format(
                 resource_config.get('name'), resource_config.get('repo_url')))
 
 

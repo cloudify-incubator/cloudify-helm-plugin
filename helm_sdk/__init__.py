@@ -85,7 +85,8 @@ class Helm(object):
                 values_file=None,
                 kubeconfig=None,
                 token=None,
-                apiserver=None):
+                apiserver=None,
+                **_):
         """
         Execute helm install command.
         :param name: name for the created release.
@@ -116,7 +117,8 @@ class Helm(object):
                   flags=None,
                   kubeconfig=None,
                   token=None,
-                  apiserver=None):
+                  apiserver=None,
+                  **_):
         cmd = ['uninstall', release_name]
         self.handle_auth_params(cmd, kubeconfig, token, apiserver)
         flags = flags or []
@@ -126,7 +128,8 @@ class Helm(object):
     def repo_add(self,
                  name,
                  repo_url,
-                 flags=None):
+                 flags=None,
+                 **_):
         cmd = ['repo', 'add', name, repo_url]
         flags = flags or []
         cmd.extend(map(prepare_parameter, flags))
@@ -134,7 +137,8 @@ class Helm(object):
 
     def repo_remove(self,
                     name,
-                    flags=None):
+                    flags=None,
+                    **_):
         cmd = ['repo', 'remove', name]
         flags = flags or []
         cmd.extend(map(prepare_parameter, flags))
