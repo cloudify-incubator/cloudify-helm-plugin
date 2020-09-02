@@ -20,6 +20,7 @@ import tempfile
 import unittest
 
 from cloudify.mocks import MockCloudifyContext
+from cloudify.exceptions import NonRecoverableError
 
 from cloudify_helm.tasks import (
     add_repo,
@@ -74,10 +75,9 @@ class TestTasks(unittest.TestCase):
         kwargs = {
             'ctx': ctx
         }
-        install_binary(**kwargs)
-        self.assertEqual(
-            ctx.instance.runtime_properties.get("executable_path"),
-            properties.get("helm_config").get("executable_path"))
+        with self.assertRaisesRegexp(NonRecoverableError,
+                                     'Helm executable not found'):
+            install_binary(**kwargs)
 
     def test_install(self):
         properties = {
