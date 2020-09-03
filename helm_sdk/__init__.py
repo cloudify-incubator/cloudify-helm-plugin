@@ -16,9 +16,10 @@
 import json
 
 from .exceptions import CloudifyHelmSDKError
-from helm_sdk.utils import (run_subprocess,
-                            prepare_set_parameter,
-                            prepare_parameter)
+from helm_sdk.utils import (
+    run_subprocess,
+    prepare_set_parameter,
+    prepare_parameter)
 
 # Helm cli flags names
 HELM_KUBECONFIG_FLAG = 'kubeconfig'
@@ -113,13 +114,13 @@ class Helm(object):
         return json.loads(output)
 
     def uninstall(self,
-                  release_name,
+                  name,
                   flags=None,
                   kubeconfig=None,
                   token=None,
                   apiserver=None,
                   **_):
-        cmd = ['uninstall', release_name]
+        cmd = ['uninstall', name]
         self.handle_auth_params(cmd, kubeconfig, token, apiserver)
         flags = flags or []
         cmd.extend(map(prepare_parameter, flags))

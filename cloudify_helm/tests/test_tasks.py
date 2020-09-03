@@ -27,12 +27,12 @@ from cloudify_helm.tasks import (
     remove_repo,
     install_binary,
     install_release,
-    uninstall_binary)
+    uninstall_binary,
+    uninstall_release)
 from cloudify_helm.constants import (
     DATA_DIR_ENV_VAR,
     CACHE_DIR_ENV_VAR,
-    CONFIG_DIR_ENV_VAR
-    )
+    CONFIG_DIR_ENV_VAR)
 
 
 class TestTasks(unittest.TestCase):
@@ -50,6 +50,26 @@ class TestTasks(unittest.TestCase):
             DATA_DIR_ENV_VAR: '/path/to/data'
         }
         return runtime_properties
+
+    def mock_install_release_properties(self):
+        properties = {
+            "helm_config": {
+                "executable_path": "/path/to/helm"
+            },
+            "client_config": {
+                "kube_token": "abcd",
+                "kube_api_server": "https://10.0.0.0"
+            },
+            "use_external_resource": False,
+            "resource_config": {
+                "name": "my_release",
+                "chart": "my_chart",
+                "set_values": {"name": "x", "value": "y"},
+                "flags": []
+            }
+
+        }
+        return properties
 
     def mock_ctx(self,
                  test_properties,
@@ -233,6 +253,39 @@ class TestTasks(unittest.TestCase):
                              ".com/",
                     flags=[])
 
+    def test_install_release(self):
+        properties = self.mock_install_release_properties()
+        ctx = self.mock_ctx(properties,
+                            self.mock_runtime_properties())
+        kwargs = {
+            'ctx': ctx
+        }
 
-if __name__ == '__main__':
-    unittest.main()
+        with mock.patch('helm_sdk.Helm.install') as fake_install:
+            with mock.patch('cloudify_helm.utils.os.path.exists',
+                            return_value=True):
+                install_release(**kwargs)
+                fake_install.assert_called_once_with(
+                    name=properties["resource_config"]["name"],
+                    chart=properties["resource_config"]["chart"],
+                    flags=[],
+                    set_values=properties["resource_config"]["set_values"],
+                    values_file=None,
+                    kubeconfig=None,
+                    token=properties["client_config"]["kube_token"],
+                    apiserver=properties["client_config"]["kube_api_server"])
+
+    def test_uninstall_release(self):
+        properties = self.mock_install_release_properties()
+        ctx = self.mock_ctx(properties,
+                            self.mock_runtime_properties())
+        kwargs = {
+            'ctx': ctx
+        }
+
+        with mock.patch('helm_sdk.Helm.uninstall') as fake_uninstall:
+            with mock.patch('cloudify_helm.utils.os.path.exists',
+                            return_value=True):
+                uninstall_release(**kwargs)
+                fake_uninstall.assert_called_once()
+
