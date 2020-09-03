@@ -123,7 +123,7 @@ class CapturingOutputConsumer(OutputConsumer):
 
 
 def prepare_parameter(arg_dict):
-    """ 
+    """
     Prepare single parameter.
     :param arg_dict: dictionary with the name of the flag and value(optional)
     :return: "--name=value" or -"-name"

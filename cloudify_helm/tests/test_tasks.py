@@ -288,4 +288,3 @@ class TestTasks(unittest.TestCase):
                             return_value=True):
                 uninstall_release(**kwargs)
                 fake_uninstall.assert_called_once()
-

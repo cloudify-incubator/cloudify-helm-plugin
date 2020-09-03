@@ -41,7 +41,7 @@ def with_helm(func):
                 except Exception as e:
                     _, _, tb = sys.exc_info()
                     raise NonRecoverableError(
-                        '{0}'.format(text_type(e),
-                                     causes=[exception_to_error_cause(e, tb)]))
+                        '{0}'.format(text_type(e)),
+                        causes=[exception_to_error_cause(e, tb)])
 
     return f
