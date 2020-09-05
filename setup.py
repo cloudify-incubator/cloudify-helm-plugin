@@ -36,7 +36,7 @@ def get_version(rel_file):
 
 setup(
     name='cloudify-helm-plugin',
-    version=get_version('plugin.yaml'),
+    version='0.0.1',
     author='Cloudify',
     author_email='hello@cloudify.co',
     description='Enables Cloudify support Helm',
