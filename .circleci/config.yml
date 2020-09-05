@@ -340,7 +340,9 @@ workflows:
               only: /master/
           requires:
             - validate_version
-            - validate_documentation
+#            - validate_documentation
+            - unittests_py27
+            - unittests_py36
 
   nightly:
     triggers:
