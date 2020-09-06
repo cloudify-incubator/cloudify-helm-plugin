@@ -23,7 +23,7 @@ def read(rel_path):
         return fp.read()
 
 
-def get_version(rel_file):
+def get_version(rel_file='plugin.yaml'):
     lines = read(rel_file)
     for line in lines.splitlines():
         if 'package_version' in line:
@@ -36,7 +36,7 @@ def get_version(rel_file):
 
 setup(
     name='cloudify-helm-plugin',
-    version=get_version('plugin.yaml'),
+    version=get_version(),
     author='Cloudify',
     author_email='hello@cloudify.co',
     description='Enables Cloudify support Helm',
