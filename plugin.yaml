@@ -31,6 +31,31 @@ data_types:
           Helm binary path.
         required: false
 
+
+  cloudify.helm.types.ConfigurationVariant:
+    description: >
+      Type representing all Kubernetes configuration variants.
+      Each property represents separate supported variant of configuration.
+      You should choose one variant and fill in only on property.
+    properties:
+      blueprint_file_name:
+        type: string
+        required: false
+        description: >
+          Name of Kubernetes configuration file attached to blueprint(path)
+
+      manager_file_path:
+        type: string
+        required: false
+        description: >
+          Path to Kubernetes configuration file placed on Cloudify Manager VM
+
+      file_content:
+        required: false
+        description: >
+          Content (YAML) of Kubernetes configuration file
+
+
   cloudify.types.helm.ClientConfig:
     description: >
       Configuration properties for Helm to interact with kubernetes cluster.
@@ -46,11 +71,13 @@ data_types:
 #          default: ''
         description: the address and the port for the Kubernetes API server(endpoint).
         required: false
-      kube_config:
-        type: string
-#          default: ''
-        description: path to the kubeconfig file
-        required: false
+      kube_config_configuration:
+        type: cloudify.kubernetes.types.ConfigurationVariant
+        description: >
+          Configuration properties of Kubernetes API. One of three configuration options can be used.
+          1. Kubernetes config file contained by blueprint archive
+          2. Kubernetes config file previously uploaded into Cloudify Manager VM
+          3. Content of Kubernetes config file (YAML)
 
   cloudify.types.helm.ReleaseConfig:
     description: >
