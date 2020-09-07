@@ -72,7 +72,7 @@ data_types:
         description: the address and the port for the Kubernetes API server(endpoint).
         required: false
       kube_config_configuration:
-        type: cloudify.kubernetes.types.ConfigurationVariant
+        type: cloudify.helm.types.ConfigurationVariant
         description: >
           Configuration properties of Kubernetes API. One of three configuration options can be used.
           1. Kubernetes config file contained by blueprint archive
