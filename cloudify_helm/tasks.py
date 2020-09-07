@@ -47,9 +47,8 @@ def install_binary(ctx, **_):
     else:
         if os.path.isfile(executable_path):
             ctx.logger.info(
-                "Helm executable already found at {0}; " +
-                "skipping installation of executable".format(
-                    executable_path))
+                "Helm executable already found at {path};skipping "
+                "installation of executable".format(path=executable_path))
         else:
             with get_binary(ctx) as binary:
                 copy_binary(binary, executable_path)

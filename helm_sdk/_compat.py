@@ -14,6 +14,7 @@
 #    * limitations under the License.
 
 """Python 2 + 3 compatibility utils"""
+# flake8: noqa
 
 import sys
 
@@ -22,12 +23,12 @@ PY2 = sys.version_info[0] == 2
 if PY2:
     from StringIO import StringIO
 
-    exec ("""
+    exec("""
 def reraise(exception_type, value, traceback):
     raise exception_type, value, traceback
 """)
     text_type = unicode
-    exec ("""
+    exec("""
 def exec_(code, globs):
     exec code in globs
 """)
@@ -36,12 +37,10 @@ else:
     import builtins
     from io import StringIO
 
-
     def reraise(exception_type,
                 value,
                 traceback):
         raise value.with_traceback(traceback)
-
 
     text_type = str
     exec_ = getattr(builtins, 'exec')

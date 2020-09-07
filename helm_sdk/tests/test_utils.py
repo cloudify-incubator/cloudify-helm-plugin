@@ -19,7 +19,6 @@ from helm_sdk.exceptions import CloudifyHelmSDKError
 from helm_sdk.utils import prepare_parameter, prepare_set_parameter
 
 
-
 class TestUtils(unittest.TestCase):
 
     def test_prepare_parameter(self):

@@ -28,6 +28,7 @@ HELM_KUBE_TOKEN_FLAG = 'kube-token'
 HELM_VALUES_FLAG = 'values'
 APPEND_FLAG_STRING = '--{name}={value}'
 
+
 class Helm(object):
 
     def __init__(self,
@@ -107,9 +108,9 @@ class Helm(object):
             cmd.append(APPEND_FLAG_STRING.format(name=HELM_VALUES_FLAG,
                                                  value=values_file))
         flags = flags or []
-        cmd.extend(map(prepare_parameter, flags))
+        cmd.extend([prepare_parameter(flag) for flag in flags])
         set_arguments = set_values or []
-        cmd.extend(map(prepare_set_parameter, set_arguments))
+        cmd.extend([prepare_set_parameter(param) for param in set_arguments])
         output = self.execute(self._helm_command(cmd), True)
         return json.loads(output)
 
@@ -123,7 +124,7 @@ class Helm(object):
         cmd = ['uninstall', name]
         self.handle_auth_params(cmd, kubeconfig, token, apiserver)
         flags = flags or []
-        cmd.extend(map(prepare_parameter, flags))
+        cmd.extend([prepare_parameter(flag) for flag in flags])
         self.execute(self._helm_command(cmd))
 
     def repo_add(self,
@@ -133,7 +134,7 @@ class Helm(object):
                  **_):
         cmd = ['repo', 'add', name, repo_url]
         flags = flags or []
-        cmd.extend(map(prepare_parameter, flags))
+        cmd.extend([prepare_parameter(flag) for flag in flags])
         self.execute(self._helm_command(cmd))
 
     def repo_remove(self,
@@ -142,7 +143,7 @@ class Helm(object):
                     **_):
         cmd = ['repo', 'remove', name]
         flags = flags or []
-        cmd.extend(map(prepare_parameter, flags))
+        cmd.extend([prepare_parameter(flag) for flag in flags])
         self.execute(self._helm_command(cmd))
 
     def repo_list(self):
