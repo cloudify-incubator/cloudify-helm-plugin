@@ -22,7 +22,6 @@ import unittest
 from cloudify.mocks import MockCloudifyContext
 from cloudify.exceptions import NonRecoverableError
 
-from ..constants import *
 from ..tasks import (
     add_repo,
     remove_repo,
@@ -30,6 +29,18 @@ from ..tasks import (
     install_release,
     uninstall_binary,
     uninstall_release)
+from ..constants import (
+    HOST,
+    API_KEY,
+    API_OPTIONS,
+    HELM_CONFIG,
+    CONFIGURATION,
+    CLIENT_CONFIG,
+    RESOURCE_CONFIG,
+    EXECUTABLE_PATH,
+    CONFIG_DIR_ENV_VAR,
+    CACHE_DIR_ENV_VAR,
+    DATA_DIR_ENV_VAR)
 
 
 class TestTasks(unittest.TestCase):
@@ -273,12 +284,10 @@ class TestTasks(unittest.TestCase):
                     set_values=properties[RESOURCE_CONFIG]["set_values"],
                     values_file=None,
                     kubeconfig=None,
-                    token=
-                    properties[CLIENT_CONFIG][CONFIGURATION][API_OPTIONS][
-                        API_KEY],
-                    apiserver=
-                    properties[CLIENT_CONFIG][CONFIGURATION][API_OPTIONS][
-                        HOST])
+                    token=properties[CLIENT_CONFIG][CONFIGURATION][API_OPTIONS]
+                    [API_KEY],
+                    apiserver=properties[CLIENT_CONFIG][CONFIGURATION]
+                    [API_OPTIONS][HOST])
 
     def test_uninstall_release(self):
         properties = self.mock_install_release_properties()
@@ -293,4 +302,3 @@ class TestTasks(unittest.TestCase):
                             return_value=True):
                 uninstall_release(**kwargs)
                 fake_uninstall.assert_called_once()
-

@@ -39,10 +39,10 @@ class KubernetesConfiguration(object):
         kubeconf_file = self._get_kubeconfig()
         if not kubeconf_file:
             raise HelmKubeconfigInitializationFailedError(
-                'Cannot initialize kubeconfig with {0} '
-                'configuration '
-                'and {1} properties'
-                    .format(self.__class__.__name__, self.configuration_data))
+                'Cannot initialize kubeconfig with {0} configuration'
+                ' and {1} properties'.format(
+                    self.__class__.__name__,
+                    self.configuration_data))
 
         return kubeconf_file
 
@@ -143,15 +143,15 @@ class KubeConfigConfigurationVariants(KubernetesConfiguration):
                     **self.kwargs).get_kubeconfig()
 
                 self.logger.debug(
-                    'Configuration option {0} will be used'
-                        .format(variant.__name__)
+                    'Configuration option {0} will be used'.format(
+                        variant.__name__)
                 )
 
                 return config_candidate
             except HelmKubeconfigInitializationFailedError:
                 self.logger.debug(
-                    'Configuration option {0} cannot be used'
-                        .format(variant.__name__)
+                    'Configuration option {0} cannot be used'.format(
+                        variant.__name__)
                 )
 
         self.logger.debug(

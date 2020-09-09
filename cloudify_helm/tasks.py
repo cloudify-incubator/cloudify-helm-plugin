@@ -18,7 +18,6 @@ import os
 from cloudify.decorators import operation
 from cloudify.exceptions import NonRecoverableError
 
-from .constants import *
 from .decorators import with_helm
 from .utils import (
     get_binary,
@@ -27,6 +26,18 @@ from .utils import (
     use_existing_repo_on_helm,
     create_temporary_env_of_helm,
     delete_temporary_env_of_helm)
+from .constants import (
+    HOST,
+    API_KEY,
+    FLAGS_FIELD,
+    API_OPTIONS,
+    HELM_CONFIG,
+    CONFIGURATION,
+    CLIENT_CONFIG,
+    RESOURCE_CONFIG,
+    EXECUTABLE_PATH,
+    HELM_ENV_VARS_LIST,
+    USE_EXTERNAL_RESOURCE)
 
 
 @operation
