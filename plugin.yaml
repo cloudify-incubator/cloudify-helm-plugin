@@ -32,11 +32,13 @@ data_types:
         required: false
 
 
-  cloudify.helm.types.ConfigurationVariant:
+  cloudify.types.helm.ConfigurationVariant:
     description: >
-      Type representing all Kubernetes configuration variants.
+      Type representing all Kubernetes API configuration variants.
       Each property represents separate supported variant of configuration.
-      You should choose one variant and fill in only on property.
+      For now, until Helm support "--insecure" one of "blueprint_file_name",
+      "manager_file_path" and "file_content" must be used.
+      "api_key" inputs will override kubeconfig data.
     properties:
       blueprint_file_name:
         type: string
@@ -48,12 +50,33 @@ data_types:
         type: string
         required: false
         description: >
-          Path to Kubernetes configuration file placed on Cloudify Manager VM
+          Path to Kubernetes configuration file placed on Cloudify Manager VM.
 
       file_content:
         required: false
         description: >
-          Content (YAML) of Kubernetes configuration file
+          Content (YAML) of Kubernetes configuration file.
+          kubeconfig string or dict are supported.
+
+      api_options:
+        type: cloudify.types.helm.ApiOptions
+        required: false
+        description: >
+          Set of basic properties describing Kubernetes API access.
+
+  cloudify.types.helm.ApiOptions:
+    properties:
+      host:
+        type: string
+        required: false
+        description: >
+          HTTP/HTTPS URL to Kubernetes API.
+
+      api_key:
+        type: string
+        required: false
+        description: >
+          Bearer token used for authentication.
 
 
   cloudify.types.helm.ClientConfig:
@@ -61,23 +84,16 @@ data_types:
       Configuration properties for Helm to interact with kubernetes cluster.
       if kube_config file not provided then kube_token and kube_api_server should provided.
     properties:
-      kube_token:
-        type: string
-#        default: ''
-        description: Bearer token used for authentication.
-        required: false
-      kube_api_server:
-        type: string
-#          default: ''
-        description: the address and the port for the Kubernetes API server(endpoint).
-        required: false
-      kube_config_configuration:
-        type: cloudify.helm.types.ConfigurationVariant
+      configuration:
+        type: cloudify.types.helm.ConfigurationVariant
         description: >
-          Configuration properties of Kubernetes API. One of three configuration options can be used.
+          Configuration properties of Kubernetes API.
+          For now, until Helm support "--insecure" one of 1-3 must be used.
           1. Kubernetes config file contained by blueprint archive
           2. Kubernetes config file previously uploaded into Cloudify Manager VM
-          3. Content of Kubernetes config file (YAML)
+          3. Content of Kubernetes config file (YAML).
+          4. Kubernetes API set of properties
+
 
   cloudify.types.helm.ReleaseConfig:
     description: >
