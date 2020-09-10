@@ -23,7 +23,9 @@ from cloudify.exceptions import NonRecoverableError
 
 from helm_sdk import Helm
 from helm_sdk.utils import run_subprocess
+from .configuration import KubeConfigConfigurationVariants
 from .constants import (
+    CONFIGURATION,
     CLIENT_CONFIG,
     EXECUTABLE_PATH,
     RESOURCE_CONFIG,
@@ -73,18 +75,23 @@ def is_using_existing(ctx):
 
 @contextmanager
 def get_kubeconfig_file(ctx):
-    if ctx.node.properties.get(CLIENT_CONFIG, {}).get('kube_config'):
-        with tempfile.NamedTemporaryFile(delete=False) as f:
-            f.close()
-            ctx.download_resource(
-                ctx.node.properties.get(CLIENT_CONFIG).get('kube_config'),
-                target_path=f.name)
-            try:
-                yield f.name
-            finally:
-                os.remove(f.name)
-    else:
-        yield None
+    """
+    This is contextmanager that responsible to handle kubeconfig file
+    resource.
+    :return Path of temporary file with kubeconfig, otherwise None.
+    """
+    configuration_property = ctx.node.properties.get(CLIENT_CONFIG, {}).get(
+        CONFIGURATION, {})
+
+    kubeconfig_file = KubeConfigConfigurationVariants(
+        ctx.logger,
+        configuration_property,
+        download_resource=ctx.download_resource).get_kubeconfig()
+    try:
+        yield kubeconfig_file
+    finally:
+        if kubeconfig_file is not None:
+            os.remove(kubeconfig_file)
 
 
 @contextmanager

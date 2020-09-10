@@ -18,14 +18,7 @@ import os
 from cloudify.decorators import operation
 from cloudify.exceptions import NonRecoverableError
 
-
 from .decorators import with_helm
-from .constants import (
-    FLAGS_FIELD,
-    CLIENT_CONFIG,
-    EXECUTABLE_PATH,
-    HELM_ENV_VARS_LIST,
-    USE_EXTERNAL_RESOURCE)
 from .utils import (
     get_binary,
     copy_binary,
@@ -33,12 +26,24 @@ from .utils import (
     use_existing_repo_on_helm,
     create_temporary_env_of_helm,
     delete_temporary_env_of_helm)
+from .constants import (
+    HOST,
+    API_KEY,
+    FLAGS_FIELD,
+    API_OPTIONS,
+    HELM_CONFIG,
+    CONFIGURATION,
+    CLIENT_CONFIG,
+    RESOURCE_CONFIG,
+    EXECUTABLE_PATH,
+    HELM_ENV_VARS_LIST,
+    USE_EXTERNAL_RESOURCE)
 
 
 @operation
 def install_binary(ctx, **_):
     executable_path = ctx.node.properties.get(
-        'helm_config', {}).get(EXECUTABLE_PATH, "")
+        HELM_CONFIG, {}).get(EXECUTABLE_PATH, "")
     if is_using_existing(ctx):
         if not os.path.isfile(executable_path):
             raise NonRecoverableError(
@@ -62,7 +67,7 @@ def uninstall_binary(ctx, **_):
     executable_path = ctx.instance.runtime_properties.get(EXECUTABLE_PATH,
                                                           "") or \
                       ctx.node.properties.get(
-                          'helm_config', {}).get(
+                          HELM_CONFIG, {}).get(
                           EXECUTABLE_PATH, "")
     if os.path.isfile(executable_path) and not is_using_existing(ctx):
         ctx.logger.info("Removing executable: {0}".format(executable_path))
@@ -80,7 +85,7 @@ def prepare_args(ctx, flags=None):
     """
     flags = flags or []
     args_dict = {}
-    args_dict.update(ctx.node.properties.get('resource_config', {}))
+    args_dict.update(ctx.node.properties.get(RESOURCE_CONFIG, {}))
     args_dict[FLAGS_FIELD] = args_dict[FLAGS_FIELD] + flags
     return args_dict
 
@@ -101,9 +106,10 @@ def install_release(ctx, helm, kubeconfig=None, values_file=None, **kwargs):
         values_file=values_file,
         kubeconfig=kubeconfig,
         token=ctx.node.properties.get(CLIENT_CONFIG, {}).get(
-            'kube_token'),
+            CONFIGURATION, {}).get(API_OPTIONS, {}).get(API_KEY),
         apiserver=ctx.node.properties.get(
-            CLIENT_CONFIG, {}).get('kube_api_server'),
+            CLIENT_CONFIG, {}).get(CONFIGURATION, {}).get(API_OPTIONS, {}).get(
+            HOST),
         **args_dict)
     ctx.instance.runtime_properties['install_output'] = output
 
@@ -114,9 +120,11 @@ def uninstall_release(ctx, helm, kubeconfig=None, **kwargs):
     args_dict = prepare_args(ctx, kwargs.get('flags'))
     helm.uninstall(
         kubeconfig=kubeconfig,
-        token=ctx.node.properties.get(CLIENT_CONFIG, {}).get('kube_token'),
+        token=ctx.node.properties.get(CLIENT_CONFIG, {}).get(
+            CONFIGURATION, {}).get(API_OPTIONS, {}).get(API_KEY),
         apiserver=ctx.node.properties.get(
-            CLIENT_CONFIG, {}).get('kube_api_server'),
+            CLIENT_CONFIG, {}).get(CONFIGURATION, {}).get(API_OPTIONS, {}).get(
+            HOST),
         **args_dict)
 
 

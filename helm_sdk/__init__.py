@@ -65,19 +65,29 @@ class Helm(object):
                            kubeconfig=None,
                            token=None,
                            apiserver=None):
-        if token and apiserver:
+        """
+            Validation of authentication params.
+            Until helm will support --insecure, kubeconfig must be provided.
+            :param kubeconfig: Kubeconfig file path
+            :param: token: bearer token used for authentication.
+            :param: apiserver: the address and the port for the Kubernetes API
+            server.
+        """
+        if kubeconfig is None:
+            raise CloudifyHelmSDKError(
+                'Must provide kubeconfig file path.')
+        else:
+            cmd.append(APPEND_FLAG_STRING.format(name=HELM_KUBECONFIG_FLAG,
+                                                 value=kubeconfig))
+
+        if token:
             cmd.append(APPEND_FLAG_STRING.format(name=HELM_KUBE_TOKEN_FLAG,
                                                  value=token))
+
+        if apiserver:
             cmd.append(
                 APPEND_FLAG_STRING.format(name=HELM_KUBE_API_SERVER_FLAG,
                                           value=apiserver))
-        elif kubeconfig:
-            cmd.append(APPEND_FLAG_STRING.format(name=HELM_KUBECONFIG_FLAG,
-                                                 value=kubeconfig))
-        else:
-            raise CloudifyHelmSDKError(
-                'Must provide kubernetes token and kube_api_server or '
-                'kube_config file path.')
 
     def install(self,
                 name,

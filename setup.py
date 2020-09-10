@@ -45,6 +45,7 @@ setup(
     install_requires=[
         "cloudify-common>=4.5.5",
         "cloudify-utilities-plugins-sdk==0.0.28",  # obfuscate_passwords
+        "pyyaml==3.12"
     ],
     test_requires=[
         "cloudify-common>=4.5.5",
