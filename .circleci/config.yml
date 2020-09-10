@@ -251,6 +251,39 @@ commands:
           at: workspace
       - run: python .circleci/package_release.py
 
+  merge_docs:
+    steps:
+      - attach_workspace:
+          at: workspace
+      - run:
+          name: "Pull Submodules"
+          command: |
+            git submodule init
+            git submodule update --remote --recursive
+      - run:
+          name: Download pip
+          command: curl "https://bootstrap.pypa.io/get-pip.py" -o "get-pip.py"
+      - run:
+          name: Install pip
+          command: sudo python get-pip.py
+      - run:
+          name: Install virtualenv
+          command: pip install --user virtualenv
+      - run:
+          name: Init virtualenv
+          command: virtualenv env
+      - run:
+          name: install tox
+          command: pip install --user pygithub pyyaml==3.10
+      - run:
+          name: upgrade setuptools
+          command: pip install --upgrade setuptools
+      - run:
+          name: install local project
+          command: pip install https://github.com/cloudify-incubator/cloudify-ecosystem-test/archive/latest.zip
+      - attach_workspace:
+          at: workspace
+      - run: python .circleci/merge_docs.py
 
 jobs:
 
@@ -308,6 +341,12 @@ jobs:
       - checkout
       - release_plugin
 
+  merge_docs:
+    executor: py27
+    steps:
+      - checkout
+      - merge_docs
+
 workflows:
   version: 2.1
   tests:
@@ -316,7 +355,7 @@ workflows:
       - unittests_py27
       - unittests_py36
       - validate_version
-#      - validate_documentation
+      - validate_documentation
       - wagon:
           filters:
             branches:
@@ -340,10 +379,16 @@ workflows:
               only: /master/
           requires:
             - validate_version
-#            - validate_documentation
+            - validate_documentation
             - unittests_py27
             - unittests_py36
-
+      - merge_docs:
+          filters:
+            branches:
+              only: /master/
+          requires:
+            - release
+            - validate_documentation
   nightly:
     triggers:
     - schedule:
