@@ -47,7 +47,7 @@ class HelmSDKTest(HelmTestBase):
         cmd_expected = [HELM_BINARY, 'install', 'release1', 'my_chart',
                         '--wait', '--output=json',
                         '--kubeconfig=/path/to/config', '--dry-run',
-                        '--timeout=100', '--set x=y', '--set a=b']
+                        '--timeout=100', '--set', 'x=y', '--set', 'a=b']
         mock_execute.assert_called_once_with(cmd_expected, True)
         self.assertEqual(out, {"manifest": "resourceA"})
 

@@ -18,7 +18,7 @@ import json
 from .exceptions import CloudifyHelmSDKError
 from helm_sdk.utils import (
     run_subprocess,
-    prepare_set_parameter,
+    prepare_set_parameters,
     prepare_parameter)
 
 # Helm cli flags names
@@ -120,7 +120,7 @@ class Helm(object):
         flags = flags or []
         cmd.extend([prepare_parameter(flag) for flag in flags])
         set_arguments = set_values or []
-        cmd.extend([prepare_set_parameter(param) for param in set_arguments])
+        cmd.extend(prepare_set_parameters(set_arguments))
         output = self.execute(self._helm_command(cmd), True)
         return json.loads(output)
 

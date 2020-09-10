@@ -30,6 +30,7 @@ from .constants import (
     HOST,
     API_KEY,
     FLAGS_FIELD,
+    VALUES_FILE,
     API_OPTIONS,
     HELM_CONFIG,
     CONFIGURATION,
@@ -80,13 +81,15 @@ def prepare_args(ctx, flags=None):
     Prepare arguments dictionary to helm  sdk function(like:helm.install,
     helm.repo_add).
     :param ctx: cloudify context.
-    :param flags: flags that user passed -unique for install operation.
+    :param flags: flags that user passed - unique for install operation.
     :return arguments dictionary for helm.install function
     """
     flags = flags or []
     args_dict = {}
     args_dict.update(ctx.node.properties.get(RESOURCE_CONFIG, {}))
     args_dict[FLAGS_FIELD] = args_dict[FLAGS_FIELD] + flags
+    # Pop local path of values_file, its not necessary parameter.
+    args_dict.pop(VALUES_FILE, None)
     return args_dict
 
 
