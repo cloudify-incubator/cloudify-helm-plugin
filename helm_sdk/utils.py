@@ -123,7 +123,7 @@ class CapturingOutputConsumer(OutputConsumer):
 
 
 def prepare_parameter(arg_dict):
-    """ 
+    """
     Prepare single parameter.
     :param arg_dict: dictionary with the name of the flag and value(optional)
     :return: "--name=value" or -"-name"
@@ -136,14 +136,19 @@ def prepare_parameter(arg_dict):
         raise CloudifyHelmSDKError("parameter name doesen't exist")
 
 
-def prepare_set_parameter(set_dict):
+def prepare_set_parameters(set_values):
     """
-    Prepare single set parameter.
-    :param set_dict: dictionary with the name of the variable to set command
-    and its value
-    :return "--set name=value"
+    Prepare set parameters for install command.
+    :param set_values: list of dictionaries with the name of the variable to
+    set command and its value.
+    :return list like: ["--set", "name=value","--set",
     """
-    try:
-        return "--set " + set_dict["name"] + "=" + set_dict["value"]
-    except KeyError:
-        raise CloudifyHelmSDKError("set parameter name or value is missing")
+    set_list = []
+    for set_dict in set_values:
+        set_list.append('--set')
+        try:
+            set_list.append(set_dict["name"] + "=" + set_dict["value"])
+        except KeyError:
+            raise CloudifyHelmSDKError(
+                "set parameter name or value is missing")
+    return set_list

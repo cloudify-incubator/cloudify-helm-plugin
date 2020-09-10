@@ -27,20 +27,14 @@ mock_set_args = [{'name': 'x', 'value': 'y'},
 class HelmSDKTest(HelmTestBase):
 
     def test_install_with_token_and_api(self):
-        mock_execute = mock.Mock(return_value='{"manifest":"resourceA"}')
-        self.helm.execute = mock_execute
-        out = self.helm.install('release1',
-                                'my_chart',
-                                mock_flags,
-                                mock_set_args,
-                                token='demotoken',
-                                apiserver='https://1.0.0.0')
-        cmd_expected = [HELM_BINARY, 'install', 'release1', 'my_chart',
-                        '--wait', '--output=json', '--kube-token=demotoken',
-                        '--kube-apiserver=https://1.0.0.0', '--dry-run',
-                        '--timeout=100', '--set x=y', '--set a=b']
-        mock_execute.assert_called_once_with(cmd_expected, True)
-        self.assertEqual(out, {"manifest": "resourceA"})
+        with self.assertRaisesRegexp(CloudifyHelmSDKError,
+                                     'Must provide kubeconfig file path.'):
+            self.helm.install('release1',
+                              'my_chart',
+                              mock_flags,
+                              mock_set_args,
+                              token='demotoken',
+                              apiserver='https://1.0.0.0')
 
     def test_install_with_kubeconfig(self):
         mock_execute = mock.Mock(return_value='{"manifest":"resourceA"}')
@@ -53,15 +47,13 @@ class HelmSDKTest(HelmTestBase):
         cmd_expected = [HELM_BINARY, 'install', 'release1', 'my_chart',
                         '--wait', '--output=json',
                         '--kubeconfig=/path/to/config', '--dry-run',
-                        '--timeout=100', '--set x=y', '--set a=b']
+                        '--timeout=100', '--set', 'x=y', '--set', 'a=b']
         mock_execute.assert_called_once_with(cmd_expected, True)
         self.assertEqual(out, {"manifest": "resourceA"})
 
     def test_install_no_token_and_no_kubeconfig(self):
         with self.assertRaisesRegexp(CloudifyHelmSDKError,
-                                     'Must provide kubernetes token and '
-                                     'kube_api_server or kube_config file '
-                                     'path'):
+                                     'Must provide kubeconfig file path.'):
             self.helm.install('release1',
                               'my_chart',
                               mock_flags,
@@ -70,42 +62,34 @@ class HelmSDKTest(HelmTestBase):
 
     def test_install_no_apiserver_and_no_kubeconfig(self):
         with self.assertRaisesRegexp(CloudifyHelmSDKError,
-                                     'Must provide kubernetes token and '
-                                     'kube_api_server or kube_config file '
-                                     'path'):
+                                     'Must provide kubeconfig file path.'):
             self.helm.install('release1',
                               'my_chart',
                               mock_flags,
                               mock_set_args,
                               token='demotoken')
 
-    def test_uninstall_with_token_and_api(self):
+    def test_uninstall_with_kubekonfig(self):
         mock_execute = mock.Mock()
         self.helm.execute = mock_execute
         self.helm.uninstall('release1',
                             mock_flags,
-                            token='demotoken',
-                            apiserver='https://1.0.0.0')
+                            kubeconfig='/path/to/config')
         cmd_expected = [HELM_BINARY, 'uninstall', 'release1',
-                        '--kube-token=demotoken',
-                        '--kube-apiserver=https://1.0.0.0', '--dry-run',
+                        '--kubeconfig=/path/to/config', '--dry-run',
                         '--timeout=100']
         mock_execute.assert_called_once_with(cmd_expected)
 
     def test_uninstall_no_token_and_no_kubeconfig(self):
         with self.assertRaisesRegexp(CloudifyHelmSDKError,
-                                     'Must provide kubernetes token and '
-                                     'kube_api_server or kube_config file '
-                                     'path'):
+                                     'Must provide kubeconfig file path.'):
             self.helm.uninstall('release1',
                                 mock_flags,
                                 apiserver='https://1.0.0.0')
 
     def test_uninstall_no_apiserver_and_no_kubeconfig(self):
         with self.assertRaisesRegexp(CloudifyHelmSDKError,
-                                     'Must provide kubernetes token and '
-                                     'kube_api_server or kube_config file '
-                                     'path'):
+                                     'Must provide kubeconfig file path.'):
             self.helm.uninstall('release1',
                                 mock_flags,
                                 token='demotoken')

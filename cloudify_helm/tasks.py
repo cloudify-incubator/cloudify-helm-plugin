@@ -18,14 +18,7 @@ import os
 from cloudify.decorators import operation
 from cloudify.exceptions import NonRecoverableError
 
-
 from .decorators import with_helm
-from .constants import (
-    FLAGS_FIELD,
-    CLIENT_CONFIG,
-    EXECUTABLE_PATH,
-    HELM_ENV_VARS_LIST,
-    USE_EXTERNAL_RESOURCE)
 from .utils import (
     get_binary,
     copy_binary,
@@ -33,12 +26,25 @@ from .utils import (
     use_existing_repo_on_helm,
     create_temporary_env_of_helm,
     delete_temporary_env_of_helm)
+from .constants import (
+    HOST,
+    API_KEY,
+    FLAGS_FIELD,
+    VALUES_FILE,
+    API_OPTIONS,
+    HELM_CONFIG,
+    CONFIGURATION,
+    CLIENT_CONFIG,
+    RESOURCE_CONFIG,
+    EXECUTABLE_PATH,
+    HELM_ENV_VARS_LIST,
+    USE_EXTERNAL_RESOURCE)
 
 
 @operation
 def install_binary(ctx, **_):
     executable_path = ctx.node.properties.get(
-        'helm_config', {}).get(EXECUTABLE_PATH, "")
+        HELM_CONFIG, {}).get(EXECUTABLE_PATH, "")
     if is_using_existing(ctx):
         if not os.path.isfile(executable_path):
             raise NonRecoverableError(
@@ -47,9 +53,8 @@ def install_binary(ctx, **_):
     else:
         if os.path.isfile(executable_path):
             ctx.logger.info(
-                "Helm executable already found at {0}; " +
-                "skipping installation of executable".format(
-                    executable_path))
+                "Helm executable already found at {path};skipping "
+                "installation of executable".format(path=executable_path))
         else:
             with get_binary(ctx) as binary:
                 copy_binary(binary, executable_path)
@@ -63,7 +68,7 @@ def uninstall_binary(ctx, **_):
     executable_path = ctx.instance.runtime_properties.get(EXECUTABLE_PATH,
                                                           "") or \
                       ctx.node.properties.get(
-                          'helm_config', {}).get(
+                          HELM_CONFIG, {}).get(
                           EXECUTABLE_PATH, "")
     if os.path.isfile(executable_path) and not is_using_existing(ctx):
         ctx.logger.info("Removing executable: {0}".format(executable_path))
@@ -76,13 +81,15 @@ def prepare_args(ctx, flags=None):
     Prepare arguments dictionary to helm  sdk function(like:helm.install,
     helm.repo_add).
     :param ctx: cloudify context.
-    :param flags: flags that user passed -unique for install operation.
+    :param flags: flags that user passed - unique for install operation.
     :return arguments dictionary for helm.install function
     """
     flags = flags or []
     args_dict = {}
-    args_dict.update(ctx.node.properties.get('resource_config', {}))
+    args_dict.update(ctx.node.properties.get(RESOURCE_CONFIG, {}))
     args_dict[FLAGS_FIELD] = args_dict[FLAGS_FIELD] + flags
+    # Pop local path of values_file, its not necessary parameter.
+    args_dict.pop(VALUES_FILE, None)
     return args_dict
 
 
@@ -102,16 +109,26 @@ def install_release(ctx, helm, kubeconfig=None, values_file=None, **kwargs):
         values_file=values_file,
         kubeconfig=kubeconfig,
         token=ctx.node.properties.get(CLIENT_CONFIG, {}).get(
-            'kube_token'),
+            CONFIGURATION, {}).get(API_OPTIONS, {}).get(API_KEY),
         apiserver=ctx.node.properties.get(
-            CLIENT_CONFIG, {}).get('kube_api_server'), **args_dict)
+            CLIENT_CONFIG, {}).get(CONFIGURATION, {}).get(API_OPTIONS, {}).get(
+            HOST),
+        **args_dict)
     ctx.instance.runtime_properties['install_output'] = output
 
 
 @operation
 @with_helm
-def uninstall_release(ctx, helm, kubeconfig=None, values_file=None, **kwargs):
-    pass
+def uninstall_release(ctx, helm, kubeconfig=None, **kwargs):
+    args_dict = prepare_args(ctx, kwargs.get('flags'))
+    helm.uninstall(
+        kubeconfig=kubeconfig,
+        token=ctx.node.properties.get(CLIENT_CONFIG, {}).get(
+            CONFIGURATION, {}).get(API_OPTIONS, {}).get(API_KEY),
+        apiserver=ctx.node.properties.get(
+            CLIENT_CONFIG, {}).get(CONFIGURATION, {}).get(API_OPTIONS, {}).get(
+            HOST),
+        **args_dict)
 
 
 @operation

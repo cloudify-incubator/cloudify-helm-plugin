@@ -16,9 +16,10 @@
 import json
 
 from .exceptions import CloudifyHelmSDKError
-from helm_sdk.utils import (run_subprocess,
-                            prepare_set_parameter,
-                            prepare_parameter)
+from helm_sdk.utils import (
+    run_subprocess,
+    prepare_set_parameters,
+    prepare_parameter)
 
 # Helm cli flags names
 HELM_KUBECONFIG_FLAG = 'kubeconfig'
@@ -26,6 +27,7 @@ HELM_KUBE_API_SERVER_FLAG = 'kube-apiserver'
 HELM_KUBE_TOKEN_FLAG = 'kube-token'
 HELM_VALUES_FLAG = 'values'
 APPEND_FLAG_STRING = '--{name}={value}'
+
 
 class Helm(object):
 
@@ -63,19 +65,29 @@ class Helm(object):
                            kubeconfig=None,
                            token=None,
                            apiserver=None):
-        if token and apiserver:
+        """
+            Validation of authentication params.
+            Until helm will support --insecure, kubeconfig must be provided.
+            :param kubeconfig: Kubeconfig file path
+            :param: token: bearer token used for authentication.
+            :param: apiserver: the address and the port for the Kubernetes API
+            server.
+        """
+        if kubeconfig is None:
+            raise CloudifyHelmSDKError(
+                'Must provide kubeconfig file path.')
+        else:
+            cmd.append(APPEND_FLAG_STRING.format(name=HELM_KUBECONFIG_FLAG,
+                                                 value=kubeconfig))
+
+        if token:
             cmd.append(APPEND_FLAG_STRING.format(name=HELM_KUBE_TOKEN_FLAG,
                                                  value=token))
+
+        if apiserver:
             cmd.append(
                 APPEND_FLAG_STRING.format(name=HELM_KUBE_API_SERVER_FLAG,
                                           value=apiserver))
-        elif kubeconfig:
-            cmd.append(APPEND_FLAG_STRING.format(name=HELM_KUBECONFIG_FLAG,
-                                                 value=kubeconfig))
-        else:
-            raise CloudifyHelmSDKError(
-                'Must provide kubernetes token and kube_api_server or '
-                'kube_config file path.')
 
     def install(self,
                 name,
@@ -106,23 +118,23 @@ class Helm(object):
             cmd.append(APPEND_FLAG_STRING.format(name=HELM_VALUES_FLAG,
                                                  value=values_file))
         flags = flags or []
-        cmd.extend(map(prepare_parameter, flags))
+        cmd.extend([prepare_parameter(flag) for flag in flags])
         set_arguments = set_values or []
-        cmd.extend(map(prepare_set_parameter, set_arguments))
+        cmd.extend(prepare_set_parameters(set_arguments))
         output = self.execute(self._helm_command(cmd), True)
         return json.loads(output)
 
     def uninstall(self,
-                  release_name,
+                  name,
                   flags=None,
                   kubeconfig=None,
                   token=None,
                   apiserver=None,
                   **_):
-        cmd = ['uninstall', release_name]
+        cmd = ['uninstall', name]
         self.handle_auth_params(cmd, kubeconfig, token, apiserver)
         flags = flags or []
-        cmd.extend(map(prepare_parameter, flags))
+        cmd.extend([prepare_parameter(flag) for flag in flags])
         self.execute(self._helm_command(cmd))
 
     def repo_add(self,
@@ -132,7 +144,7 @@ class Helm(object):
                  **_):
         cmd = ['repo', 'add', name, repo_url]
         flags = flags or []
-        cmd.extend(map(prepare_parameter, flags))
+        cmd.extend([prepare_parameter(flag) for flag in flags])
         self.execute(self._helm_command(cmd))
 
     def repo_remove(self,
@@ -141,7 +153,7 @@ class Helm(object):
                     **_):
         cmd = ['repo', 'remove', name]
         flags = flags or []
-        cmd.extend(map(prepare_parameter, flags))
+        cmd.extend([prepare_parameter(flag) for flag in flags])
         self.execute(self._helm_command(cmd))
 
     def repo_list(self):
