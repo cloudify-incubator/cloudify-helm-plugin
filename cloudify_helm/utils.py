@@ -103,6 +103,7 @@ def get_values_file(ctx):
                 ctx.node.properties.get(RESOURCE_CONFIG).get('values_file'),
                 target_path=f.name)
             try:
+                ctx.logger.info("using values file:{file}".format(file=f.name))
                 yield f.name
             finally:
                 os.remove(f.name)
