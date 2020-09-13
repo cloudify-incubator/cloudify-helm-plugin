@@ -380,6 +380,7 @@ workflows:
           requires:
             - validate_version
             - validate_documentation
+            - build-bundle
             - unittests_py27
             - unittests_py36
       - merge_docs:
