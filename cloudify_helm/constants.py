@@ -12,3 +12,21 @@
 #    * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
+
+HOST = "host"
+API_KEY = "api_key"
+FLAGS_FIELD = "flags"
+HELM_CONFIG = "helm_config"
+API_OPTIONS = "api_options"
+VALUES_FILE = "values_file"
+CONFIGURATION = "configuration"
+CLIENT_CONFIG = "client_config"
+RESOURCE_CONFIG = "resource_config"
+EXECUTABLE_PATH = "executable_path"
+DATA_DIR_ENV_VAR = "HELM_DATA_HOME"
+CACHE_DIR_ENV_VAR = "HELM_CACHE_HOME"
+CONFIG_DIR_ENV_VAR = "HELM_CONFIG_HOME"
+USE_EXTERNAL_RESOURCE = "use_external_resource"
+
+HELM_ENV_VARS_LIST = [DATA_DIR_ENV_VAR, CACHE_DIR_ENV_VAR,
+                      CONFIG_DIR_ENV_VAR]

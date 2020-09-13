@@ -1,0 +1,245 @@
+plugins:
+  helm:
+    executor: central_deployment_agent
+    package_name: cloudify-helm-plugin
+    package_version: '0.0.1'
+
+dsl_definitions:
+
+  helm_configuration: &helm_config
+    helm_config:
+      type: cloudify.types.helm.HelmConfig
+
+  use_external_resource_desc: &use_external_resource_desc >
+    Indicate whether the resource exists or if Cloudify should create the resource,
+    true if you are bringing an existing resource, false if you want cloudify to create it.
+
+  external_resource: &external_resource
+    use_external_resource:
+      description: *use_external_resource_desc
+      type: boolean
+      default: false
+
+data_types:
+
+  cloudify.types.helm.HelmConfig:
+    properties:
+      executable_path:
+        type: string
+        default: '/usr/bin/helm'
+        description: >
+          Helm binary path.
+        required: false
+
+
+  cloudify.types.helm.ConfigurationVariant:
+    description: >
+      Type representing all Kubernetes API configuration variants.
+      Each property represents separate supported variant of configuration.
+      For now, until Helm support "--insecure" one of "blueprint_file_name",
+      "manager_file_path" and "file_content" must be used.
+      "api_key" inputs will override kubeconfig data.
+    properties:
+      blueprint_file_name:
+        type: string
+        required: false
+        description: >
+          Name of Kubernetes configuration file attached to blueprint(path)
+
+      manager_file_path:
+        type: string
+        required: false
+        description: >
+          Path to Kubernetes configuration file placed on Cloudify Manager VM.
+
+      file_content:
+        required: false
+        description: >
+          Content (YAML) of Kubernetes configuration file.
+          kubeconfig string or dict are supported.
+
+      api_options:
+        type: cloudify.types.helm.ApiOptions
+        required: false
+        description: >
+          Set of basic properties describing Kubernetes API access.
+
+  cloudify.types.helm.ApiOptions:
+    properties:
+      host:
+        type: string
+        required: false
+        description: >
+          HTTP/HTTPS URL to Kubernetes API.
+
+      api_key:
+        type: string
+        required: false
+        description: >
+          Bearer token used for authentication.
+
+
+  cloudify.types.helm.ClientConfig:
+    description: >
+      Configuration properties for Helm to interact with kubernetes cluster.
+      if kube_config file not provided then kube_token and kube_api_server should provided.
+    properties:
+      configuration:
+        type: cloudify.types.helm.ConfigurationVariant
+        description: >
+          Configuration properties of Kubernetes API.
+          For now, until Helm support "--insecure" one of 1-3 must be used.
+          1. Kubernetes config file contained by blueprint archive
+          2. Kubernetes config file previously uploaded into Cloudify Manager VM
+          3. Content of Kubernetes config file (YAML).
+          4. Kubernetes API set of properties
+
+
+  cloudify.types.helm.ReleaseConfig:
+    description: >
+      configuration properties for release node type.
+    properties:
+      name:
+        type: string
+        description: >
+          Name of the created release.
+        required: true
+      chart:
+        type: string
+        description: >
+          Name of the chart to install.For example: stable/mysql.
+        required: true
+      values_file:
+        type: string
+        description: >
+          Path to values files.
+        required: false
+      set_values:
+        description: |
+          List of variables names and values to set. For example:
+          - name: x
+            value: y
+          - name: a
+            value: b
+          It equals to --set x=y --set a=b in helm command.
+        default: []
+      flags:
+        description: |
+          List of flags add to both "helm install" and "helm uninstall" commands.
+          For example:
+          - name: namespace
+            value: my_namespace
+          If the flag not requieres value, omit "value" and specify only the name as element in the list.
+        default: []
+
+  cloudify.types.helm.RepoConfig:
+    description: >
+      configuration properties for repo node type.
+    properties:
+      name:
+        type: string
+        description: >
+          Name of the repo that added/removed.
+        required: true
+      repo_url:
+        type: string
+        description: >
+          URL of the repo to add.
+        required: true
+      flags:
+        description: |
+          List of flags add to both "helm repo add" and "helm repo remove" commands.
+          For example:
+          - name: namespace
+            value: my_namespace
+          If the flag not requieres value, omit "value" and specify only the name as element in the list.
+        default: []
+
+
+node_types:
+
+  cloudify.nodes.helm.Binary:
+    derived_from: cloudify.nodes.SoftwareComponent
+    properties:
+      <<: *helm_config
+      use_existing_resource:
+        type: boolean
+        description: If true, use an existing helm installation rather than installing it.
+        default: false
+      installation_source:
+        type: string
+        default: ''
+        description: >
+          Location to download the Helm installation from. Ignored if 'use_existing_resource' is true.
+    interfaces:
+      cloudify.interfaces.lifecycle:
+        create:
+          implementation: helm.cloudify_helm.tasks.install_binary
+        delete:
+          implementation: helm.cloudify_helm.tasks.uninstall_binary
+
+
+  cloudify.nodes.helm.Release:
+    derived_from: cloudify.nodes.Root
+    properties:
+      <<: *helm_config
+      <<: *external_resource
+      client_config:
+        type: cloudify.types.helm.ClientConfig
+        required: true
+      resource_config:
+        type: cloudify.types.helm.ReleaseConfig
+        required: true
+    interfaces:
+      cloudify.interfaces.lifecycle:
+        start:
+          implementation: helm.cloudify_helm.tasks.install_release
+          inputs:
+            flags:
+              description: >
+                 Flags to add only to `helm install` command.The format is the same as "flags".
+              default: []
+        delete:
+          implementation: helm.cloudify_helm.tasks.uninstall_release
+          inputs:
+            flags:
+              description: >
+                Flags to add only to `helm uninstall` command.The format is the same as "flags".
+              default: []
+
+
+  cloudify.nodes.helm.Repo:
+    derived_from: cloudify.nodes.Root
+    properties:
+      <<: *helm_config
+      <<: *external_resource
+      resource_config:
+        type: cloudify.types.helm.RepoConfig
+        required: true
+    interfaces:
+      cloudify.interfaces.lifecycle:
+        start:
+          implementation: helm.cloudify_helm.tasks.add_repo
+          inputs:
+            flags:
+              description: >
+                Flags to add only to `helm install` command.The format is the same as "flags".
+              default: []
+        delete:
+          implementation: helm.cloudify_helm.tasks.remove_repo
+          inputs:
+            flags:
+              description: >
+                Flags to add only to `helm uninstall` command.The format is the same as "flags".
+              default: []
+
+
+relationships:
+
+  cloudify.helm.relationships.run_on_host:
+    derived_from: cloudify.relationships.connected_to
+    source_interfaces:
+      cloudify.interfaces.relationship_lifecycle:
+        preconfigure:
+          implementation: helm.cloudify_helm.tasks.inject_env_properties
+

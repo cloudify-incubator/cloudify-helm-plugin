@@ -24,9 +24,12 @@ from helm_sdk._compat import StringIO, text_type
 from helm_sdk.exceptions import CloudifyHelmSDKError
 
 
-def run_subprocess(command, logger, cwd=None,
+def run_subprocess(command,
+                   logger,
+                   cwd=None,
                    additional_env=None,
-                   additional_args=None, return_output=False):
+                   additional_args=None,
+                   return_output=False):
     if additional_args is None:
         additional_args = {}
     args_to_pass = copy.deepcopy(additional_args)
@@ -35,8 +38,12 @@ def run_subprocess(command, logger, cwd=None,
         passed_env.update(os.environ)
         passed_env.update(additional_env)
 
-    logger.info("Running: command=%s, cwd=%s, additional_args=%s",
-                obfuscate_passwords(command), cwd, obfuscate_passwords(args_to_pass))
+    logger.info(
+        "Running: command={cmd}, cwd={cwd}, additional_args={args}".format(
+            cmd=obfuscate_passwords(command),
+            cwd=cwd,
+            args=obfuscate_passwords(args_to_pass)))
+
     process = subprocess.Popen(
         args=command,
         stdout=subprocess.PIPE,
@@ -62,8 +69,9 @@ def run_subprocess(command, logger, cwd=None,
         raise subprocess.CalledProcessError(return_code, command)
 
     output = stdout_consumer.buffer.getvalue() if return_output else None
-    logger.info("Returning output:\n%s",
-                obfuscate_passwords(output) if output is not None else '<None>')
+    logger.info("Returning output:\n{0}".format(
+        obfuscate_passwords(output) if output is not None else '<None>'))
+
     return output
 
 
@@ -97,7 +105,8 @@ class LoggingOutputConsumer(OutputConsumer):
     def handle_line(self, line):
         self.logger.info(
             "{0}{1}".format(text_type(self.prefix),
-                            obfuscate_passwords(line.decode('utf-8').rstrip('\n'))))
+                            obfuscate_passwords(
+                                line.decode('utf-8').rstrip('\n'))))
 
 
 class CapturingOutputConsumer(OutputConsumer):
@@ -114,7 +123,7 @@ class CapturingOutputConsumer(OutputConsumer):
 
 
 def prepare_parameter(arg_dict):
-    """ 
+    """
     Prepare single parameter.
     :param arg_dict: dictionary with the name of the flag and value(optional)
     :return: "--name=value" or -"-name"
@@ -127,14 +136,19 @@ def prepare_parameter(arg_dict):
         raise CloudifyHelmSDKError("parameter name doesen't exist")
 
 
-def prepare_set_parameter(set_dict):
+def prepare_set_parameters(set_values):
     """
-    Prepare single set parameter.
-    :param set_dict: dictionary with the name of the variable to set command
-    and its value
-    :return "--set name=value"
+    Prepare set parameters for install command.
+    :param set_values: list of dictionaries with the name of the variable to
+    set command and its value.
+    :return list like: ["--set", "name=value","--set",
     """
-    try:
-        return "--set " + set_dict["name"] + "=" + set_dict["value"]
-    except KeyError:
-        raise CloudifyHelmSDKError("set parameter name or value is missing")
+    set_list = []
+    for set_dict in set_values:
+        set_list.append('--set')
+        try:
+            set_list.append(set_dict["name"] + "=" + set_dict["value"])
+        except KeyError:
+            raise CloudifyHelmSDKError(
+                "set parameter name or value is missing")
+    return set_list

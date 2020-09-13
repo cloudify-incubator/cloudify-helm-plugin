@@ -16,37 +16,83 @@
 import mock
 
 from . import HelmTestBase, HELM_BINARY
+from helm_sdk.exceptions import CloudifyHelmSDKError
 
-mock_flags = [{'name': 'kube-token', 'value': 'demotoken'},
-              {'name': 'kube-apiserver', 'value': 'https://1.0.0.0'}]
+mock_flags = [{'name': 'dry-run'},
+              {'name': 'timeout', 'value': '100'}]
 mock_set_args = [{'name': 'x', 'value': 'y'},
                  {'name': 'a', 'value': 'b'}]
 
 
 class HelmSDKTest(HelmTestBase):
 
-    def test_install(self):
+    def test_install_with_token_and_api(self):
+        with self.assertRaisesRegexp(CloudifyHelmSDKError,
+                                     'Must provide kubeconfig file path.'):
+            self.helm.install('release1',
+                              'my_chart',
+                              mock_flags,
+                              mock_set_args,
+                              token='demotoken',
+                              apiserver='https://1.0.0.0')
+
+    def test_install_with_kubeconfig(self):
         mock_execute = mock.Mock(return_value='{"manifest":"resourceA"}')
         self.helm.execute = mock_execute
-        out = self.helm.install('release1', 'my_chart',
+        out = self.helm.install('release1',
+                                'my_chart',
                                 mock_flags,
-                                mock_set_args)
+                                mock_set_args,
+                                kubeconfig='/path/to/config')
         cmd_expected = [HELM_BINARY, 'install', 'release1', 'my_chart',
                         '--wait', '--output=json',
-                        '--kube-token=demotoken',
-                        '--kube-apiserver=https://1.0.0.0', '--set x=y',
-                        '--set a=b']
+                        '--kubeconfig=/path/to/config', '--dry-run',
+                        '--timeout=100', '--set', 'x=y', '--set', 'a=b']
         mock_execute.assert_called_once_with(cmd_expected, True)
         self.assertEqual(out, {"manifest": "resourceA"})
 
-    def test_uninstall(self):
+    def test_install_no_token_and_no_kubeconfig(self):
+        with self.assertRaisesRegexp(CloudifyHelmSDKError,
+                                     'Must provide kubeconfig file path.'):
+            self.helm.install('release1',
+                              'my_chart',
+                              mock_flags,
+                              mock_set_args,
+                              apiserver='https://1.0.0.0')
+
+    def test_install_no_apiserver_and_no_kubeconfig(self):
+        with self.assertRaisesRegexp(CloudifyHelmSDKError,
+                                     'Must provide kubeconfig file path.'):
+            self.helm.install('release1',
+                              'my_chart',
+                              mock_flags,
+                              mock_set_args,
+                              token='demotoken')
+
+    def test_uninstall_with_kubekonfig(self):
         mock_execute = mock.Mock()
         self.helm.execute = mock_execute
-        self.helm.uninstall('release1', mock_flags)
+        self.helm.uninstall('release1',
+                            mock_flags,
+                            kubeconfig='/path/to/config')
         cmd_expected = [HELM_BINARY, 'uninstall', 'release1',
-                        '--kube-token=demotoken',
-                        '--kube-apiserver=https://1.0.0.0']
+                        '--kubeconfig=/path/to/config', '--dry-run',
+                        '--timeout=100']
         mock_execute.assert_called_once_with(cmd_expected)
+
+    def test_uninstall_no_token_and_no_kubeconfig(self):
+        with self.assertRaisesRegexp(CloudifyHelmSDKError,
+                                     'Must provide kubeconfig file path.'):
+            self.helm.uninstall('release1',
+                                mock_flags,
+                                apiserver='https://1.0.0.0')
+
+    def test_uninstall_no_apiserver_and_no_kubeconfig(self):
+        with self.assertRaisesRegexp(CloudifyHelmSDKError,
+                                     'Must provide kubeconfig file path.'):
+            self.helm.uninstall('release1',
+                                mock_flags,
+                                token='demotoken')
 
     def test_repo_add(self):
         mock_execute = mock.Mock()

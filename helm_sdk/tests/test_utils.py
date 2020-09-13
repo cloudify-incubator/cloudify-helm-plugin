@@ -16,8 +16,7 @@
 import unittest
 
 from helm_sdk.exceptions import CloudifyHelmSDKError
-from helm_sdk.utils import prepare_parameter, prepare_set_parameter
-
+from helm_sdk.utils import prepare_parameter, prepare_set_parameters
 
 
 class TestUtils(unittest.TestCase):
@@ -28,16 +27,17 @@ class TestUtils(unittest.TestCase):
         param_dict.update({'value': 'value1'})
         self.assertEqual(prepare_parameter(param_dict), '--param1=value1')
 
-    def test_prepare_set_parameter(self):
-        set_dict_no_val = {'name': 'x'}
+    def test_prepare_set_parameters(self):
+        set_no_val = [{'name': 'x'}]
         with self.assertRaisesRegexp(CloudifyHelmSDKError,
                                      "set parameter name or value is missing"):
-            prepare_set_parameter(set_dict_no_val)
+            prepare_set_parameters(set_no_val)
 
         with self.assertRaisesRegexp(CloudifyHelmSDKError,
                                      "set parameter name or value is missing"):
-            set_dict_no_name = {'value': 'y'}
-            prepare_set_parameter(set_dict_no_name)
+            set_no_name = [{'value': 'y'}]
+            prepare_set_parameters(set_no_name)
         # Now set_dict_no_val is a valid set parameter dictionary
-        set_dict_no_val.update(set_dict_no_name)
-        self.assertEqual(prepare_set_parameter(set_dict_no_val), '--set x=y')
+        valid_set_list = [{'name': 'x', 'value': 'y'}]
+        self.assertEqual(prepare_set_parameters(valid_set_list),
+                         ['--set', 'x=y'])
