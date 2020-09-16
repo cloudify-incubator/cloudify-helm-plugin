@@ -16,7 +16,10 @@
 import unittest
 
 from helm_sdk.exceptions import CloudifyHelmSDKError
-from helm_sdk.utils import prepare_parameter, prepare_set_parameters
+from helm_sdk.utils import (
+    prepare_parameter,
+    prepare_set_parameters,
+    validate_no_collisions_between_params_and_flags)
 
 
 class TestUtils(unittest.TestCase):
@@ -41,3 +44,13 @@ class TestUtils(unittest.TestCase):
         valid_set_list = [{'name': 'x', 'value': 'y'}]
         self.assertEqual(prepare_set_parameters(valid_set_list),
                          ['--set', 'x=y'])
+
+    def test_validate_no_collisions_between_params_and_flags(self):
+        fake_flags = [{'name': 'kube-apiserver', 'value': 'https://0.0.0.0'}]
+        with self.assertRaisesRegexp(CloudifyHelmSDKError,
+                                     "Please do not pass"):
+            validate_no_collisions_between_params_and_flags(fake_flags)
+        fake_flags = [{'name': 'debug'}]
+        self.assertEqual(
+            validate_no_collisions_between_params_and_flags(fake_flags)
+            , None)

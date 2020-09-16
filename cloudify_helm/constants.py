@@ -21,6 +21,7 @@ API_OPTIONS = "api_options"
 VALUES_FILE = "values_file"
 CONFIGURATION = "configuration"
 CLIENT_CONFIG = "client_config"
+AUTHENTICATION = 'authentication'
 RESOURCE_CONFIG = "resource_config"
 EXECUTABLE_PATH = "executable_path"
 DATA_DIR_ENV_VAR = "HELM_DATA_HOME"

@@ -23,6 +23,8 @@ from cloudify_common_sdk.filters import obfuscate_passwords
 from helm_sdk._compat import StringIO, text_type
 from helm_sdk.exceptions import CloudifyHelmSDKError
 
+FLAGS_LIST_TO_VALIDATE = ['kube-apiserver', 'kube-token', 'kubeconfig']
+
 
 def run_subprocess(command,
                    logger,
@@ -152,3 +154,10 @@ def prepare_set_parameters(set_values):
             raise CloudifyHelmSDKError(
                 "set parameter name or value is missing")
     return set_list
+
+
+def validate_no_collisions_between_params_and_flags(flags):
+    if filter(lambda flag: flag['name'] in FLAGS_LIST_TO_VALIDATE, flags):
+        raise CloudifyHelmSDKError(
+            'Please do not pass {flags_list} flags inside "flags" list'.format(
+                flags_list=FLAGS_LIST_TO_VALIDATE))

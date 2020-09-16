@@ -18,8 +18,9 @@ import json
 from .exceptions import CloudifyHelmSDKError
 from helm_sdk.utils import (
     run_subprocess,
+    prepare_parameter,
     prepare_set_parameters,
-    prepare_parameter)
+    validate_no_collisions_between_params_and_flags)
 
 # Helm cli flags names
 HELM_KUBECONFIG_FLAG = 'kubeconfig'
@@ -117,6 +118,7 @@ class Helm(object):
         if values_file:
             cmd.append(APPEND_FLAG_STRING.format(name=HELM_VALUES_FLAG,
                                                  value=values_file))
+        validate_no_collisions_between_params_and_flags(flags)
         flags = flags or []
         cmd.extend([prepare_parameter(flag) for flag in flags])
         set_arguments = set_values or []
