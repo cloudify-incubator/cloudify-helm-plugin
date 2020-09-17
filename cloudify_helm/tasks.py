@@ -28,7 +28,6 @@ from .utils import (
     delete_temporary_env_of_helm)
 from .constants import (
     HOST,
-    API_KEY,
     FLAGS_FIELD,
     VALUES_FILE,
     API_OPTIONS,
