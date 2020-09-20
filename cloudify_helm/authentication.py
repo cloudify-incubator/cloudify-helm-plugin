@@ -14,8 +14,7 @@
 
 
 import json
-import google.auth.transport.requests
-from google.oauth2 import service_account
+from oauth2client.service_account import ServiceAccountCredentials
 
 from helm_sdk._compat import text_type
 from .exceptions import HelmKuberentesAuthenticationError
@@ -60,16 +59,14 @@ class GCPServiceAccountAuthentication(KubernetesApiAuthentication):
         )
         if service_account_file_content:
             if isinstance(service_account_file_content, text_type):
-                service_account_file_content_dict = \
+                service_account_file_content = \
                     json.loads(service_account_file_content)
-            credentials = \
-                service_account.Credentials.from_service_account_info(
-                    service_account_file_content_dict)
-            scoped_credentials = credentials.with_scopes(
-                self.SCOPES)
-            request = google.auth.transport.requests.Request()
-            scoped_credentials.refresh(request)
-            return scoped_credentials.token
+
+            credentials = ServiceAccountCredentials.from_json_keyfile_dict(
+                service_account_file_content,
+                self.SCOPES
+            )
+            return credentials.get_access_token().access_token
         return None
 
 
