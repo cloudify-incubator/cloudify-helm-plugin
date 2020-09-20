@@ -19,6 +19,7 @@ class HelmKubeconfigInitializationFailedError(Exception):
     """
     pass
 
+
 class HelmKuberentesAuthenticationError(Exception):
     """Generic Error for handling issues getting authentication token.
     """

@@ -52,10 +52,9 @@ class TestUtils(unittest.TestCase):
             validate_no_collisions_between_params_and_flags(fake_flags)
         fake_flags = [{'name': 'debug'}]
         self.assertEqual(
-            validate_no_collisions_between_params_and_flags(fake_flags)
-            , None)
+            validate_no_collisions_between_params_and_flags(fake_flags),
+            None)
         fake_flags = []
         self.assertEqual(
-            validate_no_collisions_between_params_and_flags(fake_flags)
-            , None)
-
+            validate_no_collisions_between_params_and_flags(fake_flags),
+            None)

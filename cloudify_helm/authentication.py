@@ -38,8 +38,7 @@ class KubernetesApiAuthentication(object):
 
         if not token:
             raise HelmKuberentesAuthenticationError(
-                'Cannot generate token use {0} for data: {1} '
-                    .format(
+                'Cannot generate token use {0} for data: {1} '.format(
                     self.__class__.__name__,
                     self.authentication_data,
                 )
@@ -87,19 +86,18 @@ class KubernetesApiAuthenticationVariants(KubernetesApiAuthentication):
                     .get_token()
 
                 self.logger.debug(
-                    'Authentication option {0} will be used'
-                        .format(variant.__name__)
+                    'Authentication option {0} will be used'.format(
+                        variant.__name__)
                 )
                 return candidate
             except HelmKuberentesAuthenticationError:
                 self.logger.debug(
-                    'Authentication option {0} cannot be used'
-                        .format(variant.__name__)
+                    'Authentication option {0} cannot be used'.format(
+                        variant.__name__)
                 )
 
         self.logger.debug(
             'Cannot generate Bearer token - no suitable authentication '
-            'variant found for {0} properties'
-                .format(self.authentication_data)
+            'variant found for {0} properties'.format(self.authentication_data)
         )
         return None
