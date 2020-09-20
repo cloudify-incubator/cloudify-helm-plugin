@@ -47,6 +47,7 @@ setup(
         "cloudify-utilities-plugins-sdk==0.0.28",  # obfuscate_passwords
         "pyyaml==3.12",
         "google-auth==1.21.2"
+
     ],
     test_requires=[
         "cloudify-common>=4.5.5",

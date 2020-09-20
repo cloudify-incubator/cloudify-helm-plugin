@@ -62,7 +62,6 @@ class GCPServiceAccountAuthentication(KubernetesApiAuthentication):
             if isinstance(service_account_file_content, text_type):
                 service_account_file_content_dict = \
                     json.loads(service_account_file_content)
-                self.logger.info("here is the json:{0}".format(service_account_file_content_dict))
             credentials = \
                 service_account.Credentials.from_service_account_info(
                     service_account_file_content_dict)
@@ -70,7 +69,6 @@ class GCPServiceAccountAuthentication(KubernetesApiAuthentication):
                 self.SCOPES)
             request = google.auth.transport.requests.Request()
             scoped_credentials.refresh(request)
-            self.logger("here is the token{0}".format(scoped_credentials.token))
             return scoped_credentials.token
         return None
 
@@ -83,8 +81,8 @@ class KubernetesApiAuthenticationVariants(KubernetesApiAuthentication):
     def get_token(self):
         return self._get_token()
 
-    def _get_kubeconfig(self):
-        self.logger.debug('Checking Kubernetes authentication options')
+    def _get_token(self):
+        self.logger.debug('Checking Kubernetes authentication options.')
 
         for variant in self.VARIANTS:
             try:

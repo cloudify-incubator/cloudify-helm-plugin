@@ -54,3 +54,8 @@ class TestUtils(unittest.TestCase):
         self.assertEqual(
             validate_no_collisions_between_params_and_flags(fake_flags)
             , None)
+        fake_flags = []
+        self.assertEqual(
+            validate_no_collisions_between_params_and_flags(fake_flags)
+            , None)
+

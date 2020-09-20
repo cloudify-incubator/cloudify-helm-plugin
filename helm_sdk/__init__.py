@@ -118,8 +118,8 @@ class Helm(object):
         if values_file:
             cmd.append(APPEND_FLAG_STRING.format(name=HELM_VALUES_FLAG,
                                                  value=values_file))
-        validate_no_collisions_between_params_and_flags(flags)
         flags = flags or []
+        validate_no_collisions_between_params_and_flags(flags)
         cmd.extend([prepare_parameter(flag) for flag in flags])
         set_arguments = set_values or []
         cmd.extend(prepare_set_parameters(set_arguments))
@@ -136,6 +136,7 @@ class Helm(object):
         cmd = ['uninstall', name]
         self.handle_auth_params(cmd, kubeconfig, token, apiserver)
         flags = flags or []
+        validate_no_collisions_between_params_and_flags(flags)
         cmd.extend([prepare_parameter(flag) for flag in flags])
         self.execute(self._helm_command(cmd))
 

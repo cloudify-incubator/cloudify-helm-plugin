@@ -224,7 +224,6 @@ def delete_temporary_env_of_helm(ctx):
 def get_auth_token(ctx):
     authentication_property = ctx.node.properties.get(CLIENT_CONFIG, {}).get(
         AUTHENTICATION, {})
-
     token = KubernetesApiAuthenticationVariants(
         ctx.logger,
         authentication_property,
