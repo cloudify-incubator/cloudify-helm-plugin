@@ -38,10 +38,10 @@ class KubernetesApiAuthentication(object):
 
         if not token:
             raise HelmKuberentesAuthenticationError(
-                'Cannot generate token use {0} for data: {1} '.format(
-                    self.__class__.__name__,
-                    self.authentication_data,
-                )
+                'Cannot generate token use {variant} for data:'
+                ' {auth_data} '.format(
+                    variant=self.__class__.__name__,
+                    auth_data=self.authentication_data)
             )
 
         return token
@@ -54,8 +54,7 @@ class GCPServiceAccountAuthentication(KubernetesApiAuthentication):
 
     def _get_token(self):
         service_account_file_content = self.authentication_data.get(
-            self.PROPERTY_GCP_SERVICE_ACCOUNT
-        )
+            self.PROPERTY_GCP_SERVICE_ACCOUNT)
         if service_account_file_content:
             if isinstance(service_account_file_content, text_type):
                 service_account_file_content = \
@@ -63,16 +62,13 @@ class GCPServiceAccountAuthentication(KubernetesApiAuthentication):
 
             credentials = ServiceAccountCredentials.from_json_keyfile_dict(
                 service_account_file_content,
-                self.SCOPES
-            )
+                self.SCOPES)
             return credentials.get_access_token().access_token
         return None
 
 
 class KubernetesApiAuthenticationVariants(KubernetesApiAuthentication):
-    VARIANTS = (
-        GCPServiceAccountAuthentication,
-    )
+    VARIANTS = (GCPServiceAccountAuthentication,)
 
     def get_token(self):
         return self._get_token()
@@ -84,20 +80,20 @@ class KubernetesApiAuthenticationVariants(KubernetesApiAuthentication):
             try:
                 candidate = variant(self.logger, self.authentication_data) \
                     .get_token()
-
                 self.logger.debug(
-                    'Authentication option {0} will be used'.format(
-                        variant.__name__)
+                    'Authentication option {variant} will be used'.format(
+                        variant=variant.__name__)
                 )
                 return candidate
             except HelmKuberentesAuthenticationError:
                 self.logger.debug(
-                    'Authentication option {0} cannot be used'.format(
-                        variant.__name__)
+                    'Authentication option {variant} cannot be used'.format(
+                        variant=variant.__name__)
                 )
 
         self.logger.debug(
             'Cannot generate Bearer token - no suitable authentication '
-            'variant found for {0} properties'.format(self.authentication_data)
+            'variant found for {props} properties'.format(
+                props=self.authentication_data)
         )
         return None

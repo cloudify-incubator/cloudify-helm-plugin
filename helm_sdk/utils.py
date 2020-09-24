@@ -159,5 +159,6 @@ def prepare_set_parameters(set_values):
 def validate_no_collisions_between_params_and_flags(flags):
     if [flag for flag in flags if flag['name'] in FLAGS_LIST_TO_VALIDATE]:
         raise CloudifyHelmSDKError(
-            'Please do not pass {flags_list} flags inside "flags" list'.format(
+            'Please do not pass {flags_list} under "flags" property,'
+            'each of them has a known property'.format(
                 flags_list=FLAGS_LIST_TO_VALIDATE))

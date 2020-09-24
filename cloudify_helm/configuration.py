@@ -39,10 +39,10 @@ class KubernetesConfiguration(object):
         kubeconf_file = self._get_kubeconfig()
         if not kubeconf_file:
             raise HelmKubeconfigInitializationFailedError(
-                'Cannot initialize kubeconfig with {0} configuration'
-                ' and {1} properties'.format(
-                    self.__class__.__name__,
-                    self.configuration_data))
+                'Cannot initialize kubeconfig with {variant} configuration'
+                ' and {props} properties'.format(
+                    variant=self.__class__.__name__,
+                    props=self.configuration_data))
 
         return kubeconf_file
 
@@ -71,10 +71,8 @@ class BlueprintFileConfiguration(KubernetesConfiguration):
 
             except Exception as e:
                 self.logger.error(
-                    'Cannot download kubeconfig file from blueprint: {'
-                    '0}'.format(
-                        str(e))
-                )
+                    'Cannot download kubeconfig file from blueprint: '
+                    '{error}'.format(error=str(e)))
 
         return None
 
@@ -124,9 +122,7 @@ class KubeConfigConfigurationVariants(KubernetesConfiguration):
     VARIANTS = (
         BlueprintFileConfiguration,
         ManagerFilePathConfiguration,
-        FileContentConfiguration
-
-    )
+        FileContentConfiguration,)
 
     def get_kubeconfig(self):
         return self._get_kubeconfig()
@@ -144,18 +140,19 @@ class KubeConfigConfigurationVariants(KubernetesConfiguration):
                     **self.kwargs).get_kubeconfig()
 
                 self.logger.debug(
-                    'Configuration option {0} will be used'.format(
-                        variant.__name__)
+                    'Configuration option {variant} will be used'.format(
+                        variant=variant.__name__)
                 )
 
                 return config_candidate
             except HelmKubeconfigInitializationFailedError:
                 self.logger.debug(
-                    'Configuration option {0} cannot be used'.format(
-                        variant.__name__)
+                    'Configuration option {variant} cannot be used'.format(
+                        variant=variant.__name__)
                 )
 
         self.logger.debug(
             'Cannot get kubeconfig file! - no suitable configuration '
-            'variant found for {0} properties'.format(self.configuration_data))
+            'variant found for {props} properties'.format(
+                props=self.configuration_data))
         return None
