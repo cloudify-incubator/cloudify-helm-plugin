@@ -32,12 +32,14 @@ class TestUtils(unittest.TestCase):
 
     def test_prepare_set_parameters(self):
         set_no_val = [{'name': 'x'}]
-        with self.assertRaisesRegexp(CloudifyHelmSDKError,
-                                     "set parameter name or value is missing"):
+        with self.assertRaisesRegexp(
+                CloudifyHelmSDKError,
+                "\"set\" parameter name or value is missing"):
             prepare_set_parameters(set_no_val)
 
-        with self.assertRaisesRegexp(CloudifyHelmSDKError,
-                                     "set parameter name or value is missing"):
+        with self.assertRaisesRegexp(
+                CloudifyHelmSDKError,
+                "\"set\" parameter name or value is missing"):
             set_no_name = [{'value': 'y'}]
             prepare_set_parameters(set_no_name)
         # Now set_dict_no_val is a valid set parameter dictionary

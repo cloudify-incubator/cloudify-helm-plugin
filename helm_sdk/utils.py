@@ -152,7 +152,7 @@ def prepare_set_parameters(set_values):
             set_list.append(set_dict["name"] + "=" + set_dict["value"])
         except KeyError:
             raise CloudifyHelmSDKError(
-                "Set parameter name or value is missing.")
+                "\"set\" parameter name or value is missing.")
     return set_list
 
 
