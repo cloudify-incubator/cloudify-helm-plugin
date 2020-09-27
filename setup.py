@@ -44,8 +44,10 @@ setup(
     license='LICENSE',
     install_requires=[
         "cloudify-common>=4.5.5",
-        "cloudify-utilities-plugins-sdk==0.0.28",  # obfuscate_passwords
-        "pyyaml==3.12"
+        "cloudify-utilities-plugins-sdk==0.0.29",  # obfuscate_passwords
+        "pyyaml==3.12",
+        'oauth2client'  # used in GCPServiceAccountAuthentication
+
     ],
     test_requires=[
         "cloudify-common>=4.5.5",

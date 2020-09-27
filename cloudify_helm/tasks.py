@@ -28,7 +28,6 @@ from .utils import (
     delete_temporary_env_of_helm)
 from .constants import (
     HOST,
-    API_KEY,
     FLAGS_FIELD,
     VALUES_FILE,
     API_OPTIONS,
@@ -95,7 +94,12 @@ def prepare_args(ctx, flags=None):
 
 @operation
 @with_helm
-def install_release(ctx, helm, kubeconfig=None, values_file=None, **kwargs):
+def install_release(ctx,
+                    helm,
+                    kubeconfig=None,
+                    values_file=None,
+                    token=None,
+                    **kwargs):
     """
     Execute helm install.
     :param ctx: cloudify context.
@@ -108,8 +112,7 @@ def install_release(ctx, helm, kubeconfig=None, values_file=None, **kwargs):
     output = helm.install(
         values_file=values_file,
         kubeconfig=kubeconfig,
-        token=ctx.node.properties.get(CLIENT_CONFIG, {}).get(
-            CONFIGURATION, {}).get(API_OPTIONS, {}).get(API_KEY),
+        token=token,
         apiserver=ctx.node.properties.get(
             CLIENT_CONFIG, {}).get(CONFIGURATION, {}).get(API_OPTIONS, {}).get(
             HOST),
@@ -119,12 +122,11 @@ def install_release(ctx, helm, kubeconfig=None, values_file=None, **kwargs):
 
 @operation
 @with_helm
-def uninstall_release(ctx, helm, kubeconfig=None, **kwargs):
+def uninstall_release(ctx, helm, kubeconfig=None, token=None, **kwargs):
     args_dict = prepare_args(ctx, kwargs.get('flags'))
     helm.uninstall(
         kubeconfig=kubeconfig,
-        token=ctx.node.properties.get(CLIENT_CONFIG, {}).get(
-            CONFIGURATION, {}).get(API_OPTIONS, {}).get(API_KEY),
+        token=token,
         apiserver=ctx.node.properties.get(
             CLIENT_CONFIG, {}).get(CONFIGURATION, {}).get(API_OPTIONS, {}).get(
             HOST),

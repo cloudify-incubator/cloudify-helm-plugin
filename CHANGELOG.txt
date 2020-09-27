@@ -1,3 +1,3 @@
 0.0.1: First version of helm plugin.
 0.0.2: Fix CircleCi.
-
+0.0.3: Add gcp authentication token refresh.

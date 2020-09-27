@@ -22,6 +22,7 @@ from cloudify.utils import exception_to_error_cause
 from helm_sdk._compat import text_type
 from .utils import (
     helm_from_ctx,
+    get_auth_token,
     get_values_file,
     get_kubeconfig_file)
 
@@ -36,6 +37,7 @@ def with_helm(func):
                 kwargs['helm'] = helm
                 kwargs['kubeconfig'] = kubeconfig
                 kwargs['values_file'] = values_file
+                kwargs['token'] = get_auth_token(ctx)
                 try:
                     return func(*args, **kwargs)
                 except Exception as e:

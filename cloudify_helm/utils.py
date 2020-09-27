@@ -24,9 +24,13 @@ from cloudify.exceptions import NonRecoverableError
 from helm_sdk import Helm
 from helm_sdk.utils import run_subprocess
 from .configuration import KubeConfigConfigurationVariants
+from .authentication import KubernetesApiAuthenticationVariants
 from .constants import (
+    API_KEY,
+    API_OPTIONS,
     CONFIGURATION,
     CLIENT_CONFIG,
+    AUTHENTICATION,
     EXECUTABLE_PATH,
     RESOURCE_CONFIG,
     DATA_DIR_ENV_VAR,
@@ -215,3 +219,15 @@ def delete_temporary_env_of_helm(ctx):
         else:
             ctx.logger.info(
                 "Directory {0} doesn't exist,skipping".format(dir_to_delete))
+
+
+def get_auth_token(ctx):
+    authentication_property = ctx.node.properties.get(CLIENT_CONFIG, {}).get(
+        AUTHENTICATION, {})
+    token = KubernetesApiAuthenticationVariants(
+        ctx.logger,
+        authentication_property,
+    ).get_token()
+    # If the user specify token so its in higher priority.
+    return ctx.node.properties.get(CLIENT_CONFIG, {}).get(
+        CONFIGURATION, {}).get(API_OPTIONS, {}).get(API_KEY) or token

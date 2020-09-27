@@ -23,6 +23,8 @@ from cloudify_common_sdk.filters import obfuscate_passwords
 from helm_sdk._compat import StringIO, text_type
 from helm_sdk.exceptions import CloudifyHelmSDKError
 
+FLAGS_LIST_TO_VALIDATE = ['kube-apiserver', 'kube-token', 'kubeconfig']
+
 
 def run_subprocess(command,
                    logger,
@@ -89,7 +91,7 @@ class OutputConsumer(object):
         self.out.close()
 
     def handle_line(self, line):
-        raise NotImplementedError("Must be implemented by subclass")
+        raise NotImplementedError("Must be implemented by subclass.")
 
     def join(self):
         self.consumer.join()
@@ -133,7 +135,7 @@ def prepare_parameter(arg_dict):
         return param_string + '=' + arg_dict.get("value") if arg_dict.get(
             "value") else param_string
     except KeyError:
-        raise CloudifyHelmSDKError("parameter name doesen't exist")
+        raise CloudifyHelmSDKError("Parameter name doesen't exist.")
 
 
 def prepare_set_parameters(set_values):
@@ -150,5 +152,13 @@ def prepare_set_parameters(set_values):
             set_list.append(set_dict["name"] + "=" + set_dict["value"])
         except KeyError:
             raise CloudifyHelmSDKError(
-                "set parameter name or value is missing")
+                "\"set\" parameter name or value is missing.")
     return set_list
+
+
+def validate_no_collisions_between_params_and_flags(flags):
+    if [flag for flag in flags if flag['name'] in FLAGS_LIST_TO_VALIDATE]:
+        raise CloudifyHelmSDKError(
+            'Please do not pass {flags_list} under "flags" property,'
+            'each of them has a known property.'.format(
+                flags_list=FLAGS_LIST_TO_VALIDATE))
