@@ -68,7 +68,9 @@ def run_subprocess(command,
     stderr_consumer.join()
 
     if return_code:
-        raise subprocess.CalledProcessError(return_code, command)
+        raise subprocess.CalledProcessError(return_code,
+                                            [obfuscate_passwords(cmd_element)
+                                             for cmd_element in command])
 
     output = stdout_consumer.buffer.getvalue() if return_output else None
     logger.info("Returning output:\n{0}".format(
