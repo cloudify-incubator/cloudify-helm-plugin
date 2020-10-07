@@ -19,8 +19,9 @@ import tarfile
 import tempfile
 from contextlib import contextmanager
 
-from cloudify.utils import get_tenant_name
+
 from cloudify.exceptions import NonRecoverableError
+from cloudify_common_sdk.utils import get_deployment_dir
 
 from helm_sdk import Helm
 from helm_sdk.utils import run_subprocess
@@ -203,31 +204,6 @@ def use_existing_repo_on_helm(ctx, helm):
                 resource_config.get('name'), resource_config.get('repo_url')))
 
 
-def get_deployment_workdir(deployment_id):
-    """
-       Get current deployment directory.
-      :param deployment_id:  deployment id from cloudify context.
-      :return: Deployment directory path
-    """
-    deployments_old_workdir = os.path.join('/opt', 'mgmtworker', 'work',
-                                           'deployments',
-                                           get_tenant_name(),
-                                           deployment_id)
-
-    deployments_new_workdir = os.path.join('/opt', 'manager',
-                                           'resources',
-                                           'deployments',
-                                           get_tenant_name(),
-                                           deployment_id)
-
-    if os.path.isdir(deployments_new_workdir):
-        return deployments_new_workdir
-    elif os.path.isdir(deployments_old_workdir):
-        return deployments_old_workdir
-    else:
-        raise NonRecoverableError("No deployment directory found!")
-
-
 def create_temporary_env_of_helm(ctx):
     """
     Create temporary directories for helm cache,data and configuration files
@@ -235,13 +211,13 @@ def create_temporary_env_of_helm(ctx):
     :param ctx: cloudify context.
 
     """
-    deployment_workdir = get_deployment_workdir(ctx.deployment.id)
+    deployment_dir = get_deployment_dir(ctx.deployment.id)
     ctx.instance.runtime_properties[CACHE_DIR_ENV_VAR] = tempfile.mkdtemp(
-        dir=deployment_workdir)
+        dir=deployment_dir)
     ctx.instance.runtime_properties[CONFIG_DIR_ENV_VAR] = tempfile.mkdtemp(
-        dir=deployment_workdir)
+        dir=deployment_dir)
     ctx.instance.runtime_properties[DATA_DIR_ENV_VAR] = tempfile.mkdtemp(
-        dir=deployment_workdir)
+        dir=deployment_dir)
 
 
 def delete_temporary_env_of_helm(ctx):

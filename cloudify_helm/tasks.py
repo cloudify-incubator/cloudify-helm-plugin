@@ -15,6 +15,8 @@
 
 import os
 
+from cloudify_common_sdk.utils import get_deployment_dir
+
 from cloudify.decorators import operation
 from cloudify.exceptions import NonRecoverableError
 
@@ -24,7 +26,6 @@ from .utils import (
     copy_binary,
     is_using_existing,
     get_executable_path,
-    get_deployment_workdir,
     use_existing_repo_on_helm,
     create_temporary_env_of_helm,
     delete_temporary_env_of_helm)
@@ -54,7 +55,7 @@ def install_binary(ctx, **_):
                            'property.'.format(loc=executable_path))
     else:
         executable_path = os.path.join(
-            get_deployment_workdir(ctx.deployment.id), 'helm')
+            get_deployment_dir(ctx.deployment.id), 'helm')
 
     if is_using_existing(ctx):
         if not os.path.isfile(executable_path):
