@@ -126,13 +126,15 @@ class TestTasks(unittest.TestCase):
         kwargs = {
             'ctx': ctx
         }
-        install_binary(**kwargs)
-        self.assertEqual(ctx.instance.runtime_properties.get(
-            EXECUTABLE_PATH),
-            properties.get(HELM_CONFIG).get(EXECUTABLE_PATH))
-        self.assertTrue(
-            os.path.isfile(ctx.instance.runtime_properties.get(
-                EXECUTABLE_PATH)))
+        with mock.patch('cloudify_helm.tasks.create_temporary_env_of_helm',
+                        return_value=None):
+            install_binary(**kwargs)
+            self.assertEqual(ctx.instance.runtime_properties.get(
+                EXECUTABLE_PATH),
+                properties.get(HELM_CONFIG).get(EXECUTABLE_PATH))
+            self.assertTrue(
+                os.path.isfile(ctx.instance.runtime_properties.get(
+                    EXECUTABLE_PATH)))
 
         # cleanup
         shutil.rmtree(os.path.dirname(ctx.instance.runtime_properties.get(

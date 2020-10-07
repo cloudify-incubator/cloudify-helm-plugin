@@ -26,7 +26,7 @@ data_types:
     properties:
       executable_path:
         type: string
-        default: '/usr/bin/helm'
+        default: ''
         description: >
           Helm binary path.
         required: false
