@@ -13,12 +13,6 @@ inputs:
       Name of the repo to add.
     type: string
 
-  helm_executable:
-    description: >
-      Helm binary path.
-    type: string
-    default: '/tmp/helm'
-
   helm_installation_source:
     description: >
       Helm download link.
@@ -31,24 +25,18 @@ inputs:
       https://kubernetes-charts.storage.googleapis.com/
     type: string
 
-dsl_definitions:
-
-  helm_config: &helm_config
-    executable_path: { get_input: helm_executable }
 
 node_templates:
 
   helm_install:
     type: cloudify.nodes.helm.Binary
     properties:
-      helm_config: *helm_config
       use_existing_resource: false
       installation_source: { get_input: helm_installation_source }
 
   repo:
     type: cloudify.nodes.helm.Repo
     properties:
-      helm_config: *helm_config
       resource_config:
         name: { get_input: repo_name }
         repo_url: { get_input: repo_url }

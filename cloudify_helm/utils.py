@@ -19,7 +19,9 @@ import tarfile
 import tempfile
 from contextlib import contextmanager
 
+
 from cloudify.exceptions import NonRecoverableError
+from cloudify_common_sdk.utils import get_deployment_dir
 
 from helm_sdk import Helm
 from helm_sdk.utils import run_subprocess
@@ -28,6 +30,7 @@ from .authentication import KubernetesApiAuthenticationVariants
 from .constants import (
     API_KEY,
     API_OPTIONS,
+    HELM_CONFIG,
     CONFIGURATION,
     CLIENT_CONFIG,
     AUTHENTICATION,
@@ -40,11 +43,15 @@ from .constants import (
     USE_EXTERNAL_RESOURCE)
 
 
-def helm_from_ctx(ctx):
+def get_executable_path(properties, runtime_properties):
     # Look for executable path in runtime property or in default place.
-    executable_path = ctx.instance.runtime_properties.get(
-        EXECUTABLE_PATH, "") or ctx.node.properties.get(
-        'helm_config', {}).get(EXECUTABLE_PATH, "")
+    return runtime_properties.get(EXECUTABLE_PATH, "") or \
+           properties.get(HELM_CONFIG, {}).get(EXECUTABLE_PATH, "")
+
+
+def helm_from_ctx(ctx):
+    executable_path = get_executable_path(ctx.node.properties,
+                                          ctx.instance.runtime_properties)
     if not os.path.exists(executable_path):
         raise NonRecoverableError(
             "Helm's executable not found in {0}. Please set the "
@@ -204,9 +211,13 @@ def create_temporary_env_of_helm(ctx):
     :param ctx: cloudify context.
 
     """
-    ctx.instance.runtime_properties[CACHE_DIR_ENV_VAR] = tempfile.mkdtemp()
-    ctx.instance.runtime_properties[CONFIG_DIR_ENV_VAR] = tempfile.mkdtemp()
-    ctx.instance.runtime_properties[DATA_DIR_ENV_VAR] = tempfile.mkdtemp()
+    deployment_dir = get_deployment_dir(ctx.deployment.id)
+    ctx.instance.runtime_properties[CACHE_DIR_ENV_VAR] = tempfile.mkdtemp(
+        dir=deployment_dir)
+    ctx.instance.runtime_properties[CONFIG_DIR_ENV_VAR] = tempfile.mkdtemp(
+        dir=deployment_dir)
+    ctx.instance.runtime_properties[DATA_DIR_ENV_VAR] = tempfile.mkdtemp(
+        dir=deployment_dir)
 
 
 def delete_temporary_env_of_helm(ctx):
@@ -214,11 +225,12 @@ def delete_temporary_env_of_helm(ctx):
         dir_to_delete = ctx.instance.runtime_properties.get(
             dir_property_name, "")
         if os.path.isdir(dir_to_delete):
-            ctx.logger.info("Removing: {}".format(dir_to_delete))
+            ctx.logger.info("Removing: {dir}".format(dir=dir_to_delete))
             shutil.rmtree(dir_to_delete)
         else:
             ctx.logger.info(
-                "Directory {0} doesn't exist,skipping".format(dir_to_delete))
+                "Directory {dir} doesn't exist,skipping".format(
+                    dir=dir_to_delete))
 
 
 def get_auth_token(ctx):

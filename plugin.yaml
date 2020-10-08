@@ -2,7 +2,7 @@ plugins:
   helm:
     executor: central_deployment_agent
     package_name: cloudify-helm-plugin
-    package_version: '0.0.4'
+    package_version: '0.0.5'
 
 dsl_definitions:
 
@@ -26,7 +26,7 @@ data_types:
     properties:
       executable_path:
         type: string
-        default: '/usr/bin/helm'
+        default: ''
         description: >
           Helm binary path.
         required: false
