@@ -163,3 +163,8 @@ class Helm(object):
         cmd = ['repo', 'list', '--output=json']
         output = self.execute(self._helm_command(cmd), True)
         return json.loads(output)
+
+    def repo_update(self, flags):
+        cmd = ['repo', 'update']
+        cmd.extend([prepare_parameter(flag) for flag in flags])
+        self.execute(self._helm_command(cmd))
