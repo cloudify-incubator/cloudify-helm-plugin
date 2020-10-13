@@ -18,39 +18,39 @@ from cloudify.exceptions import NonRecoverableError
 
 def _helm_operation(ctx,
                     operation,
-                    node_ids,
-                    node_instance_ids,
+                    node_instance_id,
                     node_type,
                     **kwargs):
     graph = ctx.graph_mode()
     sequence = graph.sequence()
-    # Iterate over all node instances of type "node_type"
-    for node_instance in ctx.node_instances:
-        if node_ids and (node_instance.node.id not in node_ids):
-            continue
-        if node_instance_ids and (node_instance.id not in node_instance_ids):
-            continue
-        if node_type in node_instance.node.type_hierarchy:
-            ctx.logger.info("Adding node instance: {id}".format(
-                            id=node_instance.id))
-            sequence.add(
-                node_instance.execute_operation(
-                    operation,
-                    kwargs=kwargs,
-                    allow_kwargs_override=True)
-            )
+    node_instance = ctx.get_node_instance(node_instance_id)
+    if not node_instance:
+        raise NonRecoverableError(
+            'No such node_instance_id : {id} in the deployment.'.format(
+                id=node_instance_id))
+    if node_type not in node_instance.node.type_hierarchy:
+        raise NonRecoverableError(
+            'Node instance {id} is not from type: {type} '.format(
+                id=node_instance_id,
+                type=node_type))
+    ctx.logger.info("Adding node instance: {id}".format(id=node_instance.id))
+    sequence.add(
+        node_instance.execute_operation(
+            operation,
+            kwargs=kwargs,
+            allow_kwargs_override=True)
+    )
 
     return graph
 
 
-def update_repositories(ctx, node_ids, node_instance_ids, flags):
+def update_repositories(ctx, node_instance_id, flags):
     # TODO: Remove the check when 4.X is not supported, add to flags
     #  parameter type: list in plugin.yaml
     if type(flags) is not list:
         raise NonRecoverableError('Flags parameter must be a list.')
     _helm_operation(ctx,
                     "helm.update_repo",
-                    node_ids,
-                    node_instance_ids,
+                    node_instance_id,
                     'cloudify.nodes.helm.Repo',
                     flags=flags).execute()

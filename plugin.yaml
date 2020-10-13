@@ -266,16 +266,10 @@ workflows:
   update_repositories:
     mapping: helm.cloudify_helm.workflows.update_repositories
     parameters:
-      node_instance_ids:
-        # type: list commented for 4.X support
-        default: []
+      node_instance_id:
+        default: ''
         description: |
-          List of node instance ID's of helm clients to refresh for(type:cloudify.nodes.helm.Repo).
-      node_ids:
-        # type: list commented for 4.X support
-        default: []
-        description: |
-          List of node templates to refresh for(type:cloudify.nodes.helm.Repo).
+           Node instance ID's of helm clients to refresh repositories for(type:cloudify.nodes.helm.Repo).
       flags:
         <<: *flags_input
 
