@@ -24,6 +24,7 @@ from .decorators import with_helm
 from .utils import (
     get_binary,
     copy_binary,
+    helm_from_ctx,
     is_using_existing,
     get_executable_path,
     use_existing_repo_on_helm,
@@ -119,7 +120,7 @@ def install_release(ctx,
     :param values_file: values file path
     :return output of `helm install` command
     """
-    args_dict = prepare_args(ctx, kwargs.get('flags'))
+    args_dict = prepare_args(ctx, kwargs.get(FLAGS_FIELD))
     output = helm.install(
         values_file=values_file,
         kubeconfig=kubeconfig,
@@ -134,7 +135,7 @@ def install_release(ctx,
 @operation
 @with_helm
 def uninstall_release(ctx, helm, kubeconfig=None, token=None, **kwargs):
-    args_dict = prepare_args(ctx, kwargs.get('flags'))
+    args_dict = prepare_args(ctx, kwargs.get(FLAGS_FIELD))
     helm.uninstall(
         kubeconfig=kubeconfig,
         token=token,
@@ -156,7 +157,7 @@ def add_repo(ctx, helm, **kwargs):
 @with_helm
 def remove_repo(ctx, helm, **kwargs):
     if not ctx.node.properties.get(USE_EXTERNAL_RESOURCE):
-        args_dict = prepare_args(ctx, kwargs.get('flags'))
+        args_dict = prepare_args(ctx, kwargs.get(FLAGS_FIELD))
         helm.repo_remove(**args_dict)
 
 
@@ -170,3 +171,9 @@ def inject_env_properties(ctx, **_):
                                                    value=value))
         ctx.source.instance.runtime_properties[
             dir_property_name] = value
+
+
+@operation
+def update_repo(ctx, **kwargs):
+    helm = helm_from_ctx(ctx)
+    helm.repo_update(flags=kwargs.get(FLAGS_FIELD))
