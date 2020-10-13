@@ -30,9 +30,9 @@ def _helm_operation(ctx,
             continue
         if node_instance_ids and (node_instance.id not in node_instance_ids):
             continue
-        if node_type in \
-                node_instance.node.type_hierarchy:
-            ctx.logger.info("Adding node instance: %s", node_instance.id)
+        if node_type in node_instance.node.type_hierarchy:
+            ctx.logger.info("Adding node instance: {id}".format(
+                            id=node_instance.id))
             sequence.add(
                 node_instance.execute_operation(
                     operation,
@@ -47,7 +47,7 @@ def update_repositories(ctx, node_ids, node_instance_ids, flags):
     # TODO: Remove the check when 4.X is not supported, add to flags
     #  parameter type: list in plugin.yaml
     if type(flags) is not list:
-        raise NonRecoverableError('flags parameter must be a list.')
+        raise NonRecoverableError('Flags parameter must be a list.')
     _helm_operation(ctx,
                     "helm.update_repo",
                     node_ids,
