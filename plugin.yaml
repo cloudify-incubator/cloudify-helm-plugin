@@ -195,7 +195,6 @@ node_types:
         delete:
           implementation: helm.cloudify_helm.tasks.uninstall_binary
 
-
   cloudify.nodes.helm.Release:
     derived_from: cloudify.nodes.Root
     properties:
@@ -212,7 +211,7 @@ node_types:
         start:
           implementation: helm.cloudify_helm.tasks.install_release
           inputs:
-            flags:
+            flags: &flags_input
               description: >
                  Flags to add only to `helm install` command.The format is the same as "flags".
               default: []
@@ -220,9 +219,7 @@ node_types:
           implementation: helm.cloudify_helm.tasks.uninstall_release
           inputs:
             flags:
-              description: >
-                Flags to add only to `helm uninstall` command.The format is the same as "flags".
-              default: []
+              <<: *flags_input
 
 
   cloudify.nodes.helm.Repo:
@@ -246,10 +243,14 @@ node_types:
           implementation: helm.cloudify_helm.tasks.remove_repo
           inputs:
             flags:
-              description: >
-                Flags to add only to `helm uninstall` command.The format is the same as "flags".
-              default: []
-
+              <<: *flags_input
+      helm:
+        update_repo:
+          # update repositories for this repo helm client.
+          implementation: helm.cloudify_helm.tasks.update_repo
+          inputs:
+            flags:
+              <<: *flags_input
 
 relationships:
 
@@ -259,4 +260,16 @@ relationships:
       cloudify.interfaces.relationship_lifecycle:
         preconfigure:
           implementation: helm.cloudify_helm.tasks.inject_env_properties
+
+workflows:
+
+  update_repositories:
+    mapping: helm.cloudify_helm.workflows.update_repositories
+    parameters:
+      node_instance_id:
+        default: ''
+        description: |
+           Node instance ID's of helm clients to refresh repositories for(type:cloudify.nodes.helm.Repo).
+      flags:
+        <<: *flags_input
 
