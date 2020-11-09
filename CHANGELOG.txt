@@ -3,3 +3,4 @@
 0.0.3: Add gcp authentication token refresh.
 0.0.4: Add obfuscate_passwords also when command execution fails.
 0.0.5: Create binary and Helm env inside deployment folder.
+0.0.6: Add update_repositories workflow.
