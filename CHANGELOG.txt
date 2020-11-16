@@ -4,3 +4,4 @@
 0.0.4: Add obfuscate_passwords also when command execution fails.
 0.0.5: Create binary and Helm env inside deployment folder.
 0.0.6: Add update_repositories workflow.
+0.0.7: Release in order to trigger build bundle.
