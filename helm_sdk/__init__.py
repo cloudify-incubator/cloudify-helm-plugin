@@ -169,3 +169,42 @@ class Helm(object):
         flags = flags or []
         cmd.extend([prepare_parameter(flag) for flag in flags])
         self.execute(self._helm_command(cmd))
+
+    def upgrade(self,
+                release_name,
+                chart,
+                flags=None,
+                set_values=None,
+                values_file=None,
+                kubeconfig=None,
+                token=None,
+                apiserver=None,
+                **_):
+        """
+        Execute helm upgrade command.
+        :param release_name: name of the release to upgrade.
+        :param chart: The chart to upgrade the release with.
+        The chart argument can be either: a chart reference('example/mariadb'),
+        a path to a chart directory, a packaged chart, or a fully qualified
+        URL.
+        :param flags: list of flags to add to the upgrade command.
+        :param set_values: list of variables and their values for --set.
+        :param kubeconfig: path to kubeconfig file.
+        :param values_file: values file path.
+        :param token: bearer token used for authentication.
+        :param apiserver: the address and the port for the Kubernetes API
+        server.
+        :return output of helm upgrade command.
+        """
+        cmd = ['upgrade', release_name, chart, '--atomic', '--output=json']
+        self.handle_auth_params(cmd, kubeconfig, token, apiserver)
+        if values_file:
+            cmd.append(APPEND_FLAG_STRING.format(name=HELM_VALUES_FLAG,
+                                                 value=values_file))
+        flags = flags or []
+        validate_no_collisions_between_params_and_flags(flags)
+        cmd.extend([prepare_parameter(flag) for flag in flags])
+        set_arguments = set_values or []
+        cmd.extend(prepare_set_parameters(set_arguments))
+        output = self.execute(self._helm_command(cmd), True)
+        return json.loads(output)

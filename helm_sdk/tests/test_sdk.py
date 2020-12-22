@@ -108,3 +108,46 @@ class HelmSDKTest(HelmTestBase):
         self.helm.repo_remove('my_repo')
         cmd_expected = [HELM_BINARY, 'repo', 'remove', 'my_repo']
         mock_execute.assert_called_once_with(cmd_expected)
+
+    def test_upgrade_with_token_and_api(self):
+        with self.assertRaisesRegexp(CloudifyHelmSDKError,
+                                     'Must provide kubeconfig file path.'):
+            self.helm.upgrade('release1',
+                              'example/mariadb',
+                              mock_flags,
+                              mock_set_args,
+                              token='demotoken',
+                              apiserver='https://1.0.0.0')
+
+    def test_upgrade_with_kubeconfig(self):
+        mock_execute = mock.Mock(return_value='{"name":"release1"}')
+        self.helm.execute = mock_execute
+        out = self.helm.upgrade('release1',
+                                'my_chart',
+                                mock_flags,
+                                mock_set_args,
+                                kubeconfig='/path/to/config')
+        cmd_expected = [HELM_BINARY, 'upgrade', 'release1', 'my_chart',
+                        '--atomic', '--output=json',
+                        '--kubeconfig=/path/to/config', '--dry-run',
+                        '--timeout=100', '--set', 'x=y', '--set', 'a=b']
+        mock_execute.assert_called_once_with(cmd_expected, True)
+        self.assertEqual(out, {"name": "release1"})
+
+    def test_upgrade_no_token_and_no_kubeconfig(self):
+        with self.assertRaisesRegexp(CloudifyHelmSDKError,
+                                     'Must provide kubeconfig file path.'):
+            self.helm.upgrade('release1',
+                              'my_chart',
+                              mock_flags,
+                              mock_set_args,
+                              apiserver='https://1.0.0.0')
+
+    def test_upgrade_no_apiserver_and_no_kubeconfig(self):
+        with self.assertRaisesRegexp(CloudifyHelmSDKError,
+                                     'Must provide kubeconfig file path.'):
+            self.helm.upgrade('release1',
+                              'my_chart',
+                              mock_flags,
+                              mock_set_args,
+                              token='demotoken')
