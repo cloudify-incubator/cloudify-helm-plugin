@@ -14,6 +14,7 @@
 #    * limitations under the License.
 
 HOST = "host"
+NAME_FIELD = "name"
 API_KEY = "api_key"
 FLAGS_FIELD = "flags"
 HELM_CONFIG = "helm_config"
@@ -28,6 +29,5 @@ DATA_DIR_ENV_VAR = "HELM_DATA_HOME"
 CACHE_DIR_ENV_VAR = "HELM_CACHE_HOME"
 CONFIG_DIR_ENV_VAR = "HELM_CONFIG_HOME"
 USE_EXTERNAL_RESOURCE = "use_external_resource"
-
 HELM_ENV_VARS_LIST = [DATA_DIR_ENV_VAR, CACHE_DIR_ENV_VAR,
                       CONFIG_DIR_ENV_VAR]

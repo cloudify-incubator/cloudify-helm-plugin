@@ -185,8 +185,7 @@ class Helm(object):
         :param release_name: name of the release to upgrade.
         :param chart: The chart to upgrade the release with.
         The chart argument can be either: a chart reference('example/mariadb'),
-        a path to a chart directory, a packaged chart, or a fully qualified
-        URL.
+        a packaged chart, or a fully qualified URL.
         :param flags: list of flags to add to the upgrade command.
         :param set_values: list of variables and their values for --set.
         :param kubeconfig: path to kubeconfig file.

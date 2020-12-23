@@ -32,6 +32,7 @@ from .utils import (
     delete_temporary_env_of_helm)
 from .constants import (
     HOST,
+    NAME_FIELD,
     FLAGS_FIELD,
     VALUES_FILE,
     API_OPTIONS,
@@ -177,3 +178,38 @@ def inject_env_properties(ctx, **_):
 def update_repo(ctx, **kwargs):
     helm = helm_from_ctx(ctx)
     helm.repo_update(flags=kwargs.get(FLAGS_FIELD))
+
+
+@operation
+@with_helm
+def upgrade_release(ctx,
+                    helm,
+                    chart,
+                    kubeconfig=None,
+                    values_file=None,
+                    set_values=None,
+                    token=None,
+                    flags=None,
+                    **_):
+    """
+    Execute helm upgrade.
+    :param ctx: cloudify context.
+    :param helm: helm client object.
+    :param chart: The chart to upgrade the release with.
+    :param kubeconfig: kubeconfig path.
+    :param values_file: values file path.
+    :return output of `helm upgrade` command
+    """
+    output = helm.upgrade(
+        release_name=ctx.node.properties.ctx.node.properties.get(
+            RESOURCE_CONFIG, {}).get(NAME_FIELD),
+        chart=chart,
+        flags=flags,
+        set_values=set_values,
+        values_file=values_file,
+        kubeconfig=kubeconfig,
+        token=token,
+        apiserver=ctx.node.properties.get(
+            CLIENT_CONFIG, {}).get(CONFIGURATION, {}).get(API_OPTIONS, {}).get(
+            HOST), )
+    ctx.instance.runtime_properties['upgrade_output'] = output

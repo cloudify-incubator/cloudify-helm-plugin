@@ -126,12 +126,12 @@ data_types:
         description: >
           Name of the chart to install.For example: stable/mysql.
         required: true
-      values_file:
+      values_file: &values_file
         type: string
         description: >
           Path to values files.
         required: false
-      set_values:
+      set_values: &set_values
         description: |
           List of variables names and values to set. For example:
           - name: x
@@ -273,3 +273,26 @@ workflows:
       flags:
         <<: *flags_input
 
+  upgrade_release:
+    mapping: helm.cloudify_helm.workflows.upgrade_release
+    parameters:
+      node_instance_id:
+        default: ''
+        description: |
+           Node instance ID's of helm clients to refresh repositories for(type:cloudify.nodes.helm.Repo).
+      chart:
+        description: |
+          The chart to upgrade the release with.
+          The chart argument can be either: a chart reference('example/mariadb'),
+          a packaged chart, or a fully qualified
+          URL.
+        required: true
+      flags:
+        <<: *flags_input
+      set_values:
+        <<: *set_values
+      values_file:
+        type: string
+        description: >
+          Path to values files.
+        default: ''

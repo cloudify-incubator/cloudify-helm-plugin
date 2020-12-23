@@ -54,3 +54,21 @@ def update_repositories(ctx, node_instance_id, flags):
                     node_instance_id,
                     'cloudify.nodes.helm.Repo',
                     flags=flags).execute()
+
+
+def upgrade_release(ctx,
+                    node_instance_id,
+                    chart,
+                    flags,
+                    set_values,
+                    values_file):
+    if type(flags) is not list:
+        raise NonRecoverableError('Flags parameter must be a list.')
+    _helm_operation(ctx,
+                    "helm.upgrade_release",
+                    node_instance_id,
+                    'cloudify.nodes.helm.Release',
+                    chart=chart,
+                    flags=flags,
+                    set_values=set_values,
+                    values_file=values_file).execute()

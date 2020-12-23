@@ -106,12 +106,14 @@ def get_kubeconfig_file(ctx):
 
 
 @contextmanager
-def get_values_file(ctx):
-    if ctx.node.properties.get(RESOURCE_CONFIG, {}).get('values_file'):
+def get_values_file(ctx, values_file=None):
+    values_file = values_file if values_file else ctx.node.properties.get(
+        RESOURCE_CONFIG, {}).get('values_file')
+    if values_file:
         with tempfile.NamedTemporaryFile(delete=False) as f:
             f.close()
             ctx.download_resource(
-                ctx.node.properties.get(RESOURCE_CONFIG).get('values_file'),
+                values_file,
                 target_path=f.name)
             try:
                 ctx.logger.info("using values file:{file}".format(file=f.name))

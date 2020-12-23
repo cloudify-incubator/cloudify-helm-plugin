@@ -32,7 +32,8 @@ def with_helm(func):
     def f(*args, **kwargs):
         ctx = kwargs['ctx']
         with get_kubeconfig_file(ctx) as kubeconfig:
-            with get_values_file(ctx) as values_file:
+            with get_values_file(ctx,
+                                 kwargs.get('values_file')) as values_file:
                 helm = helm_from_ctx(ctx)
                 kwargs['helm'] = helm
                 kwargs['kubeconfig'] = kubeconfig
