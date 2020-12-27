@@ -106,7 +106,7 @@ def prepare_args(ctx, flags=None):
 
 
 @operation
-@with_helm
+@with_helm()
 def install_release(ctx,
                     helm,
                     kubeconfig=None,
@@ -134,7 +134,7 @@ def install_release(ctx,
 
 
 @operation
-@with_helm
+@with_helm()
 def uninstall_release(ctx, helm, kubeconfig=None, token=None, **kwargs):
     args_dict = prepare_args(ctx, kwargs.get(FLAGS_FIELD))
     helm.uninstall(
@@ -147,7 +147,7 @@ def uninstall_release(ctx, helm, kubeconfig=None, token=None, **kwargs):
 
 
 @operation
-@with_helm
+@with_helm()
 def add_repo(ctx, helm, **kwargs):
     if not use_existing_repo_on_helm(ctx, helm):
         args_dict = prepare_args(ctx, kwargs.get('flags'))
@@ -155,7 +155,7 @@ def add_repo(ctx, helm, **kwargs):
 
 
 @operation
-@with_helm
+@with_helm()
 def remove_repo(ctx, helm, **kwargs):
     if not ctx.node.properties.get(USE_EXTERNAL_RESOURCE):
         args_dict = prepare_args(ctx, kwargs.get(FLAGS_FIELD))
@@ -181,10 +181,10 @@ def update_repo(ctx, **kwargs):
 
 
 @operation
-@with_helm
+@with_helm(ignore_properties_values_file=True)
 def upgrade_release(ctx,
                     helm,
-                    chart,
+                    chart=None,
                     kubeconfig=None,
                     values_file=None,
                     set_values=None,
@@ -200,8 +200,13 @@ def upgrade_release(ctx,
     :param values_file: values file path.
     :return output of `helm upgrade` command
     """
+    ctx.logger.info(
+        "Checking if used local packaged chart file, If local file used and "
+        "the command failed check file access permissions.")
+    if os.path.isfile(chart):
+        ctx.logger.info("Local chart file: {path} found.".format(chart))
     output = helm.upgrade(
-        release_name=ctx.node.properties.ctx.node.properties.get(
+        release_name=ctx.node.properties.get(
             RESOURCE_CONFIG, {}).get(NAME_FIELD),
         chart=chart,
         flags=flags,

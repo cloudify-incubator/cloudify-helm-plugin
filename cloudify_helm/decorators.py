@@ -27,24 +27,36 @@ from .utils import (
     get_kubeconfig_file)
 
 
-def with_helm(func):
-    @wraps(func)
-    def f(*args, **kwargs):
-        ctx = kwargs['ctx']
-        with get_kubeconfig_file(ctx) as kubeconfig:
-            with get_values_file(ctx,
-                                 kwargs.get('values_file')) as values_file:
-                helm = helm_from_ctx(ctx)
-                kwargs['helm'] = helm
-                kwargs['kubeconfig'] = kubeconfig
-                kwargs['values_file'] = values_file
-                kwargs['token'] = get_auth_token(ctx)
-                try:
-                    return func(*args, **kwargs)
-                except Exception as e:
-                    _, _, tb = sys.exc_info()
-                    raise NonRecoverableError(
-                        '{0}'.format(text_type(e)),
-                        causes=[exception_to_error_cause(e, tb)])
+def with_helm(ignore_properties_values_file=False):
+    """
+    This decorator creates Helm client for operations and handle special
+    parameters like kubeconfig, authentication token etc.
+    :param ignore_properties_values_file: whether to ignore the values file
+    path resides under properties->resource_config
+    (used by upgrade release operation in order avoid collisions between node
+    properties and user inputs).
+    """
 
-    return f
+    def decorator(func):
+        @wraps(func)
+        def f(*args, **kwargs):
+            ctx = kwargs['ctx']
+            with get_kubeconfig_file(ctx) as kubeconfig:
+                with get_values_file(ctx,
+                                     ignore_properties_values_file,
+                                     kwargs.get('values_file')) as values_file:
+                    helm = helm_from_ctx(ctx)
+                    kwargs['helm'] = helm
+                    kwargs['kubeconfig'] = kubeconfig
+                    kwargs['values_file'] = values_file
+                    kwargs['token'] = get_auth_token(ctx)
+                    try:
+                        return func(*args, **kwargs)
+                    except Exception as e:
+                        _, _, tb = sys.exc_info()
+                        raise NonRecoverableError(
+                            '{0}'.format(text_type(e)),
+                            causes=[exception_to_error_cause(e, tb)])
+        return f
+
+    return decorator
