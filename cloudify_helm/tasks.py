@@ -128,8 +128,7 @@ def install_release(ctx,
         token=token,
         apiserver=ctx.node.properties.get(
             CLIENT_CONFIG, {}).get(CONFIGURATION, {}).get(API_OPTIONS, {}).get(
-            HOST),
-        **args_dict)
+            HOST), **args_dict)
     ctx.instance.runtime_properties['install_output'] = output
 
 
@@ -204,7 +203,7 @@ def upgrade_release(ctx,
         "Checking if used local packaged chart file, If local file used and "
         "the command failed check file access permissions.")
     if os.path.isfile(chart):
-        ctx.logger.info("Local chart file: {path} found.".format(chart))
+        ctx.logger.info("Local chart file: {path} found.".format(path=chart))
     output = helm.upgrade(
         release_name=ctx.node.properties.get(
             RESOURCE_CONFIG, {}).get(NAME_FIELD),

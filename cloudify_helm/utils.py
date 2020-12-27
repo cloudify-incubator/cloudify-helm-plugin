@@ -19,7 +19,6 @@ import tarfile
 import tempfile
 from contextlib import contextmanager
 
-
 from cloudify.exceptions import NonRecoverableError
 from cloudify_common_sdk.utils import get_deployment_dir
 
@@ -107,10 +106,10 @@ def get_kubeconfig_file(ctx):
 
 @contextmanager
 def get_values_file(ctx, ignore_properties_values_file, values_file=None):
-    values_file = values_file if ignore_properties_values_file else ctx.node.properties.get(
-        RESOURCE_CONFIG, {}).get('values_file')
+    values_file = values_file if ignore_properties_values_file else \
+        ctx.node.properties.get(RESOURCE_CONFIG, {}).get('values_file')
     ctx.logger.debug("values file path:{path}".format(path=values_file))
-    if values_file and not ignore_properties_values_file :
+    if values_file and not ignore_properties_values_file:
         # It means we took values file path from resource_config
         with tempfile.NamedTemporaryFile(delete=False) as f:
             f.close()
