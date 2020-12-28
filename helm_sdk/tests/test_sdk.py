@@ -151,3 +151,12 @@ class HelmSDKTest(HelmTestBase):
                               mock_flags,
                               mock_set_args,
                               token='demotoken')
+
+    def test_upgrade_no_chart(self):
+        with self.assertRaisesRegexp(CloudifyHelmSDKError,
+                                     'Must provide chart for upgrade '
+                                     'release.'):
+            self.helm.upgrade(release_name='release1',
+                              flags=mock_flags,
+                              set_values=mock_set_args,
+                              kubeconfig='/path/to/config')

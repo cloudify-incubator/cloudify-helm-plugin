@@ -183,7 +183,7 @@ def update_repo(ctx, **kwargs):
 @with_helm(ignore_properties_values_file=True)
 def upgrade_release(ctx,
                     helm,
-                    chart=None,
+                    chart='',
                     kubeconfig=None,
                     values_file=None,
                     set_values=None,
@@ -199,7 +199,7 @@ def upgrade_release(ctx,
     :param values_file: values file path.
     :return output of `helm upgrade` command
     """
-    ctx.logger.info(
+    ctx.logger.debug(
         "Checking if used local packaged chart file, If local file used and "
         "the command failed check file access permissions.")
     if os.path.isfile(chart):
