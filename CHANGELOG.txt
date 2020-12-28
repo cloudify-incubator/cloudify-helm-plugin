@@ -5,3 +5,4 @@
 0.0.5: Create binary and Helm env inside deployment folder.
 0.0.6: Add update_repositories workflow.
 0.0.7: Release in order to trigger build bundle.
+0.0.8: Added upgrade_release workflow.
