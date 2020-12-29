@@ -129,7 +129,7 @@ def get_values_file(ctx, ignore_properties_values_file, values_file=None):
                 "it, please check file permissions.")
         yield values_file
     else:
-        yield None
+        yield
 
 
 @contextmanager

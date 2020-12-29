@@ -216,4 +216,4 @@ def upgrade_release(ctx,
         apiserver=ctx.node.properties.get(
             CLIENT_CONFIG, {}).get(CONFIGURATION, {}).get(API_OPTIONS, {}).get(
             HOST), )
-    ctx.instance.runtime_properties['upgrade_output'] = output
+    ctx.instance.runtime_properties['install_output'] = output

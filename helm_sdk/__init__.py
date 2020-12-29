@@ -198,7 +198,7 @@ class Helm(object):
         if not chart:
             raise CloudifyHelmSDKError(
                 'Must provide chart for upgrade release.')
-        cmd = ['upgrade', release_name, chart, '--atomic']
+        cmd = ['upgrade', release_name, chart, '--atomic', '-o=json']
         self.handle_auth_params(cmd, kubeconfig, token, apiserver)
         if values_file:
             cmd.append(APPEND_FLAG_STRING.format(name=HELM_VALUES_FLAG,
@@ -208,4 +208,5 @@ class Helm(object):
         cmd.extend([prepare_parameter(flag) for flag in flags])
         set_arguments = set_values or []
         cmd.extend(prepare_set_parameters(set_arguments))
-        return self.execute(self._helm_command(cmd), True)
+        output = self.execute(self._helm_command(cmd), True)
+        return json.loads(output)
