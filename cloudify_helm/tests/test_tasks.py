@@ -27,6 +27,7 @@ from ..tasks import (
     remove_repo,
     install_binary,
     install_release,
+    upgrade_release,
     uninstall_binary,
     uninstall_release)
 from ..constants import (
@@ -304,3 +305,48 @@ class TestTasks(unittest.TestCase):
                             return_value=True):
                 uninstall_release(**kwargs)
                 fake_uninstall.assert_called_once()
+
+    def test_upgrade_release_no_chart(self):
+        properties = self.mock_install_release_properties()
+        ctx = self.mock_ctx(properties,
+                            self.mock_runtime_properties())
+        kwargs = {
+            'ctx': ctx
+        }
+        with self.assertRaisesRegexp(NonRecoverableError,
+                                     'Must provide chart for'
+                                     ' upgrade release.'):
+            with mock.patch('cloudify_helm.utils.os.path.exists',
+                            return_value=True):
+                upgrade_release(**kwargs)
+
+    def test_upgrade_release(self):
+        properties = self.mock_install_release_properties()
+        properties['resource_config'][
+            'values_file'] = 'initial/path/to/values/file'
+        ctx = self.mock_ctx(properties,
+                            self.mock_runtime_properties())
+        kwargs = {
+            'ctx': ctx,
+            'chart': 'example/testchart',
+            'values_file': 'upgrade/path/to/values/file',
+            'set_values': {"name": "a", "value": "b"}
+        }
+        with mock.patch('helm_sdk.Helm.upgrade',
+                        return_value='Success!') as fake_upgrade:
+            with mock.patch('cloudify_helm.utils.os.path.exists',
+                            return_value=True):
+                with mock.patch('cloudify_helm.utils.os.path.isfile',
+                                return_value=True):
+                    upgrade_release(**kwargs)
+                    fake_upgrade.assert_called_once_with(
+                        release_name=properties[RESOURCE_CONFIG]["name"],
+                        chart='example/testchart',
+                        flags=None,
+                        set_values={"name": "a", "value": "b"},
+                        values_file='upgrade/path/to/values/file',
+                        kubeconfig=None,
+                        token=properties[CLIENT_CONFIG][CONFIGURATION]
+                        [API_OPTIONS][API_KEY],
+                        apiserver=properties[CLIENT_CONFIG][CONFIGURATION]
+                        [API_OPTIONS][HOST])
