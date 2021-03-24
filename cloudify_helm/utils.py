@@ -14,11 +14,16 @@
 #    * limitations under the License.
 
 import os
+import sys
 import shutil
 import tarfile
 import tempfile
 from contextlib import contextmanager
+from subprocess import SubprocessError
 
+import yaml
+
+from cloudify import ctx
 from cloudify.exceptions import NonRecoverableError
 from cloudify_common_sdk.utils import get_deployment_dir
 
@@ -30,26 +35,29 @@ from .constants import (
     API_KEY,
     API_OPTIONS,
     HELM_CONFIG,
+    AWS_CLI_VENV,
     CONFIGURATION,
     CLIENT_CONFIG,
     AUTHENTICATION,
     EXECUTABLE_PATH,
     RESOURCE_CONFIG,
+    AWS_ENV_VAR_LIST,
     DATA_DIR_ENV_VAR,
     CACHE_DIR_ENV_VAR,
     CONFIG_DIR_ENV_VAR,
     HELM_ENV_VARS_LIST,
+    AWS_CLI_TO_INSTALL,
     USE_EXTERNAL_RESOURCE)
 
 
-def get_executable_path(properties, runtime_properties):
+def get_helm_executable_path(properties, runtime_properties):
     # Look for executable path in runtime property or in default place.
     return runtime_properties.get(EXECUTABLE_PATH, "") or \
            properties.get(HELM_CONFIG, {}).get(EXECUTABLE_PATH, "")
 
 
 def helm_from_ctx(ctx):
-    executable_path = get_executable_path(ctx.node.properties,
+    executable_path = get_helm_executable_path(ctx.node.properties,
                                           ctx.instance.runtime_properties)
     if not os.path.exists(executable_path):
         raise NonRecoverableError(
@@ -253,3 +261,132 @@ def get_auth_token(ctx):
     # If the user specify token so its in higher priority.
     return ctx.node.properties.get(CLIENT_CONFIG, {}).get(
         CONFIGURATION, {}).get(API_OPTIONS, {}).get(API_KEY) or token
+
+
+def prepare_aws_env(kubeconfig):
+    """
+    Install aws cli if needed.
+    If the cli installed, return aws credentials dictionary to append to helm
+    command invocation.
+    """
+    install_aws_cli_if_needed(kubeconfig)
+    return prepare_aws_env_vars_dict()
+
+
+def prepare_aws_env_vars_dict():
+    """
+    Create aws env vras dictionary for aws cli invocation.
+    If AWS_CLI_VENV runtime property exist, all aws credentials exists under
+    client_config.authentication
+    """
+    if not ctx.instance.runtime_properties.get(AWS_CLI_VENV):
+        return {}
+    authentication_property = ctx.node.properties.get(CLIENT_CONFIG, {}).get(
+        AUTHENTICATION, {})
+    aws_credentials_env_dict = {}
+    for aws_env_var in AWS_ENV_VAR_LIST:
+        aws_credentials_env_dict[aws_env_var] = authentication_property.get(
+            aws_env_var.lower())
+    return aws_credentials_env_dict
+
+
+def install_aws_cli_if_needed(kubeconfig=None):
+    """
+        Install AWS cli inside virtual environment to support native use of
+        authentication for aws.
+        :param kubeconfig: kubeconfig path
+    """
+    if not kubeconfig or not check_aws_cmd_in_kubeconfig(kubeconfig):
+        return
+    authentication_property = ctx.node.properties.get(CLIENT_CONFIG, {}).get(
+        AUTHENTICATION, {})
+    for aws_env_var in AWS_ENV_VAR_LIST:
+        if not authentication_property.get(aws_env_var.lower()):
+            raise NonRecoverableError('Found that aws cli needed in order to'
+                                      ' authenticate with kubernetes but one '
+                                      'of :aws_access_key_id, '
+                                      'aws_secret_access_key, '
+                                      'aws_default_region is missing under '
+                                      'client_config.authentication ')
+    create_venv()
+
+
+def check_aws_cmd_in_kubeconfig(kubeconfig):
+    with open(kubeconfig) as kube_file:
+        kubeconfig_dict = yaml.load(kube_file)
+    ctx.logger.debug("Trying to get users from kubeconfig")
+    users = kubeconfig_dict.get('users', {})
+    for user in users:
+        command = user.get('user', {}).get('exec', {}).get('command', None)
+        if command == 'aws':
+            return True
+        if command == 'aws-iam-authenticator':
+            ctx.logger.warning("Found kubeconfig user that uses "
+                               "aws-iam-authenticator command,if its the user "
+                               "of the current kubernetes context please use "
+                               "aws command See https://docs.aws.amazon.com/"
+                               "eks/latest/userguide/create-kubeconfig.html#"
+                               "create-kubeconfig-manually ")
+    return False
+
+
+def create_venv():
+    """
+        Handle creation of virtual environment.
+        Create the virtual environment in deployment directory.
+        Save the path of the virtual environment in runtime properties.
+       :param packages_to_install: list of python packages to install
+        inside venv.
+    """
+    if not ctx.instance.runtime_properties.get(AWS_CLI_VENV):
+        deployment_dir = get_deployment_dir(ctx.deployment.id)
+        venv_path = tempfile.mkdtemp(dir=deployment_dir)
+        make_virtualenv(path=venv_path)
+        install_packages_to_venv(venv_path, [AWS_CLI_TO_INSTALL])
+        ctx.instance.runtime_properties[AWS_CLI_VENV] = venv_path
+
+
+def make_virtualenv(path):
+    """
+        Make a venv for installing aws cli inside.
+    """
+    ctx.logger.debug("Creating virtualenv at: {path}".format(path=path))
+    run_subprocess(
+        [sys.executable, '-m', 'virtualenv', path],
+        ctx.logger
+    )
+
+
+def install_packages_to_venv(venv, packages_list):
+    # Force reinstall inside venv in order to make sure
+    # packages being installed on specified environment .
+    if packages_list:
+        ctx.logger.debug("venv = {path}".format(path=venv))
+        command = [get_executable_path('pip', venv=venv), 'install',
+                   '--force-reinstall', '--retries=2',
+                   '--timeout=15'] + packages_list
+        ctx.logger.debug("cmd:{command}".format(command=command))
+        ctx.logger.info("Installing {packages} on inside venv: {venv}.".format(
+            packages=packages_list,
+            venv=venv))
+        try:
+            run_subprocess(
+                command=command,
+                logger=ctx.logger,
+                cwd=venv,
+                additional_env={'PYTHONPATH': ''})
+
+        except SubprocessError as e:
+            raise NonRecoverableError("Failed install packages: {packages}"
+                                      " inside venv: {venv}. Error message: "
+                                      "{err}".format(packages=packages_list,
+                                                     venv=venv,
+                                                     err=e))
+
+
+def get_executable_path(executable, venv):
+    """
+    :param executable: the name of the executable
+    :param venv: the venv to look for the executable in.
+    """
+    return '{0}/bin/{1}'.format(venv, executable) if venv else executable

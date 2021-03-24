@@ -25,8 +25,9 @@ from .utils import (
     get_binary,
     copy_binary,
     helm_from_ctx,
+    prepare_aws_env,
     is_using_existing,
-    get_executable_path,
+    get_helm_executable_path,
     use_existing_repo_on_helm,
     create_temporary_env_of_helm,
     delete_temporary_env_of_helm)
@@ -79,7 +80,7 @@ def install_binary(ctx, **_):
 
 @operation
 def uninstall_binary(ctx, **_):
-    executable_path = get_executable_path(ctx.node.properties,
+    executable_path = get_helm_executable_path(ctx.node.properties,
                                           ctx.instance.runtime_properties)
 
     if os.path.isfile(executable_path) and not is_using_existing(ctx):
@@ -122,13 +123,16 @@ def install_release(ctx,
     :return output of `helm install` command
     """
     args_dict = prepare_args(ctx, kwargs.get(FLAGS_FIELD))
+    aws_env_vars = prepare_aws_env(kubeconfig)
     output = helm.install(
         values_file=values_file,
         kubeconfig=kubeconfig,
         token=token,
         apiserver=ctx.node.properties.get(
             CLIENT_CONFIG, {}).get(CONFIGURATION, {}).get(API_OPTIONS, {}).get(
-            HOST), **args_dict)
+            HOST),
+        additional_env=aws_env_vars,
+        **args_dict)
     ctx.instance.runtime_properties['install_output'] = output
 
 
@@ -136,12 +140,14 @@ def install_release(ctx,
 @with_helm()
 def uninstall_release(ctx, helm, kubeconfig=None, token=None, **kwargs):
     args_dict = prepare_args(ctx, kwargs.get(FLAGS_FIELD))
+    aws_env_vars = prepare_aws_env(kubeconfig)
     helm.uninstall(
         kubeconfig=kubeconfig,
         token=token,
         apiserver=ctx.node.properties.get(
             CLIENT_CONFIG, {}).get(CONFIGURATION, {}).get(API_OPTIONS, {}).get(
             HOST),
+        additional_env=aws_env_vars
         **args_dict)
 
 
