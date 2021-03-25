@@ -279,15 +279,18 @@ def prepare_aws_env_vars_dict():
     If AWS_CLI_VENV runtime property exist, all aws credentials exists under
     client_config.authentication
     """
-    if not ctx.instance.runtime_properties.get(AWS_CLI_VENV):
-        return {}
+    aws_env_dict = {}
+    aws_cli_venv = ctx.instance.runtime_properties.get(AWS_CLI_VENV)
+    if not aws_cli_venv:
+        return aws_env_dict
+    # Add virtual environment to path in order to use aws cli.
+    aws_env_dict['PATH'] = aws_cli_venv + '/bin:' + os.environ.get('PATH')
     authentication_property = ctx.node.properties.get(CLIENT_CONFIG, {}).get(
         AUTHENTICATION, {})
-    aws_credentials_env_dict = {}
     for aws_env_var in AWS_ENV_VAR_LIST:
-        aws_credentials_env_dict[aws_env_var] = authentication_property.get(
+        aws_env_dict[aws_env_var] = authentication_property.get(
             aws_env_var.lower())
-    return aws_credentials_env_dict
+    return aws_env_dict
 
 
 def install_aws_cli_if_needed(kubeconfig=None):
@@ -304,7 +307,7 @@ def install_aws_cli_if_needed(kubeconfig=None):
         if not authentication_property.get(aws_env_var.lower()):
             raise NonRecoverableError('Found that aws cli needed in order to'
                                       ' authenticate with kubernetes but one '
-                                      'of :aws_access_key_id, '
+                                      'of: aws_access_key_id, '
                                       'aws_secret_access_key, '
                                       'aws_default_region is missing under '
                                       'client_config.authentication ')

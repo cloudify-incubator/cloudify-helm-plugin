@@ -185,6 +185,7 @@ class Helm(object):
                 kubeconfig=None,
                 token=None,
                 apiserver=None,
+                additional_env=None,
                 **_):
         """
         Execute helm upgrade command.
@@ -214,5 +215,7 @@ class Helm(object):
         cmd.extend([prepare_parameter(flag) for flag in flags])
         set_arguments = set_values or []
         cmd.extend(prepare_set_parameters(set_arguments))
+        if additional_env:
+            self.env.update(additional_env)
         output = self.execute(self._helm_command(cmd), True)
         return json.loads(output)
