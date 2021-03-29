@@ -43,7 +43,6 @@ from .constants import (
     RESOURCE_CONFIG,
     AWS_ENV_VAR_LIST,
     DATA_DIR_ENV_VAR,
-    AWS_CLI_VENV_DIR,
     CACHE_DIR_ENV_VAR,
     CONFIG_DIR_ENV_VAR,
     HELM_ENV_VARS_LIST,
@@ -344,12 +343,7 @@ def create_venv():
     """
     if not ctx.instance.runtime_properties.get(AWS_CLI_VENV):
         deployment_dir = get_deployment_dir(ctx.deployment.id)
-        venv_path = os.path.join(deployment_dir, AWS_CLI_VENV_DIR)
-        if os.path.isdir(venv_path):
-            ctx.instance.runtime_properties[AWS_CLI_VENV] = venv_path
-            return
-        os.mkdir(venv_path)
-        # venv_path = tempfile.mkdtemp(dir=deployment_dir)
+        venv_path = tempfile.mkdtemp(dir=deployment_dir)
         make_virtualenv(path=venv_path)
         install_packages_to_venv(venv_path, [AWS_CLI_TO_INSTALL])
         ctx.instance.runtime_properties[AWS_CLI_VENV] = venv_path

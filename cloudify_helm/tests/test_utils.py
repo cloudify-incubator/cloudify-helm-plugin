@@ -24,8 +24,7 @@ from ..utils import (create_venv,
                      install_aws_cli_if_needed,
                      check_aws_cmd_in_kubeconfig)
 from ..constants import (AWS_CLI_VENV,
-                         AWS_ENV_VAR_LIST,
-                         AWS_CLI_VENV_DIR)
+                         AWS_ENV_VAR_LIST)
 
 
 class TestUtils(TestBase):
@@ -39,13 +38,6 @@ class TestUtils(TestBase):
         self.gke_kubeconfig = os.path.join(os.path.dirname(__file__),
                                            'resources',
                                            'kubeconfig_gke.yaml')
-
-        self.fake_deployment_dir = os.path.join('/opt',
-                                                'mgmtworker',
-                                                'work',
-                                                'deployments',
-                                                'default-tenant',
-                                                'test-deployment')
 
     def tearDown(self):
         super(TestBase, self).tearDown()
@@ -97,26 +89,19 @@ class TestUtils(TestBase):
                          False)
 
     def test_create_venv(self):
-        with mock.patch('cloudify_helm.utils.get_deployment_dir',
-                        return_value=self.fake_deployment_dir):
-            with mock.patch('cloudify_helm.utils.os.mkdir'):
+        fake_deployment_dir = os.path.join('/opt',
+                                           'mgmtworker',
+                                           'work',
+                                           'deployments',
+                                           'default-tenant',
+                                           'test-deployment')
+        with mock.patch('cloudify_helm.utils.get_deployment_dir'):
+            with mock.patch('cloudify_helm.utils.tempfile.mkdtemp',
+                            return_value=fake_deployment_dir):
                 with mock.patch('cloudify_helm.utils.run_subprocess'):
                     ctx = self.mock_ctx(test_properties={})
                     current_ctx.set(ctx)
                     create_venv()
                     self.assertEqual(
                         ctx.instance.runtime_properties.get(AWS_CLI_VENV),
-                        os.path.join(self.fake_deployment_dir,
-                                     AWS_CLI_VENV_DIR))
-
-    def test_create_venv_already_exist(self):
-        with mock.patch('cloudify_helm.utils.get_deployment_dir',
-                        return_value=self.fake_deployment_dir):
-            with mock.patch('cloudify_helm.utils.os.path.isdir',
-                            return_value=True):
-                ctx = self.mock_ctx(test_properties={})
-                current_ctx.set(ctx)
-                create_venv()
-                self.assertEqual(
-                    ctx.instance.runtime_properties.get(AWS_CLI_VENV),
-                    os.path.join(self.fake_deployment_dir, AWS_CLI_VENV_DIR))
+                        fake_deployment_dir)
