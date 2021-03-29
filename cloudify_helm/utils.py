@@ -19,7 +19,7 @@ import shutil
 import tarfile
 import tempfile
 from contextlib import contextmanager
-from subprocess import SubprocessError
+from subprocess import CalledProcessError
 
 import yaml
 
@@ -379,7 +379,7 @@ def install_packages_to_venv(venv, packages_list):
                 cwd=venv,
                 additional_env={'PYTHONPATH': ''})
 
-        except SubprocessError as e:
+        except CalledProcessError as e:
             raise NonRecoverableError("Failed install packages: {packages}"
                                       " inside venv: {venv}. Error message: "
                                       "{err}".format(packages=packages_list,
