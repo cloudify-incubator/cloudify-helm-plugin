@@ -268,6 +268,7 @@ def prepare_aws_env(kubeconfig):
     Install aws cli if needed.
     If the cli installed, return aws credentials dictionary to append to helm
     command invocation.
+    :param kubeconfig: kubeconfig path
     """
     install_aws_cli_if_needed(kubeconfig)
     return prepare_aws_env_vars_dict()
@@ -295,9 +296,9 @@ def prepare_aws_env_vars_dict():
 
 def install_aws_cli_if_needed(kubeconfig=None):
     """
-        Install AWS cli inside virtual environment to support native use of
-        authentication for aws.
-        :param kubeconfig: kubeconfig path
+    Install AWS cli inside virtual environment to support native use of
+    authentication for aws.
+    :param kubeconfig: kubeconfig path
     """
     if not kubeconfig or not check_aws_cmd_in_kubeconfig(kubeconfig):
         return

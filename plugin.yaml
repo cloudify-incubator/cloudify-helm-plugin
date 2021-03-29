@@ -31,15 +31,6 @@ data_types:
           Helm binary path.
         required: false
 
-#  cloudify.types.helm.AwsCliConfig:
-#    properties:
-#      executable_path:
-#        type: string
-#        default: ''
-#        description: >
-#          aws cli binary path.
-#        required: false
-
   cloudify.types.helm.ConfigurationVariant:
     description: >
       Type representing all Kubernetes API configuration variants.
@@ -217,34 +208,6 @@ node_types:
           implementation: helm.cloudify_helm.tasks.install_binary
         delete:
           implementation: helm.cloudify_helm.tasks.uninstall_binary
-
-#  cloudify.nodes.helm.AwsAuth:
-#    derived_from: cloudify.nodes.Root
-#    properties:
-#      executable_path:
-#        type: string
-#        default: ''
-#        description: >
-#          Aws cli binary path.
-#        required: false
-#      use_existing_resource:
-#        type: boolean
-#        description: If true, use an existing aws cli installation rather than installing it.
-#        default: false
-#      aws_access_key_id:
-#        type: string
-#        requiered: true
-#      aws_secret_access_key:
-#        type: string
-#      aws_region:
-#        type: string
-#    interfaces:
-#      cloudify.interfaces.lifecycle:
-#        create:
-#          implementation: helm.cloudify_helm.tasks.install_awscli
-#        delete:
-#          implementation: helm.cloudify_helm.tasks.uninstall_awscli
-
 
   cloudify.nodes.helm.Release:
     derived_from: cloudify.nodes.Root
