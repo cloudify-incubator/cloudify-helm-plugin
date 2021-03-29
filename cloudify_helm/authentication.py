@@ -14,7 +14,9 @@
 
 
 import json
+
 from oauth2client.service_account import ServiceAccountCredentials
+from cloudify_common_sdk.filters import obfuscate_passwords
 
 from helm_sdk._compat import text_type
 from .exceptions import HelmKuberentesAuthenticationError
@@ -41,7 +43,7 @@ class KubernetesApiAuthentication(object):
                 'Cannot generate token use {variant} for data:'
                 ' {auth_data} '.format(
                     variant=self.__class__.__name__,
-                    auth_data=self.authentication_data)
+                    auth_data=obfuscate_passwords(self.authentication_data))
             )
 
         return token
@@ -94,6 +96,6 @@ class KubernetesApiAuthenticationVariants(KubernetesApiAuthentication):
         self.logger.debug(
             'Cannot generate Bearer token - no suitable authentication '
             'variant found for {props} properties'.format(
-                props=self.authentication_data)
+                props=obfuscate_passwords(self.authentication_data))
         )
         return None

@@ -2,7 +2,7 @@ plugins:
   helm:
     executor: central_deployment_agent
     package_name: cloudify-helm-plugin
-    package_version: '0.0.8'
+    package_version: '0.1.0'
 
 dsl_definitions:
 
@@ -30,7 +30,6 @@ data_types:
         description: >
           Helm binary path.
         required: false
-
 
   cloudify.types.helm.ConfigurationVariant:
     description: >
@@ -90,6 +89,21 @@ data_types:
         required: false
         description: >
           (JSON) Content of Google Cloud Platform Service Account file.
+      aws_access_key_id:
+        type: string
+        required: false
+        description: >
+          Aws access key id, for authentication with aws.
+      aws_secret_access_key:
+        type: string
+        required: false
+        description: >
+          Aws secret access key, for authentication with aws.
+      aws_default_region:
+        type: string
+        required: false
+        description: >
+          Aws region, where the cluster deployed.
 
   cloudify.types.helm.ClientConfig:
     description: >

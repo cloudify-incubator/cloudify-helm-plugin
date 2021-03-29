@@ -24,6 +24,7 @@ from .utils import (
     helm_from_ctx,
     get_auth_token,
     get_values_file,
+    prepare_aws_env,
     get_kubeconfig_file)
 
 
@@ -60,3 +61,23 @@ def with_helm(ignore_properties_values_file=False):
         return f
 
     return decorator
+
+
+def prepare_aws(func):
+    """
+    This decorator prepares AWS environment.
+    Check if AWS CLI is needed in order to authenticate with kubernetes and
+    prepare the environment variables.
+    """
+    @wraps(func)
+    def f(*args, **kwargs):
+        kubeconfig = kwargs.get('kubeconfig')
+        kwargs['env_vars'] = prepare_aws_env(kubeconfig)
+        try:
+            return func(*args, **kwargs)
+        except Exception as e:
+            _, _, tb = sys.exc_info()
+            raise NonRecoverableError(
+                '{0}'.format(text_type(e)),
+                causes=[exception_to_error_cause(e, tb)])
+    return f

@@ -20,13 +20,13 @@ from cloudify_common_sdk.utils import get_deployment_dir
 from cloudify.decorators import operation
 from cloudify.exceptions import NonRecoverableError
 
-from .decorators import with_helm
+from .decorators import with_helm, prepare_aws
 from .utils import (
     get_binary,
     copy_binary,
     helm_from_ctx,
     is_using_existing,
-    get_executable_path,
+    get_helm_executable_path,
     use_existing_repo_on_helm,
     create_temporary_env_of_helm,
     delete_temporary_env_of_helm)
@@ -79,8 +79,8 @@ def install_binary(ctx, **_):
 
 @operation
 def uninstall_binary(ctx, **_):
-    executable_path = get_executable_path(ctx.node.properties,
-                                          ctx.instance.runtime_properties)
+    executable_path = get_helm_executable_path(ctx.node.properties,
+                                               ctx.instance.runtime_properties)
 
     if os.path.isfile(executable_path) and not is_using_existing(ctx):
         ctx.logger.info("Removing executable: {0}".format(executable_path))
@@ -107,11 +107,13 @@ def prepare_args(ctx, flags=None):
 
 @operation
 @with_helm()
+@prepare_aws
 def install_release(ctx,
                     helm,
                     kubeconfig=None,
                     values_file=None,
                     token=None,
+                    env_vars=None,
                     **kwargs):
     """
     Execute helm install.
@@ -128,13 +130,21 @@ def install_release(ctx,
         token=token,
         apiserver=ctx.node.properties.get(
             CLIENT_CONFIG, {}).get(CONFIGURATION, {}).get(API_OPTIONS, {}).get(
-            HOST), **args_dict)
+            HOST),
+        additional_env=env_vars,
+        **args_dict)
     ctx.instance.runtime_properties['install_output'] = output
 
 
 @operation
 @with_helm()
-def uninstall_release(ctx, helm, kubeconfig=None, token=None, **kwargs):
+@prepare_aws
+def uninstall_release(ctx,
+                      helm,
+                      kubeconfig=None,
+                      token=None,
+                      env_vars=None,
+                      **kwargs):
     args_dict = prepare_args(ctx, kwargs.get(FLAGS_FIELD))
     helm.uninstall(
         kubeconfig=kubeconfig,
@@ -142,6 +152,7 @@ def uninstall_release(ctx, helm, kubeconfig=None, token=None, **kwargs):
         apiserver=ctx.node.properties.get(
             CLIENT_CONFIG, {}).get(CONFIGURATION, {}).get(API_OPTIONS, {}).get(
             HOST),
+        additional_env=env_vars,
         **args_dict)
 
 
@@ -181,6 +192,7 @@ def update_repo(ctx, **kwargs):
 
 @operation
 @with_helm(ignore_properties_values_file=True)
+@prepare_aws
 def upgrade_release(ctx,
                     helm,
                     chart='',
@@ -189,6 +201,7 @@ def upgrade_release(ctx,
                     set_values=None,
                     token=None,
                     flags=None,
+                    env_vars=None,
                     **_):
     """
     Execute helm upgrade.
@@ -215,5 +228,6 @@ def upgrade_release(ctx,
         token=token,
         apiserver=ctx.node.properties.get(
             CLIENT_CONFIG, {}).get(CONFIGURATION, {}).get(API_OPTIONS, {}).get(
-            HOST), )
+            HOST),
+        additional_env=env_vars)
     ctx.instance.runtime_properties['install_output'] = output

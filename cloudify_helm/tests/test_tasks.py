@@ -17,11 +17,11 @@ import os
 import mock
 import shutil
 import tempfile
-import unittest
 
-from cloudify.mocks import MockCloudifyContext
+from cloudify.state import current_ctx
 from cloudify.exceptions import NonRecoverableError
 
+from . import TestBase
 from ..tasks import (
     add_repo,
     remove_repo,
@@ -44,13 +44,13 @@ from ..constants import (
     DATA_DIR_ENV_VAR)
 
 
-class TestTasks(unittest.TestCase):
+class TestTasks(TestBase):
 
     def setUp(self):
-        super(TestTasks, self).setUp()
+        super(TestBase, self).setUp()
 
     def tearDown(self):
-        super(TestTasks, self).tearDown()
+        super(TestBase, self).tearDown()
 
     def mock_runtime_properties(self):
         runtime_properties = {
@@ -83,18 +83,6 @@ class TestTasks(unittest.TestCase):
 
         }
         return properties
-
-    def mock_ctx(self,
-                 test_properties,
-                 test_runtime_properties=None):
-        ctx = MockCloudifyContext(
-            node_id="test_id",
-            node_name="test_name",
-            properties=test_properties,
-            runtime_properties=None if not test_runtime_properties
-            else test_runtime_properties,
-        )
-        return ctx
 
     def test_install_binary_use_existing(self):
         properties = {
@@ -275,7 +263,7 @@ class TestTasks(unittest.TestCase):
         kwargs = {
             'ctx': ctx
         }
-
+        current_ctx.set(ctx)
         with mock.patch('helm_sdk.Helm.install') as fake_install:
             with mock.patch('cloudify_helm.utils.os.path.exists',
                             return_value=True):
@@ -290,7 +278,8 @@ class TestTasks(unittest.TestCase):
                     token=properties[CLIENT_CONFIG][CONFIGURATION][API_OPTIONS]
                     [API_KEY],
                     apiserver=properties[CLIENT_CONFIG][CONFIGURATION]
-                    [API_OPTIONS][HOST])
+                    [API_OPTIONS][HOST],
+                    additional_env={})
 
     def test_uninstall_release(self):
         properties = self.mock_install_release_properties()
@@ -299,7 +288,7 @@ class TestTasks(unittest.TestCase):
         kwargs = {
             'ctx': ctx
         }
-
+        current_ctx.set(ctx)
         with mock.patch('helm_sdk.Helm.uninstall') as fake_uninstall:
             with mock.patch('cloudify_helm.utils.os.path.exists',
                             return_value=True):
@@ -313,6 +302,7 @@ class TestTasks(unittest.TestCase):
         kwargs = {
             'ctx': ctx
         }
+        current_ctx.set(ctx)
         with self.assertRaisesRegexp(NonRecoverableError,
                                      'Must provide chart for'
                                      ' upgrade release.'):
@@ -349,4 +339,5 @@ class TestTasks(unittest.TestCase):
                         token=properties[CLIENT_CONFIG][CONFIGURATION]
                         [API_OPTIONS][API_KEY],
                         apiserver=properties[CLIENT_CONFIG][CONFIGURATION]
-                        [API_OPTIONS][HOST])
+                        [API_OPTIONS][HOST],
+                        additional_env={})
