@@ -25,7 +25,6 @@ from .utils import (
     get_binary,
     copy_binary,
     helm_from_ctx,
-    prepare_aws_env,
     is_using_existing,
     get_helm_executable_path,
     use_existing_repo_on_helm,
@@ -81,7 +80,7 @@ def install_binary(ctx, **_):
 @operation
 def uninstall_binary(ctx, **_):
     executable_path = get_helm_executable_path(ctx.node.properties,
-                                          ctx.instance.runtime_properties)
+                                               ctx.instance.runtime_properties)
 
     if os.path.isfile(executable_path) and not is_using_existing(ctx):
         ctx.logger.info("Removing executable: {0}".format(executable_path))
@@ -230,5 +229,5 @@ def upgrade_release(ctx,
         apiserver=ctx.node.properties.get(
             CLIENT_CONFIG, {}).get(CONFIGURATION, {}).get(API_OPTIONS, {}).get(
             HOST),
-        additional_env=env_vars )
+        additional_env=env_vars)
     ctx.instance.runtime_properties['install_output'] = output

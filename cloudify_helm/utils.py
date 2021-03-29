@@ -43,6 +43,7 @@ from .constants import (
     RESOURCE_CONFIG,
     AWS_ENV_VAR_LIST,
     DATA_DIR_ENV_VAR,
+    AWS_CLI_VENV_DIR,
     CACHE_DIR_ENV_VAR,
     CONFIG_DIR_ENV_VAR,
     HELM_ENV_VARS_LIST,
@@ -58,7 +59,7 @@ def get_helm_executable_path(properties, runtime_properties):
 
 def helm_from_ctx(ctx):
     executable_path = get_helm_executable_path(ctx.node.properties,
-                                          ctx.instance.runtime_properties)
+                                               ctx.instance.runtime_properties)
     if not os.path.exists(executable_path):
         raise NonRecoverableError(
             "Helm's executable not found in {0}. Please set the "
@@ -306,7 +307,7 @@ def install_aws_cli_if_needed(kubeconfig=None):
     for aws_env_var in AWS_ENV_VAR_LIST:
         if not authentication_property.get(aws_env_var.lower()):
             raise NonRecoverableError('Found that aws cli needed in order to'
-                                      ' authenticate with kubernetes but one '
+                                      ' authenticate with kubernetes, but one '
                                       'of: aws_access_key_id, '
                                       'aws_secret_access_key, '
                                       'aws_default_region is missing under '
@@ -343,7 +344,12 @@ def create_venv():
     """
     if not ctx.instance.runtime_properties.get(AWS_CLI_VENV):
         deployment_dir = get_deployment_dir(ctx.deployment.id)
-        venv_path = tempfile.mkdtemp(dir=deployment_dir)
+        venv_path = os.path.join(deployment_dir, AWS_CLI_VENV_DIR)
+        if os.path.isdir(venv_path):
+            ctx.instance.runtime_properties[AWS_CLI_VENV] = venv_path
+            return
+        os.mkdir(venv_path)
+        # venv_path = tempfile.mkdtemp(dir=deployment_dir)
         make_virtualenv(path=venv_path)
         install_packages_to_venv(venv_path, [AWS_CLI_TO_INSTALL])
         ctx.instance.runtime_properties[AWS_CLI_VENV] = venv_path
@@ -369,7 +375,7 @@ def install_packages_to_venv(venv, packages_list):
                    '--force-reinstall', '--retries=2',
                    '--timeout=15'] + packages_list
         ctx.logger.debug("cmd:{command}".format(command=command))
-        ctx.logger.info("Installing {packages} on inside venv: {venv}.".format(
+        ctx.logger.info("Installing {packages} inside venv: {venv}.".format(
             packages=packages_list,
             venv=venv))
         try:
