@@ -114,6 +114,7 @@ def install_release(ctx,
                     values_file=None,
                     token=None,
                     env_vars=None,
+                    ca_file=None,
                     **kwargs):
     """
     Execute helm install.
@@ -132,6 +133,7 @@ def install_release(ctx,
             CLIENT_CONFIG, {}).get(CONFIGURATION, {}).get(API_OPTIONS, {}).get(
             HOST),
         additional_env=env_vars,
+        ca_file=ca_file
         **args_dict)
     ctx.instance.runtime_properties['install_output'] = output
 
@@ -144,6 +146,7 @@ def uninstall_release(ctx,
                       kubeconfig=None,
                       token=None,
                       env_vars=None,
+                      ca_file=None,
                       **kwargs):
     args_dict = prepare_args(ctx, kwargs.get(FLAGS_FIELD))
     helm.uninstall(
@@ -153,6 +156,7 @@ def uninstall_release(ctx,
             CLIENT_CONFIG, {}).get(CONFIGURATION, {}).get(API_OPTIONS, {}).get(
             HOST),
         additional_env=env_vars,
+        ca_file=ca_file,
         **args_dict)
 
 
@@ -202,6 +206,7 @@ def upgrade_release(ctx,
                     token=None,
                     flags=None,
                     env_vars=None,
+                    ca_file=None,
                     **_):
     """
     Execute helm upgrade.
@@ -229,5 +234,7 @@ def upgrade_release(ctx,
         apiserver=ctx.node.properties.get(
             CLIENT_CONFIG, {}).get(CONFIGURATION, {}).get(API_OPTIONS, {}).get(
             HOST),
-        additional_env=env_vars)
+        additional_env=env_vars,
+        ca_file=ca_file,
+    )
     ctx.instance.runtime_properties['install_output'] = output

@@ -24,7 +24,7 @@ from subprocess import CalledProcessError
 import yaml
 
 from cloudify import ctx
-from cloudify.exceptions import NonRecoverableError
+from cloudify.exceptions import NonRecoverableError,HttpException
 from cloudify_common_sdk.utils import get_deployment_dir
 
 from helm_sdk import Helm
@@ -35,6 +35,7 @@ from .constants import (
     API_KEY,
     API_OPTIONS,
     HELM_CONFIG,
+    SSL_CA_CERT,
     AWS_CLI_VENV,
     CONFIGURATION,
     CLIENT_CONFIG,
@@ -140,6 +141,63 @@ def get_values_file(ctx, ignore_properties_values_file, values_file=None):
         yield
 
 
+@contextmanager
+def get_ssl_ca_file():
+    configuration_property = ctx.node.properties.get(CLIENT_CONFIG, {}).get(
+        CONFIGURATION, {})
+
+    current_value = configuration_property.get(API_OPTIONS, {}).get(
+        SSL_CA_CERT)
+    if current_value and check_if_resource_inside_blueprint_folder(
+            current_value):
+        with tempfile.NamedTemporaryFile(delete=False) as f:
+            f.close()
+            ctx.download_resource(
+                current_value,
+                target_path=f.name)
+            try:
+                ctx.logger.info(
+                    "using CA file:{file}".format(file=f.name))
+                yield f.name
+            finally:
+                os.remove(f.name)
+
+    elif current_value and os.path.isfile(current_value):
+        ctx.logger.info("using CA file located at: {path}".format(
+            path=current_value))
+        yield current_value
+
+    elif current_value and not os.path.isfile(current_value):
+        # It means we have the ca as a string in the blueprint
+        f = tempfile.NamedTemporaryFile('w',
+                                        suffix='__cfy.helm.k8s__',
+                                        delete=False)
+        f.write(current_value)
+        f.close()
+        try:
+            ctx.logger.info("using CA content from the blueprint.")
+            yield f.name
+        finally:
+            os.remove(f.name)
+    else:
+        ctx.logger.info("CA file not found.")
+        yield
+
+
+def check_if_resource_inside_blueprint_folder(path):
+    with tempfile.NamedTemporaryFile(delete=True) as f:
+        f.close()
+        try:
+            ctx.download_resource(
+                path,
+                target_path=f.name)
+            return True
+        except HttpException as e:
+            ctx.logger.info("exception: {}".format(type(e)))
+            ctx.logger.info("exception: {}".format(e))
+            ctx.logger.debug("ssl_ca file not found inside blueprint package.")
+            return False
+    return False
 @contextmanager
 def get_binary(ctx):
     installation_temp_dir = tempfile.mkdtemp()
