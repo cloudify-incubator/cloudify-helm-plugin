@@ -76,14 +76,11 @@ class Helm(object):
             :param: apiserver: the address and the port for the Kubernetes API
             server.
         """
-        # if kubeconfig is None:
-        #     # raise CloudifyHelmSDKError(
-        #     #     'Must provide kubeconfig file path.')
-        #     a = 1+1
-        # else:
-        #     cmd.append(APPEND_FLAG_STRING.format(name=HELM_KUBECONFIG_FLAG,
-        #                                          value=kubeconfig))
-        # TODO validte paraams for auth(kubeconfig or token apiserver and ca)
+
+        if not kubeconfig and not (token and apiserver and ca_file):
+            raise CloudifyHelmSDKError(
+                'Must provide kubeconfig file path or token,apiserver and'
+                ' ca_file in order to authenticate with the cluster.')
         if kubeconfig:
             cmd.append(APPEND_FLAG_STRING.format(name=HELM_KUBECONFIG_FLAG,
                                                  value=kubeconfig))

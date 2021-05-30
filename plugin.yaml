@@ -2,7 +2,7 @@ plugins:
   helm:
     executor: central_deployment_agent
     package_name: cloudify-helm-plugin
-    package_version: '0.1.1'
+    package_version: '0.2.0'
 
 
 dsl_definitions:
@@ -206,7 +206,7 @@ node_types:
         default: false
       installation_source:
         type: string
-        default: ''
+        default: 'https://get.helm.sh/helm-v3.6.0-linux-amd64.tar.gz'
         description: >
           Location to download the Helm installation from. Ignored if 'use_existing_resource' is true.
     interfaces:
