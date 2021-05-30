@@ -127,7 +127,7 @@ class Helm(object):
         :return output of install command.
         """
         cmd = ['install', name, chart, '--wait', '--output=json']
-        self.handle_auth_params(cmd, kubeconfig, token, apiserver)
+        self.handle_auth_params(cmd, kubeconfig, token, apiserver, ca_file)
         if values_file:
             cmd.append(APPEND_FLAG_STRING.format(name=HELM_VALUES_FLAG,
                                                  value=values_file))
@@ -151,7 +151,7 @@ class Helm(object):
                   additional_env=None,
                   **_):
         cmd = ['uninstall', name]
-        self.handle_auth_params(cmd, kubeconfig, token, apiserver)
+        self.handle_auth_params(cmd, kubeconfig, token, apiserver, ca_file)
         flags = flags or []
         validate_no_collisions_between_params_and_flags(flags)
         cmd.extend([prepare_parameter(flag) for flag in flags])
@@ -198,6 +198,7 @@ class Helm(object):
                 kubeconfig=None,
                 token=None,
                 apiserver=None,
+                ca_file=None,
                 additional_env=None,
                 **_):
         """
@@ -219,7 +220,7 @@ class Helm(object):
             raise CloudifyHelmSDKError(
                 'Must provide chart for upgrade release.')
         cmd = ['upgrade', release_name, chart, '--atomic', '-o=json']
-        self.handle_auth_params(cmd, kubeconfig, token, apiserver)
+        self.handle_auth_params(cmd, kubeconfig, token, apiserver, ca_file)
         if values_file:
             cmd.append(APPEND_FLAG_STRING.format(name=HELM_VALUES_FLAG,
                                                  value=values_file))
