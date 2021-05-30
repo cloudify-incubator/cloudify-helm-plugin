@@ -24,8 +24,9 @@ from helm_sdk.utils import (
 
 # Helm cli flags names
 HELM_KUBECONFIG_FLAG = 'kubeconfig'
-HELM_KUBE_API_SERVER_FLAG = 'kube-apiserver'
 HELM_KUBE_TOKEN_FLAG = 'kube-token'
+HELM_KUBE_CA_FILE_FLAG = 'kube-ca-file'
+HELM_KUBE_API_SERVER_FLAG = 'kube-apiserver'
 HELM_VALUES_FLAG = 'values'
 APPEND_FLAG_STRING = '--{name}={value}'
 
@@ -65,7 +66,8 @@ class Helm(object):
     def handle_auth_params(cmd,
                            kubeconfig=None,
                            token=None,
-                           apiserver=None):
+                           apiserver=None,
+                           ca_file=None):
         """
             Validation of authentication params.
             Until helm will support --insecure, kubeconfig must be provided.
@@ -74,10 +76,15 @@ class Helm(object):
             :param: apiserver: the address and the port for the Kubernetes API
             server.
         """
-        if kubeconfig is None:
-            raise CloudifyHelmSDKError(
-                'Must provide kubeconfig file path.')
-        else:
+        # if kubeconfig is None:
+        #     # raise CloudifyHelmSDKError(
+        #     #     'Must provide kubeconfig file path.')
+        #     a = 1+1
+        # else:
+        #     cmd.append(APPEND_FLAG_STRING.format(name=HELM_KUBECONFIG_FLAG,
+        #                                          value=kubeconfig))
+        # TODO validte paraams for auth(kubeconfig or token apiserver and ca)
+        if kubeconfig:
             cmd.append(APPEND_FLAG_STRING.format(name=HELM_KUBECONFIG_FLAG,
                                                  value=kubeconfig))
 
@@ -89,6 +96,10 @@ class Helm(object):
             cmd.append(
                 APPEND_FLAG_STRING.format(name=HELM_KUBE_API_SERVER_FLAG,
                                           value=apiserver))
+        if ca_file:
+            cmd.append(
+                APPEND_FLAG_STRING.format(name=HELM_KUBE_CA_FILE_FLAG,
+                                          value=ca_file))
 
     def install(self,
                 name,
@@ -99,6 +110,7 @@ class Helm(object):
                 kubeconfig=None,
                 token=None,
                 apiserver=None,
+                ca_file=None,
                 additional_env=None,
                 **_):
         """
@@ -135,6 +147,7 @@ class Helm(object):
                   kubeconfig=None,
                   token=None,
                   apiserver=None,
+                  ca_file=None,
                   additional_env=None,
                   **_):
         cmd = ['uninstall', name]

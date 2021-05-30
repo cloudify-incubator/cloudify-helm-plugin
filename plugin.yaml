@@ -78,6 +78,11 @@ data_types:
         description: >
           Bearer token used for authentication.
 
+      ssl_ca_cert:
+        description: Either a path to a file or the content of a CA Cert file.
+        type: string
+        required: false
+
   cloudify.types.helm.AuthenticationVariant:
     description: >
       Type representing all authentication variants.
