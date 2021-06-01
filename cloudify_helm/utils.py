@@ -24,7 +24,7 @@ from subprocess import CalledProcessError
 import yaml
 
 from cloudify import ctx
-from cloudify.exceptions import NonRecoverableError,HttpException
+from cloudify.exceptions import NonRecoverableError, HttpException
 from cloudify_common_sdk.utils import get_deployment_dir
 
 from helm_sdk import Helm
@@ -145,9 +145,9 @@ def get_values_file(ctx, ignore_properties_values_file, values_file=None):
 def get_ssl_ca_file():
     configuration_property = ctx.node.properties.get(CLIENT_CONFIG, {}).get(
         CONFIGURATION, {})
-
     current_value = configuration_property.get(API_OPTIONS, {}).get(
         SSL_CA_CERT)
+
     if current_value and check_if_resource_inside_blueprint_folder(
             current_value):
         with tempfile.NamedTemporaryFile(delete=False) as f:
@@ -192,12 +192,12 @@ def check_if_resource_inside_blueprint_folder(path):
                 path,
                 target_path=f.name)
             return True
-        except HttpException as e:
-            ctx.logger.info("exception: {}".format(type(e)))
-            ctx.logger.info("exception: {}".format(e))
+        except HttpException:
             ctx.logger.debug("ssl_ca file not found inside blueprint package.")
             return False
     return False
+
+
 @contextmanager
 def get_binary(ctx):
     installation_temp_dir = tempfile.mkdtemp()
