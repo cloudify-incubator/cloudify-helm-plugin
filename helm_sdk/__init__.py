@@ -79,8 +79,9 @@ class Helm(object):
 
         if not kubeconfig and not (token and apiserver and ca_file):
             raise CloudifyHelmSDKError(
-                'Must provide kubeconfig file path or token,apiserver and'
+                'Must provide kubeconfig file path or token, apiserver and'
                 ' ca_file in order to authenticate with the cluster.')
+
         if kubeconfig:
             cmd.append(APPEND_FLAG_STRING.format(name=HELM_KUBECONFIG_FLAG,
                                                  value=kubeconfig))

@@ -79,8 +79,9 @@ data_types:
           Bearer token used for authentication.
 
       ssl_ca_cert:
-        description: Either a path to a file or the content of a CA Cert file.
-        Path can be relative to the blueprint or path to file on the manager VM.
+        description: >
+          Either a path to a file or the content of a CA Cert file.
+          Path can be relative to the blueprint or path to file on the manager VM.
         type: string
         required: false
 

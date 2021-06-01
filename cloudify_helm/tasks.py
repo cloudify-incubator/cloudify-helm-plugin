@@ -133,7 +133,7 @@ def install_release(ctx,
             CLIENT_CONFIG, {}).get(CONFIGURATION, {}).get(API_OPTIONS, {}).get(
             HOST),
         additional_env=env_vars,
-        ca_file=ca_file
+        ca_file=ca_file,
         **args_dict)
     ctx.instance.runtime_properties['install_output'] = output
 
