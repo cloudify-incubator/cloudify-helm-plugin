@@ -24,8 +24,15 @@ from ..utils import (create_venv,
                      get_ssl_ca_file,
                      install_aws_cli_if_needed,
                      check_aws_cmd_in_kubeconfig)
-from ..constants import (AWS_CLI_VENV,
+from ..constants import (API_OPTIONS,
+                         SSL_CA_CERT,
+                         AWS_CLI_VENV,
+                         CLIENT_CONFIG,
+                         CONFIGURATION,
+                         AUTHENTICATION,
                          AWS_ENV_VAR_LIST)
+
+RESOURCES = 'resources'
 
 
 class TestUtils(TestBase):
@@ -33,11 +40,11 @@ class TestUtils(TestBase):
     def setUp(self):
         super(TestBase, self).setUp()
         self.eks_kubeconfig = os.path.join(os.path.dirname(__file__),
-                                           'resources',
+                                           RESOURCES,
                                            'kubeconfig_eks.yaml')
 
         self.gke_kubeconfig = os.path.join(os.path.dirname(__file__),
-                                           'resources',
+                                           RESOURCES,
                                            'kubeconfig_gke.yaml')
 
     def tearDown(self):
@@ -73,7 +80,7 @@ class TestUtils(TestBase):
     def test_install_aws_cli_if_needed_no_aws_property(self):
         for aws_prop in AWS_ENV_VAR_LIST:
             properties = self.mock_properties()
-            del properties['client_config']['authentication'][aws_prop.lower()]
+            del properties[CLIENT_CONFIG][AUTHENTICATION][aws_prop.lower()]
             current_ctx.set(self.mock_ctx(test_properties=properties))
             with self.assertRaisesRegexp(NonRecoverableError,
                                          'one of: aws_access_key_id, '
@@ -110,8 +117,8 @@ class TestUtils(TestBase):
     def test_get_ssl_ca_file_content_in_blueprint(self):
         properties = self.mock_properties()
         ca_content = 'fake_ca_content_inside_blueprint'
-        properties['client_config']['configuration']['api_options'][
-            'ssl_ca_cert'] = ca_content
+        properties[CLIENT_CONFIG][CONFIGURATION][API_OPTIONS][
+            SSL_CA_CERT] = ca_content
         current_ctx.set(self.mock_ctx(test_properties=properties))
         with mock.patch('cloudify_helm.utils.check_if_resource_inside_'
                         'blueprint_folder', return_value=False):
@@ -122,10 +129,10 @@ class TestUtils(TestBase):
     def test_get_ssl_ca_file_on_the_manager(self):
         properties = self.mock_properties()
         ca_file_path = os.path.abspath(os.path.join(os.path.dirname(__file__),
-                                                    'resources',
+                                                    RESOURCES,
                                                     'ca_file'))
-        properties['client_config']['configuration']['api_options'][
-            'ssl_ca_cert'] = ca_file_path
+        properties[CLIENT_CONFIG][CONFIGURATION][API_OPTIONS][
+            SSL_CA_CERT] = ca_file_path
         current_ctx.set(self.mock_ctx(test_properties=properties))
         with mock.patch('cloudify_helm.utils.check_if_resource_inside_'
                         'blueprint_folder', return_value=False):
@@ -134,8 +141,8 @@ class TestUtils(TestBase):
 
     def test_get_ssl_ca_file_no_ca(self):
         properties = self.mock_properties()
-        properties['client_config']['configuration']['api_options'][
-            'ssl_ca_cert'] = ''
+        properties[CLIENT_CONFIG][CONFIGURATION][API_OPTIONS][
+            SSL_CA_CERT] = ''
         current_ctx.set(self.mock_ctx(test_properties=properties))
         with mock.patch('cloudify_helm.utils.check_if_resource_inside_'
                         'blueprint_folder', return_value=False):
