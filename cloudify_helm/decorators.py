@@ -25,6 +25,7 @@ from .utils import (
     get_auth_token,
     get_values_file,
     prepare_aws_env,
+    get_ssl_ca_file,
     get_kubeconfig_file)
 
 
@@ -46,18 +47,20 @@ def with_helm(ignore_properties_values_file=False):
                 with get_values_file(ctx,
                                      ignore_properties_values_file,
                                      kwargs.get('values_file')) as values_file:
-                    helm = helm_from_ctx(ctx)
-                    kwargs['helm'] = helm
-                    kwargs['kubeconfig'] = kubeconfig
-                    kwargs['values_file'] = values_file
-                    kwargs['token'] = get_auth_token(ctx)
-                    try:
-                        return func(*args, **kwargs)
-                    except Exception as e:
-                        _, _, tb = sys.exc_info()
-                        raise NonRecoverableError(
-                            '{0}'.format(text_type(e)),
-                            causes=[exception_to_error_cause(e, tb)])
+                    with get_ssl_ca_file() as ssl_ca:
+                        helm = helm_from_ctx(ctx)
+                        kwargs['helm'] = helm
+                        kwargs['kubeconfig'] = kubeconfig
+                        kwargs['values_file'] = values_file
+                        kwargs['token'] = get_auth_token(ctx)
+                        kwargs['ca_file'] = ssl_ca
+                        try:
+                            return func(*args, **kwargs)
+                        except Exception as e:
+                            _, _, tb = sys.exc_info()
+                            raise NonRecoverableError(
+                                '{0}'.format(text_type(e)),
+                                causes=[exception_to_error_cause(e, tb)])
         return f
 
     return decorator

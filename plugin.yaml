@@ -2,7 +2,7 @@ plugins:
   helm:
     executor: central_deployment_agent
     package_name: cloudify-helm-plugin
-    package_version: '0.1.1'
+    package_version: '0.2.0'
 
 
 dsl_definitions:
@@ -77,6 +77,13 @@ data_types:
         required: false
         description: >
           Bearer token used for authentication.
+
+      ssl_ca_cert:
+        description: >
+          Either a path to a file or the content of a CA Cert file.
+          Path can be relative to the blueprint or path to file on the manager VM.
+        type: string
+        required: false
 
   cloudify.types.helm.AuthenticationVariant:
     description: >
@@ -200,7 +207,7 @@ node_types:
         default: false
       installation_source:
         type: string
-        default: ''
+        default: 'https://get.helm.sh/helm-v3.6.0-linux-amd64.tar.gz'
         description: >
           Location to download the Helm installation from. Ignored if 'use_existing_resource' is true.
     interfaces:

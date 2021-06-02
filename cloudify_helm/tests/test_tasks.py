@@ -182,6 +182,7 @@ class TestTasks(TestBase):
 
         ctx = self.mock_ctx(properties,
                             self.mock_runtime_properties())
+        current_ctx.set(ctx)
         kwargs = {
             'ctx': ctx
         }
@@ -212,6 +213,7 @@ class TestTasks(TestBase):
 
         ctx = self.mock_ctx(properties,
                             self.mock_runtime_properties())
+        current_ctx.set(ctx)
         kwargs = {
             'ctx': ctx
         }
@@ -279,6 +281,7 @@ class TestTasks(TestBase):
                     [API_KEY],
                     apiserver=properties[CLIENT_CONFIG][CONFIGURATION]
                     [API_OPTIONS][HOST],
+                    ca_file=None,
                     additional_env={})
 
     def test_uninstall_release(self):
@@ -340,4 +343,5 @@ class TestTasks(TestBase):
                         [API_OPTIONS][API_KEY],
                         apiserver=properties[CLIENT_CONFIG][CONFIGURATION]
                         [API_OPTIONS][HOST],
+                        ca_file=None,
                         additional_env={})

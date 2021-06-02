@@ -21,10 +21,18 @@ from cloudify.exceptions import NonRecoverableError
 
 from . import TestBase
 from ..utils import (create_venv,
+                     get_ssl_ca_file,
                      install_aws_cli_if_needed,
                      check_aws_cmd_in_kubeconfig)
-from ..constants import (AWS_CLI_VENV,
+from ..constants import (API_OPTIONS,
+                         SSL_CA_CERT,
+                         AWS_CLI_VENV,
+                         CLIENT_CONFIG,
+                         CONFIGURATION,
+                         AUTHENTICATION,
                          AWS_ENV_VAR_LIST)
+
+RESOURCES = 'resources'
 
 
 class TestUtils(TestBase):
@@ -32,17 +40,17 @@ class TestUtils(TestBase):
     def setUp(self):
         super(TestBase, self).setUp()
         self.eks_kubeconfig = os.path.join(os.path.dirname(__file__),
-                                           'resources',
+                                           RESOURCES,
                                            'kubeconfig_eks.yaml')
 
         self.gke_kubeconfig = os.path.join(os.path.dirname(__file__),
-                                           'resources',
+                                           RESOURCES,
                                            'kubeconfig_gke.yaml')
 
     def tearDown(self):
         super(TestBase, self).tearDown()
 
-    def mock_aws_auth_properties(self):
+    def mock_properties(self):
         properties = {
             "client_config": {
                 "configuration": {
@@ -71,8 +79,8 @@ class TestUtils(TestBase):
 
     def test_install_aws_cli_if_needed_no_aws_property(self):
         for aws_prop in AWS_ENV_VAR_LIST:
-            properties = self.mock_aws_auth_properties()
-            del properties['client_config']['authentication'][aws_prop.lower()]
+            properties = self.mock_properties()
+            del properties[CLIENT_CONFIG][AUTHENTICATION][aws_prop.lower()]
             current_ctx.set(self.mock_ctx(test_properties=properties))
             with self.assertRaisesRegexp(NonRecoverableError,
                                          'one of: aws_access_key_id, '
@@ -105,3 +113,38 @@ class TestUtils(TestBase):
                     self.assertEqual(
                         ctx.instance.runtime_properties.get(AWS_CLI_VENV),
                         fake_deployment_dir)
+
+    def test_get_ssl_ca_file_content_in_blueprint(self):
+        properties = self.mock_properties()
+        ca_content = 'fake_ca_content_inside_blueprint'
+        properties[CLIENT_CONFIG][CONFIGURATION][API_OPTIONS][
+            SSL_CA_CERT] = ca_content
+        current_ctx.set(self.mock_ctx(test_properties=properties))
+        with mock.patch('cloudify_helm.utils.check_if_resource_inside_'
+                        'blueprint_folder', return_value=False):
+            with get_ssl_ca_file() as ca_file:
+                with open(ca_file, 'r') as temp_ca_file:
+                    self.assertEqual(temp_ca_file.read(), ca_content)
+
+    def test_get_ssl_ca_file_on_the_manager(self):
+        properties = self.mock_properties()
+        ca_file_path = os.path.abspath(os.path.join(os.path.dirname(__file__),
+                                                    RESOURCES,
+                                                    'ca_file'))
+        properties[CLIENT_CONFIG][CONFIGURATION][API_OPTIONS][
+            SSL_CA_CERT] = ca_file_path
+        current_ctx.set(self.mock_ctx(test_properties=properties))
+        with mock.patch('cloudify_helm.utils.check_if_resource_inside_'
+                        'blueprint_folder', return_value=False):
+            with get_ssl_ca_file() as ca_file:
+                self.assertEqual(os.path.abspath(ca_file), ca_file_path)
+
+    def test_get_ssl_ca_file_no_ca(self):
+        properties = self.mock_properties()
+        properties[CLIENT_CONFIG][CONFIGURATION][API_OPTIONS][
+            SSL_CA_CERT] = ''
+        current_ctx.set(self.mock_ctx(test_properties=properties))
+        with mock.patch('cloudify_helm.utils.check_if_resource_inside_'
+                        'blueprint_folder', return_value=False):
+            with get_ssl_ca_file() as ca_file:
+                self.assertEqual(ca_file, None)
