@@ -15,12 +15,10 @@
 
 import os
 import copy
-import threading
-import subprocess
 
 from cloudify_common_sdk.filters import obfuscate_passwords
+from cloudify_common_sdk.processes import general_executor, process_execution
 
-from helm_sdk._compat import StringIO, text_type
 from helm_sdk.exceptions import CloudifyHelmSDKError
 
 FLAGS_LIST_TO_VALIDATE = ['kube-apiserver', 'kube-token', 'kubeconfig']
@@ -46,84 +44,18 @@ def run_subprocess(command,
             cwd=cwd,
             args=obfuscate_passwords(args_to_pass)))
 
-    process = subprocess.Popen(
-        args=command,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        stdin=None,
-        cwd=cwd,
-        **args_to_pass)
+    general_executor_params = copy.deepcopy(args_to_pass)
+    general_executor_params['cwd'] = cwd
+    general_executor_params['log_stdout'] = return_output
+    general_executor_params['log_stderr'] = True
+    general_executor_params['stderr_to_stdout'] = False
+    script_path = command.pop(0)
+    general_executor_params['args'] = command
 
-    if return_output:
-        stdout_consumer = CapturingOutputConsumer(
-            process.stdout)
-    else:
-        stdout_consumer = LoggingOutputConsumer(
-            process.stdout, logger, "<out> ")
-    stderr_consumer = LoggingOutputConsumer(
-        process.stderr, logger, "<err> ")
-
-    return_code = process.wait()
-    stdout_consumer.join()
-    stderr_consumer.join()
-
-    if return_code:
-        raise subprocess.CalledProcessError(return_code,
-                                            [obfuscate_passwords(cmd_element)
-                                             for cmd_element in command])
-
-    output = stdout_consumer.buffer.getvalue() if return_output else None
-    logger.info("Returning output:\n{0}".format(
-        obfuscate_passwords(output) if output is not None else '<None>'))
-
-    return output
-
-
-# Stolen from the script plugin, until this class
-# moves to a utils module in cloudify-common.
-class OutputConsumer(object):
-    def __init__(self, out):
-        self.out = out
-        self.consumer = threading.Thread(target=self.consume_output)
-        self.consumer.daemon = True
-
-    def consume_output(self):
-        for line in self.out:
-            self.handle_line(line)
-        self.out.close()
-
-    def handle_line(self, line):
-        raise NotImplementedError("Must be implemented by subclass.")
-
-    def join(self):
-        self.consumer.join()
-
-
-class LoggingOutputConsumer(OutputConsumer):
-    def __init__(self, out, logger, prefix):
-        OutputConsumer.__init__(self, out)
-        self.logger = logger
-        self.prefix = prefix
-        self.consumer.start()
-
-    def handle_line(self, line):
-        self.logger.info(
-            "{0}{1}".format(text_type(self.prefix),
-                            obfuscate_passwords(
-                                line.decode('utf-8').rstrip('\n'))))
-
-
-class CapturingOutputConsumer(OutputConsumer):
-    def __init__(self, out):
-        OutputConsumer.__init__(self, out)
-        self.buffer = StringIO()
-        self.consumer.start()
-
-    def handle_line(self, line):
-        self.buffer.write(line.decode('utf-8'))
-
-    def get_buffer(self):
-        return self.buffer
+    return process_execution(
+        general_executor,
+        script_path,
+        process=general_executor_params)
 
 
 def prepare_parameter(arg_dict):
