@@ -9,3 +9,5 @@
 0.1.0: Add installation of aws cli when needed in order to authenticate with eks.
 0.1.1: Constrain smmap==3.0.5.
 0.2.0: Add ssl_ca_cert support.
+0.2.1:
+  - RD-3280: Use general executor from common sdk for process execution.
