@@ -272,7 +272,7 @@ commands:
 
   prepare_test_manager:
     steps:
-      - run: ecosystem-test prepare-test-manager -l $TEST_LICENSE -es aws_access_key_id=$aws_access_key_id -es aws_secret_access_key=$aws_secret_access_key --bundle-path workspace/build/cloudify-plugins-bundle.tgz
+      - run: ecosystem-test prepare-test-manager -l $TEST_LICENSE -es aws_access_key_id=${aws_access_key_id} -es aws_secret_access_key=${aws_secret_access_key} --bundle-path workspace/build/cloudify-plugins-bundle.tgz
 
   run_eks_helm_test:
     steps:
