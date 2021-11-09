@@ -327,6 +327,7 @@ workflows:
           a packaged chart, or a fully qualified
           URL.
         required: true
+        default: ''
       flags:
         <<: *flags_input
       set_values:

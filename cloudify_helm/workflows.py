@@ -64,6 +64,10 @@ def upgrade_release(ctx,
                     values_file):
     if type(flags) is not list:
         raise NonRecoverableError('Flags parameter must be a list.')
+    if not chart:
+        raise NonRecoverableError(
+            'The parameter chart is required. '
+            'Provided value: {}'.format(chart))
     _helm_operation(ctx,
                     "helm.upgrade_release",
                     node_instance_id,
