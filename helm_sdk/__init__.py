@@ -137,7 +137,9 @@ class Helm(object):
         if additional_env:
             self.env.update(additional_env)
         output = self.execute(self._helm_command(cmd), True)
-        return json.loads(output)
+        if output:
+            return json.loads(output)
+
 
     def uninstall(self,
                   name,
