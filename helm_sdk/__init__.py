@@ -140,7 +140,6 @@ class Helm(object):
         if output:
             return json.loads(output)
 
-
     def uninstall(self,
                   name,
                   flags=None,
