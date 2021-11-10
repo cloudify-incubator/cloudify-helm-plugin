@@ -278,7 +278,7 @@ commands:
     steps:
       - run: wget https://github.com/cloudify-community/blueprint-examples/releases/download/latest/kubernetes-helm-eks.zip
       - run: unzip kubernetes-helm-eks.zip
-      - run: ecosystem-test local-blueprint-test -b helm-eks/blueprint.yaml -i eks_cluster_name=helm-plugin-test-$CIRCLE_BUILD_NUM --test-id=helm-eks --on-failure=uninstall-force --timeout=3000
+      - run: ecosystem-test local-blueprint-test -es kubernetes_token='null' -es kubernetes_config='null' -b helm-eks/blueprint.yaml -i eks_cluster_name=helm-plugin-test-$CIRCLE_BUILD_NUM --test-id=helm-eks --on-failure=uninstall-force --timeout=3000
 
   build_archive:
     steps:
