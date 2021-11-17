@@ -498,7 +498,7 @@ workflows:
             - arch64_wagon
       - integration_tests_py3:
           requires:
-            - build_bundle
+          #  - build_bundle
           filters:
             branches:
               only: /([0-9\.]*\-build|master|dev)/
@@ -557,7 +557,7 @@ workflows:
             - arch64_wagon
       - integration_tests_py3:
           requires:
-            - build_bundle
+          #  - build_bundle
           filters:
             branches:
               only: /([0-9\.]*\-build|master|dev)/
