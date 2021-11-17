@@ -511,7 +511,7 @@ workflows:
             - build_bundle
             - unittests_py27
             - unittests_py36
-            - integration_tests_py3
+           # - integration_tests_py3
       - merge_docs:
           filters:
             branches:
