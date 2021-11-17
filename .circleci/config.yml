@@ -472,6 +472,7 @@ workflows:
       - unittests_py36
       - validate_version
       - validate_documentation
+      - integration_tests_py3
       - wagon:
           filters:
             branches:
