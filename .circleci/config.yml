@@ -474,24 +474,12 @@ workflows:
       - unittests_py36
       - validate_version
       - validate_documentation
-      - wagon:
-          filters:
-            branches:
-              only: /([0-9\.]*\-build|master|dev)/
-      - arch64_wagon:
-          filters:
-            branches:
-              only: /([0-9\.]*\-build|master|dev)/
+      - wagon
+      - arch64_wagon
       - rhel_wagon:
-          filters:
-            branches:
-              only: /([0-9\.]*\-build|master|dev)/
           requires:
             - py3_compat
       - build_bundle:
-          filters:
-            branches:
-              only: /master/
           requires:
             - wagon
             - rhel_wagon
@@ -499,13 +487,7 @@ workflows:
       - integration_tests_py3:
           requires:
             - build_bundle
-          filters:
-            branches:
-              only: /([0-9\.]*\-build|master|dev)/
       - release:
-          filters:
-            branches:
-              only: /master/
           requires:
             - validate_version
             - validate_documentation
@@ -514,9 +496,6 @@ workflows:
             - unittests_py36
             - integration_tests_py3
       - merge_docs:
-          filters:
-            branches:
-              only: /master/
           requires:
             - release
             - validate_documentation
