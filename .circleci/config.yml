@@ -30,6 +30,8 @@ executors:
   cloudify-machine-py3:
     machine:
       image: ubuntu-1604:201903-01
+      resource_class: large
+
 
 commands:
 
@@ -472,24 +474,24 @@ workflows:
       - unittests_py36
       - validate_version
       - validate_documentation
-      - wagon
-#          filters:
-#            branches:
-#              only: /([0-9\.]*\-build|master|dev)/
-      - arch64_wagon
-#          filters:
-#            branches:
-#              only: /([0-9\.]*\-build|master|dev)/
-      - rhel_wagon
-#          filters:
-#            branches:
-#              only: /([0-9\.]*\-build|master|dev)/
-#          requires:
-#            - py3_compat
+      - wagon:
+          filters:
+            branches:
+              only: /([0-9\.]*\-build|master|dev)/
+      - arch64_wagon:
+          filters:
+            branches:
+              only: /([0-9\.]*\-build|master|dev)/
+      - rhel_wagon:
+          filters:
+            branches:
+              only: /([0-9\.]*\-build|master|dev)/
+          requires:
+            - py3_compat
       - build_bundle:
-#          filters:
-#            branches:
-#              only: /master/
+          filters:
+            branches:
+              only: /master/
           requires:
             - wagon
             - rhel_wagon
@@ -497,9 +499,9 @@ workflows:
       - integration_tests_py3:
           requires:
             - build_bundle
-#          filters:
-#            branches:
-#              only: /([0-9\.]*\-build|master|dev)/
+          filters:
+            branches:
+              only: /([0-9\.]*\-build|master|dev)/
       - release:
           filters:
             branches:
@@ -507,10 +509,10 @@ workflows:
           requires:
             - validate_version
             - validate_documentation
-          # - build_bundle
+            - build_bundle
             - unittests_py27
             - unittests_py36
-          # - integration_tests_py3
+            - integration_tests_py3
       - merge_docs:
           filters:
             branches:
@@ -555,7 +557,7 @@ workflows:
             - arch64_wagon
       - integration_tests_py3:
           requires:
-           - build_bundle
+            - build_bundle
           filters:
             branches:
               only: /([0-9\.]*\-build|master|dev)/
