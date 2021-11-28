@@ -470,7 +470,7 @@ workflows:
   tests:
     jobs:
       - py3_compat
-      - unittests_py27
+      # - unittests_py27
       - unittests_py36
       - validate_version
       - validate_documentation
@@ -510,7 +510,7 @@ workflows:
             - validate_version
             - validate_documentation
             - build_bundle
-            - unittests_py27
+            # - unittests_py27
             - unittests_py36
             - integration_tests_py3
       - merge_docs:
@@ -530,7 +530,7 @@ workflows:
               - master
     jobs:
       - py3_compat
-      - unittests_py27
+      # - unittests_py27
       - unittests_py36
       - validate_version
       - wagon:

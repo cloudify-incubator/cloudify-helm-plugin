@@ -30,10 +30,11 @@ def run_subprocess(command,
                    additional_env=None,
                    additional_args=None,
                    return_output=False):
+
     if additional_args is None:
         additional_args = {}
     if 'max_sleep_time' not in additional_args:
-        additional_args['max_sleep_time'] = 300
+        additional_args['max_sleep_time'] = 299
     args_to_pass = copy.deepcopy(additional_args)
     if additional_env:
         passed_env = args_to_pass.setdefault('env', {})

@@ -102,6 +102,12 @@ def prepare_args(ctx, flags=None):
     args_dict[FLAGS_FIELD] = args_dict[FLAGS_FIELD] + flags
     # Pop local path of values_file, its not necessary parameter.
     args_dict.pop(VALUES_FILE, None)
+
+    if 'additional_args' not in args_dict:
+        additional_args = {
+            'max_sleep_time': ctx.node.properties.get('max_sleep_time', 300)
+        }
+        args_dict['additional_args'] = additional_args
     return args_dict
 
 

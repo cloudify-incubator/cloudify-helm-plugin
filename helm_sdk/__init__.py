@@ -48,13 +48,13 @@ class Helm(object):
 
         self.env = environment_variables
 
-    def execute(self, command, return_output=False):
+    def execute(self, command, additional_args=None, return_output=False):
         return run_subprocess(
             command,
             self.logger,
             cwd=None,
             additional_env=self.env,
-            additional_args=None,
+            additional_args=additional_args,
             return_output=return_output)
 
     def _helm_command(self, args):
@@ -110,6 +110,7 @@ class Helm(object):
                 apiserver=None,
                 ca_file=None,
                 additional_env=None,
+                additional_args=None,
                 **_):
         """
         Execute helm install command.
@@ -136,7 +137,10 @@ class Helm(object):
         cmd.extend(prepare_set_parameters(set_arguments))
         if additional_env:
             self.env.update(additional_env)
-        output = self.execute(self._helm_command(cmd), True)
+        output = self.execute(
+            self._helm_command(cmd),
+            additional_args=additional_args,
+            return_output=True)
         if output:
             return json.loads(output)
 
@@ -148,6 +152,7 @@ class Helm(object):
                   apiserver=None,
                   ca_file=None,
                   additional_env=None,
+                  additional_args=None,
                   **_):
         cmd = ['uninstall', name]
         self.handle_auth_params(cmd, kubeconfig, token, apiserver, ca_file)
@@ -156,37 +161,39 @@ class Helm(object):
         cmd.extend([prepare_parameter(flag) for flag in flags])
         if additional_env:
             self.env.update(additional_env)
-        self.execute(self._helm_command(cmd))
+        self.execute(self._helm_command(cmd), additional_args=additional_args)
 
     def repo_add(self,
                  name,
                  repo_url,
                  flags=None,
+                 additional_args=None,
                  **_):
         cmd = ['repo', 'add', name, repo_url]
         flags = flags or []
         cmd.extend([prepare_parameter(flag) for flag in flags])
-        self.execute(self._helm_command(cmd))
+        self.execute(self._helm_command(cmd), additional_args=additional_args)
 
     def repo_remove(self,
                     name,
                     flags=None,
+                    additional_args=None,
                     **_):
         cmd = ['repo', 'remove', name]
         flags = flags or []
         cmd.extend([prepare_parameter(flag) for flag in flags])
-        self.execute(self._helm_command(cmd))
+        self.execute(self._helm_command(cmd), additional_args=additional_args)
 
     def repo_list(self):
         cmd = ['repo', 'list', '--output=json']
-        output = self.execute(self._helm_command(cmd), True)
+        output = self.execute(self._helm_command(cmd), return_output=True)
         return json.loads(output)
 
-    def repo_update(self, flags):
+    def repo_update(self, flags, additional_args=None, **_):
         cmd = ['repo', 'update']
         flags = flags or []
         cmd.extend([prepare_parameter(flag) for flag in flags])
-        self.execute(self._helm_command(cmd))
+        self.execute(self._helm_command(cmd), additional_args=additional_args)
 
     def upgrade(self,
                 release_name,
@@ -199,6 +206,7 @@ class Helm(object):
                 apiserver=None,
                 ca_file=None,
                 additional_env=None,
+                additional_args=None,
                 **_):
         """
         Execute helm upgrade command.
@@ -230,5 +238,8 @@ class Helm(object):
         cmd.extend(prepare_set_parameters(set_arguments))
         if additional_env:
             self.env.update(additional_env)
-        output = self.execute(self._helm_command(cmd), True)
+        output = self.execute(
+            self._helm_command(cmd),
+            additional_args=additional_args,
+            return_output=True)
         return json.loads(output)

@@ -209,6 +209,9 @@ def get_binary(ctx):
             "invalid installation_source")
     installation_tar = \
         os.path.join(installation_temp_dir, 'helm.tar.gz')
+
+    ctx.logger.info("ctx.node.properties: {0}".format(ctx.node.properties))
+
     additional_args = {
         'max_sleep_time': ctx.node.properties.get('max_sleep_time')
     }
