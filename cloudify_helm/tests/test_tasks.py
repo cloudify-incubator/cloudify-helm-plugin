@@ -175,8 +175,8 @@ class TestTasks(TestBase):
                 "name": "stable",
                 "repo_url":
                     "https://kubernetes-charts.storage.googleapis.com/",
-                "flags": []
-
+                "flags": [],
+                'additional_args': '{''max_sleep_time'': 300}'
             }
         }
 
@@ -256,7 +256,9 @@ class TestTasks(TestBase):
                     name="stable",
                     repo_url="https://kubernetes-charts.storage.googleapis"
                              ".com/",
-                    flags=[])
+                    flags=[],
+                    additional_args="{'max_sleep_time': 300}"
+                )
 
     def test_install_release(self):
         properties = self.mock_install_release_properties()
@@ -282,7 +284,8 @@ class TestTasks(TestBase):
                     apiserver=properties[CLIENT_CONFIG][CONFIGURATION]
                     [API_OPTIONS][HOST],
                     ca_file=None,
-                    additional_env={})
+                    additional_env={},
+                    additional_args=properties["max_sleep_time"])
 
     def test_uninstall_release(self):
         properties = self.mock_install_release_properties()
