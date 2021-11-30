@@ -129,11 +129,12 @@ class HelmSDKTest(HelmTestBase):
                                 mock_flags,
                                 mock_set_args,
                                 kubeconfig='/path/to/config')
-        cmd_expected = [[HELM_BINARY, 'upgrade', 'release1', 'my_chart',
-                         '--atomic', '-o=json', '--kubeconfig=/path/to/config',
-                         '--dry-run', '--timeout=100', '--set', 'x=y', '--set',
-                         'a=b'], 'additional_args=None', 'return_output=True']
-        mock_execute.assert_called_once_with(*cmd_expected, True)
+        cmd_expected = [HELM_BINARY, 'upgrade', 'release1', 'my_chart',
+                        '--atomic', '-o=json', '--kubeconfig=/path/to/config',
+                        '--dry-run', '--timeout=100', '--set', 'x=y', '--set',
+                        'a=b']
+        mock_execute.assert_called_once_with(
+            cmd_expected, additional_args=None, return_output=True)
         self.assertEqual(out, {"name": "release1"})
 
     def test_upgrade_no_token_and_no_kubeconfig(self):
