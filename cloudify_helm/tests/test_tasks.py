@@ -285,7 +285,7 @@ class TestTasks(TestBase):
                     [API_OPTIONS][HOST],
                     ca_file=None,
                     additional_env={},
-                    additional_args=properties["max_sleep_time"])
+                    additional_args='{max_sleep_time: 300}')
 
     def test_uninstall_release(self):
         properties = self.mock_install_release_properties()
