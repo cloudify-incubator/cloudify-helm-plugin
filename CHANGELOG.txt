@@ -13,4 +13,3 @@
   - RD-3280: Use general executor from common sdk for process execution.
 0.2.2: Rerelease with arm64 support.
 0.2.3: Work around 6.2 GA bug.
-0.2.4: RD-3650 add max_sleep_time

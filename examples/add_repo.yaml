@@ -26,6 +26,10 @@ inputs:
     type: string
     default: 'https://charts.bitnami.com/bitnami'
 
+  helm_max_sleep_time:
+    type: integer
+    default: 250
+
 node_templates:
 
   helm_install:
@@ -40,7 +44,7 @@ node_templates:
       resource_config:
         name: { get_input: repo_name }
         repo_url: { get_input: repo_url }
-      max_sleep_time: 20
+      max_sleep_time: { get_input: helm_max_sleep_time }
     relationships:
       - target: helm_install
         type: cloudify.helm.relationships.run_on_host
