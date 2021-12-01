@@ -210,12 +210,18 @@ def get_binary(ctx):
     installation_tar = \
         os.path.join(installation_temp_dir, 'helm.tar.gz')
 
+    ctx.logger.info("ctx.node.properties: {0}".format(ctx.node.properties))
+
+    additional_args = {
+        'max_sleep_time': ctx.node.properties.get('max_sleep_time')
+    }
     ctx.logger.info(
         "Downloading Helm from {0} into {1}".format(
             installation_source, installation_tar))
     run_subprocess(
         ['curl', '-o', installation_tar, installation_source],
-        ctx.logger
+        ctx.logger,
+        additional_args=additional_args
     )
     untar_and_set_permissions(ctx,
                               installation_tar,
@@ -413,9 +419,13 @@ def make_virtualenv(path):
         Make a venv for installing aws cli inside.
     """
     ctx.logger.debug("Creating virtualenv at: {path}".format(path=path))
+    additional_args = {
+        'max_sleep_time': ctx.node.properties.get('max_sleep_time')
+    }
     run_subprocess(
         [sys.executable, '-m', 'virtualenv', path],
-        ctx.logger
+        ctx.logger,
+        additional_args=additional_args
     )
 
 
@@ -431,12 +441,16 @@ def install_packages_to_venv(venv, packages_list):
         ctx.logger.info("Installing {packages} inside venv: {venv}.".format(
             packages=packages_list,
             venv=venv))
+        additional_args = {
+            'max_sleep_time': ctx.node.properties.get('max_sleep_time')
+        }
         try:
             run_subprocess(
                 command=command,
                 logger=ctx.logger,
                 cwd=venv,
-                additional_env={'PYTHONPATH': ''})
+                additional_env={'PYTHONPATH': ''},
+                additional_args=additional_args)
 
         except CalledProcessError as e:
             raise NonRecoverableError("Failed install packages: {packages}"

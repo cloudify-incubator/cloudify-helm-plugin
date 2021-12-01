@@ -48,7 +48,9 @@ class HelmSDKTest(HelmTestBase):
                         '--wait', '--output=json',
                         '--kubeconfig=/path/to/config', '--dry-run',
                         '--timeout=100', '--set', 'x=y', '--set', 'a=b']
-        mock_execute.assert_called_once_with(cmd_expected, True)
+        mock_execute.assert_called_once_with(cmd_expected,
+                                             additional_args=None,
+                                             return_output=True)
         self.assertEqual(out, {"manifest": "resourceA"})
 
     def test_install_no_token_and_no_kubeconfig(self):
@@ -78,7 +80,8 @@ class HelmSDKTest(HelmTestBase):
         cmd_expected = [HELM_BINARY, 'uninstall', 'release1',
                         '--kubeconfig=/path/to/config', '--dry-run',
                         '--timeout=100']
-        mock_execute.assert_called_once_with(cmd_expected)
+        mock_execute.assert_called_once_with(cmd_expected,
+                                             additional_args=None)
 
     def test_uninstall_no_token_and_no_kubeconfig(self):
         with self.assertRaisesRegexp(CloudifyHelmSDKError,
@@ -100,14 +103,16 @@ class HelmSDKTest(HelmTestBase):
         self.helm.repo_add('my_repo', 'https://github.com/repo')
         cmd_expected = [HELM_BINARY, 'repo', 'add', 'my_repo',
                         'https://github.com/repo']
-        mock_execute.assert_called_once_with(cmd_expected)
+        mock_execute.assert_called_once_with(cmd_expected,
+                                             additional_args=None)
 
     def test_repo_remove(self):
         mock_execute = mock.Mock()
         self.helm.execute = mock_execute
         self.helm.repo_remove('my_repo')
         cmd_expected = [HELM_BINARY, 'repo', 'remove', 'my_repo']
-        mock_execute.assert_called_once_with(cmd_expected)
+        mock_execute.assert_called_once_with(cmd_expected,
+                                             additional_args=None)
 
     def test_upgrade_with_token_and_api(self):
         with self.assertRaisesRegexp(CloudifyHelmSDKError,
@@ -131,7 +136,8 @@ class HelmSDKTest(HelmTestBase):
                         '--atomic', '-o=json', '--kubeconfig=/path/to/config',
                         '--dry-run', '--timeout=100', '--set', 'x=y', '--set',
                         'a=b']
-        mock_execute.assert_called_once_with(cmd_expected, True)
+        mock_execute.assert_called_once_with(
+            cmd_expected, additional_args=None, return_output=True)
         self.assertEqual(out, {"name": "release1"})
 
     def test_upgrade_no_token_and_no_kubeconfig(self):

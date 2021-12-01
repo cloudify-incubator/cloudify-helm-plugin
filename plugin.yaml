@@ -2,7 +2,7 @@ plugins:
   helm:
     executor: central_deployment_agent
     package_name: cloudify-helm-plugin
-    package_version: '0.2.3'
+    package_version: '0.2.4'
 
 dsl_definitions:
 
@@ -209,6 +209,9 @@ node_types:
         default: 'https://get.helm.sh/helm-v3.6.0-linux-amd64.tar.gz'
         description: >
           Location to download the Helm installation from. Ignored if 'use_existing_resource' is true.
+      max_sleep_time:
+        type: integer
+        default: 300
     interfaces:
       cloudify.interfaces.lifecycle:
         create:
@@ -227,6 +230,9 @@ node_types:
       resource_config:
         type: cloudify.types.helm.ReleaseConfig
         required: true
+      max_sleep_time:
+        type: integer
+        default: 300
     interfaces:
       cloudify.interfaces.lifecycle:
         start:
@@ -270,6 +276,9 @@ node_types:
       resource_config:
         type: cloudify.types.helm.RepoConfig
         required: true
+      max_sleep_time:
+        type: integer
+        default: 300
     interfaces:
       cloudify.interfaces.lifecycle:
         start:
