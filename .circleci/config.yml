@@ -30,6 +30,8 @@ executors:
   cloudify-machine-py3:
     machine:
       image: ubuntu-1604:201903-01
+      resource_class: large
+
 
 commands:
 
@@ -494,12 +496,12 @@ workflows:
             - wagon
             - rhel_wagon
             - arch64_wagon
-      # - integration_tests_py3:
-      #     requires:
-      #       - build_bundle
-      #     filters:
-      #       branches:
-      #         only: /([0-9\.]*\-build|master|dev)/
+      - integration_tests_py3:
+          requires:
+             - build_bundle
+          filters:
+            branches:
+              only: /([0-9\.]*\-build|master|dev)/
       - release:
           filters:
             branches:
@@ -510,7 +512,7 @@ workflows:
             - build_bundle
             # - unittests_py27
             - unittests_py36
-            # - integration_tests_py3
+            - integration_tests_py3
       - merge_docs:
           filters:
             branches:
