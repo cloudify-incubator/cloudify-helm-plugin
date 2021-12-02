@@ -102,14 +102,14 @@ class FileContentConfiguration(KubernetesConfiguration):
     def _get_kubeconfig(self):
         if self.FILE_CONTENT_KEY in self.configuration_data:
             file_content = self.configuration_data[self.FILE_CONTENT_KEY]
-            with tempfile.NamedTemporaryFile(delete=False,
-                                             mode='w') as tmp_file:
-                if type(file_content) is dict:
-                    yaml.dump(file_content, tmp_file)
-                # Its a string of kubeconfig yaml
-                elif type(file_content) is text_type:
-                    tmp_file.write(file_content)
-                return tmp_file.name
+            tmp_file = tempfile.NamedTemporaryFile(delete=False, mode='w')
+            if isinstance(file_content, dict):
+                yaml.dump(file_content, tmp_file)
+            # Its a string of kubeconfig yaml
+            elif isinstance(file_content, text_type):
+                tmp_file.write(file_content)
+            tmp_file.close()
+            return tmp_file.name
 
         return None
 
