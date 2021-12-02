@@ -14,3 +14,4 @@
 0.2.2: Rerelease with arm64 support.
 0.2.3: Work around 6.2 GA bug.
 0.2.4: add RD-3650-max-sleep-time
+0.2.5: Make sure that file content is written to file.
