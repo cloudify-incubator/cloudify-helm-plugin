@@ -127,7 +127,7 @@ workflows:
             - wagonorb/build_bundle
             - node/unittests_job
             - integration_tests_py3
-      - releaseorb/merge_docs_jobs:
+      - releaseorb/merge_docs_job:
           filters:
             branches:
               only: /master/
