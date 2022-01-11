@@ -2,7 +2,8 @@ version: 2.1
 
 orbs:
   node: cloudify/public-unittest-orb@1.0.2 #orb version
-  wagonorb: cloudify/wagon-bulder-orb@1.0.1 #orb version
+  wagonorb: cloudify/wagon-bulder-orb@1.0.3 #orb version
+  releaseorb: cloudify/release-orb@1.0.5 #orb version
 
 checkout:
   post:
@@ -69,92 +70,6 @@ commands:
       - run: unzip kubernetes-helm-eks.zip
       - run: ecosystem-test local-blueprint-test -b helm-eks/blueprint.yaml -i eks_cluster_name=helm-plugin-test-$CIRCLE_BUILD_NUM --test-id=helm-eks --on-failure=uninstall-force --timeout=3000
 
-  release_plugin:
-    steps:
-      - run:
-          name: "Pull Submodules"
-          command: |
-            git submodule init
-            git submodule update --remote --recursive
-      - run:
-          name: Set Python
-          command: |
-            if ! pyenv -v &> /dev/null
-            then
-                echo "pyenv could not be found"
-                exit
-            else
-                pyenv global 3.6.5
-            fi
-      - run:
-          name: Download pip
-          command: curl "https://bootstrap.pypa.io/get-pip.py" -o "get-pip.py"
-      - run:
-          name: Install pip
-          command: sudo python get-pip.py
-      - run:
-          name: Install virtualenv
-          command: pip install --user virtualenv
-      - run:
-          name: Init virtualenv
-          command: virtualenv env
-      - run:
-          name: install tox
-          command: pip install --user pygithub pyyaml==3.10
-      - run:
-          name: upgrade setuptools
-          command: pip install --upgrade setuptools
-      - run:
-          name: install local project
-          command: pip install https://github.com/cloudify-incubator/cloudify-ecosystem-test/archive/latest.zip
-      - attach_workspace:
-          at: workspace
-      - run: python .circleci/package_release.py
-
-  merge_docs:
-    steps:
-      - attach_workspace:
-          at: workspace
-      - run:
-          name: "Pull Submodules"
-          command: |
-            git submodule init
-            git submodule update --remote --recursive
-      - run:
-          name: Set Python
-          command: |
-            if ! pyenv -v &> /dev/null
-            then
-                echo "pyenv could not be found"
-                exit
-            else
-                pyenv global 3.6.5
-            fi
-      - run:
-          name: Download pip
-          command: curl "https://bootstrap.pypa.io/get-pip.py" -o "get-pip.py"
-      - run:
-          name: Install pip
-          command: sudo python get-pip.py
-      - run:
-          name: Install virtualenv
-          command: pip install --user virtualenv
-      - run:
-          name: Init virtualenv
-          command: virtualenv env
-      - run:
-          name: install tox
-          command: pip install --user pygithub pyyaml==3.10
-      - run:
-          name: upgrade setuptools
-          command: pip install --upgrade setuptools
-      - run:
-          name: install local project
-          command: pip install https://github.com/cloudify-incubator/cloudify-ecosystem-test/archive/latest.zip
-      - attach_workspace:
-          at: workspace
-      - run: python .circleci/merge_docs.py
-
 jobs:
   integration_tests_py3:
     executor: cloudify-machine-py3
@@ -165,18 +80,6 @@ jobs:
       - create_manager_container_py3
       - prepare_test_manager
       - run_eks_helm_test
-
-  release:
-    executor: py36
-    steps:
-      - checkout
-      - release_plugin
-
-  merge_docs:
-    executor: py36
-    steps:
-      - checkout
-      - merge_docs
 
 workflows:
   version: 2.1
@@ -214,7 +117,7 @@ workflows:
           filters:
             branches:
               only: /([0-9\.]*\-build|master|dev)/
-      - release:
+      - releaseorb/release:
           filters:
             branches:
               only: /master/
@@ -224,12 +127,12 @@ workflows:
             - wagonorb/build_bundle
             - node/unittests_job
             - integration_tests_py3
-      - merge_docs:
+      - releaseorb/merge_docs_job:
           filters:
             branches:
               only: /master/
           requires:
-            - release
+            - releaseorb/release
             - node/validate_documentation_job
   nightly:
     triggers:
