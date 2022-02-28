@@ -88,7 +88,7 @@ def uninstall_binary(ctx, **_):
     delete_temporary_env_of_helm(ctx)
 
 
-def prepare_args(ctx, flags=None):
+def prepare_args(resource_config, flags=None, max_sleep_time=None):
     """
     Prepare arguments dictionary to helm  sdk function(like:helm.install,
     helm.repo_add).
@@ -96,16 +96,21 @@ def prepare_args(ctx, flags=None):
     :param flags: flags that user passed - unique for install operation.
     :return arguments dictionary for helm.install function
     """
-    flags = flags or []
-    args_dict = {}
-    args_dict.update(ctx.node.properties.get(RESOURCE_CONFIG, {}))
-    args_dict[FLAGS_FIELD] = args_dict[FLAGS_FIELD] + flags
-    # Pop local path of values_file, its not necessary parameter.
+    flags = flags or []  # This could be flags input to operation.
+    args_dict = {}  # This is the new args dict.
+    args_dict.update(resource_config or {})
     args_dict.pop(VALUES_FILE, None)
-
+    # Unite the flags lists and copy
+    all_flags = args_dict[FLAGS_FIELD] + flags
+    args_dict[FLAGS_FIELD] = []
+    # de-duplicate
+    for value in all_flags:
+        if value in args_dict[FLAGS_FIELD]:
+            continue
+        args_dict[FLAGS_FIELD].append(value)
     if 'additional_args' not in args_dict:
         additional_args = {
-            'max_sleep_time': ctx.node.properties.get('max_sleep_time', 300)
+            'max_sleep_time': max_sleep_time or 300
         }
         args_dict['additional_args'] = additional_args
     return args_dict
@@ -130,7 +135,11 @@ def install_release(ctx,
     :param values_file: values file path
     :return output of `helm install` command
     """
-    args_dict = prepare_args(ctx, kwargs.get(FLAGS_FIELD))
+    args_dict = prepare_args(
+        ctx.node.properties.get('resource_config', {}),
+        kwargs.get(FLAGS_FIELD),
+        ctx.node.properties.get('max_sleep_time')
+    )
     output = helm.install(
         values_file=values_file,
         kubeconfig=kubeconfig,
@@ -154,7 +163,11 @@ def uninstall_release(ctx,
                       env_vars=None,
                       ca_file=None,
                       **kwargs):
-    args_dict = prepare_args(ctx, kwargs.get(FLAGS_FIELD))
+    args_dict = prepare_args(
+        ctx.node.properties.get('resource_config', {}),
+        kwargs.get(FLAGS_FIELD),
+        ctx.node.properties.get('max_sleep_time')
+    )
     helm.uninstall(
         kubeconfig=kubeconfig,
         token=token,
@@ -170,7 +183,11 @@ def uninstall_release(ctx,
 @with_helm()
 def add_repo(ctx, helm, **kwargs):
     if not use_existing_repo_on_helm(ctx, helm):
-        args_dict = prepare_args(ctx, kwargs.get('flags'))
+        args_dict = prepare_args(
+            ctx.node.properties.get('resource_config', {}),
+            kwargs.get(FLAGS_FIELD),
+            ctx.node.properties.get('max_sleep_time')
+        )
         helm.repo_add(**args_dict)
 
 
@@ -178,7 +195,11 @@ def add_repo(ctx, helm, **kwargs):
 @with_helm()
 def remove_repo(ctx, helm, **kwargs):
     if not ctx.node.properties.get(USE_EXTERNAL_RESOURCE):
-        args_dict = prepare_args(ctx, kwargs.get(FLAGS_FIELD))
+        args_dict = prepare_args(
+            ctx.node.properties.get('resource_config', {}),
+            kwargs.get(FLAGS_FIELD),
+            ctx.node.properties.get('max_sleep_time')
+        )
         helm.repo_remove(**args_dict)
 
 

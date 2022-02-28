@@ -25,6 +25,7 @@ from . import TestBase
 from ..tasks import (
     add_repo,
     remove_repo,
+    prepare_args,
     install_binary,
     install_release,
     upgrade_release,
@@ -164,6 +165,35 @@ class TestTasks(TestBase):
         }
         uninstall_binary(**kwargs)
         self.assertEqual(os.path.isfile(fake_executable.name), False)
+
+    def test_prepare_args(self):
+        properties = {
+            "helm_config": {
+                "executable_path": "/path/to/helm"
+            },
+            "use_external_resource": True,
+            "resource_config": {
+                "name": "stable",
+                "repo_url":
+                    "https://kubernetes-charts.storage.googleapis.com/",
+                "flags": [{'set': 'foo'}, {'set': 'bar'}, 'debug']
+            }
+        }
+
+        ctx = self.mock_ctx(properties,
+                            self.mock_runtime_properties())
+        flags_override = [{'set': 'foo'}, {'set': 'baz'}]
+        result = prepare_args(
+            ctx.node.properties['resource_config'], flags_override)
+        expected = properties['resource_config']
+        expected['flags'] = [
+            {'set': 'foo'},
+            {'set': 'bar'},
+            'debug',
+            {'set': 'baz'},
+        ]
+        expected['additional_args'] = {'max_sleep_time': 300}
+        assert result == expected
 
     def test_add_repo(self):
         properties = {

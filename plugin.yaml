@@ -2,7 +2,7 @@ plugins:
   helm:
     executor: central_deployment_agent
     package_name: cloudify-helm-plugin
-    package_version: '0.2.5'
+    package_version: '0.2.6'
 
 dsl_definitions:
 
@@ -299,6 +299,7 @@ node_types:
           implementation: helm.cloudify_helm.tasks.update_repo
           inputs:
             flags:
+              # This operation does not take the flags from the node properties.
               <<: *flags_input
 
 relationships:
