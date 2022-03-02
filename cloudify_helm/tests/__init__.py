@@ -34,7 +34,6 @@ class TestBase(unittest.TestCase):
             node_name="test_name",
             deployment_id='test_deployment',
             properties=test_properties,
-            runtime_properties=None if not test_runtime_properties
-            else test_runtime_properties,
+            runtime_properties=test_runtime_properties,
         )
         return ctx

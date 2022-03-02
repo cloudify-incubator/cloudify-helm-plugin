@@ -15,3 +15,4 @@
 0.2.3: Work around 6.2 GA bug.
 0.2.4: add RD-3650-max-sleep-time
 0.2.5: Make sure that file content is written to file.
+0.2.6: Deduplicate flags from properties and input overrides. This only deduplicates the key value pair. Duplicate keys are still supported.
