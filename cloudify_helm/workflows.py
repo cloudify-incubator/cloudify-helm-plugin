@@ -12,8 +12,11 @@
 #    * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
+import os
 
 from cloudify.exceptions import NonRecoverableError
+
+from . import utils
 
 
 def _helm_operation(ctx,
@@ -68,11 +71,25 @@ def upgrade_release(ctx,
         raise NonRecoverableError(
             'The parameter chart is required. '
             'Provided value: {}'.format(chart))
-    _helm_operation(ctx,
-                    "helm.upgrade_release",
-                    node_instance_id,
-                    'cloudify.nodes.helm.Release',
-                    chart=chart,
-                    flags=flags,
-                    set_values=set_values,
-                    values_file=values_file).execute()
+    if values_file and not os.path.isabs(values_file):
+        with utils.get_values_file(ctx,
+                                   False,
+                                   values_file) as temp_values_file:
+            ctx.logger.info('values file {}'.format(temp_values_file))
+            _helm_operation(ctx,
+                            "helm.upgrade_release",
+                            node_instance_id,
+                            'cloudify.nodes.helm.Release',
+                            chart=chart,
+                            flags=flags,
+                            set_values=set_values,
+                            values_file=temp_values_file).execute()
+    else:
+        _helm_operation(ctx,
+                        "helm.upgrade_release",
+                        node_instance_id,
+                        'cloudify.nodes.helm.Release',
+                        chart=chart,
+                        flags=flags,
+                        set_values=set_values,
+                        values_file=values_file).execute()
