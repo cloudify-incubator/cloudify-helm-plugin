@@ -12,8 +12,11 @@
 #    * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
+import os
 
 from cloudify.exceptions import NonRecoverableError
+
+from . import utils
 
 
 def _helm_operation(ctx,
@@ -62,17 +65,47 @@ def upgrade_release(ctx,
                     flags,
                     set_values,
                     values_file):
+
+    if not node_instance_id:
+        release_instance_ids = []
+        for node in ctx.nodes:
+            for i in node.instances:
+                if 'cloudify.nodes.helm.Release' in i.node.type_hierarchy:
+                    release_instance_ids.append(i.id)
+        if len(release_instance_ids) != 1:
+            raise NonRecoverableError(
+                'One node instance of type cloudify.nodes.helm.Release is '
+                'required as an argument to the upgrade_release workflow. '
+                'If none is provided, '
+                'one instance is expected to exist in the deployment.'
+            )
+        node_instance_id = release_instance_ids[0]
+
     if type(flags) is not list:
         raise NonRecoverableError('Flags parameter must be a list.')
     if not chart:
         raise NonRecoverableError(
             'The parameter chart is required. '
             'Provided value: {}'.format(chart))
-    _helm_operation(ctx,
-                    "helm.upgrade_release",
-                    node_instance_id,
-                    'cloudify.nodes.helm.Release',
-                    chart=chart,
-                    flags=flags,
-                    set_values=set_values,
-                    values_file=values_file).execute()
+    if values_file and not os.path.isabs(values_file):
+        with utils.get_values_file(ctx,
+                                   False,
+                                   values_file) as temp_values_file:
+            ctx.logger.info('values file {}'.format(temp_values_file))
+            _helm_operation(ctx,
+                            "helm.upgrade_release",
+                            node_instance_id,
+                            'cloudify.nodes.helm.Release',
+                            chart=chart,
+                            flags=flags,
+                            set_values=set_values,
+                            values_file=temp_values_file).execute()
+    else:
+        _helm_operation(ctx,
+                        "helm.upgrade_release",
+                        node_instance_id,
+                        'cloudify.nodes.helm.Release',
+                        chart=chart,
+                        flags=flags,
+                        set_values=set_values,
+                        values_file=values_file).execute()

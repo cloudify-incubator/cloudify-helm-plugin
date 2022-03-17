@@ -115,12 +115,15 @@ def get_kubeconfig_file(ctx):
 
 @contextmanager
 def get_values_file(ctx, ignore_properties_values_file, values_file=None):
-    values_file = values_file if ignore_properties_values_file else \
-        ctx.node.properties.get(RESOURCE_CONFIG, {}).get('values_file')
+    try:
+        values_file = values_file if ignore_properties_values_file else \
+            ctx.node.properties.get(RESOURCE_CONFIG, {}).get('values_file')
+    except AttributeError:
+        pass
     ctx.logger.debug("values file path:{path}".format(path=values_file))
     if values_file and not ignore_properties_values_file:
         # It means we took values file path from resource_config
-        with tempfile.NamedTemporaryFile(delete=False) as f:
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.yaml') as f:
             f.close()
             ctx.download_resource(
                 values_file,
