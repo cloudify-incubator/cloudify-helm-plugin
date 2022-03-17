@@ -69,9 +69,9 @@ def upgrade_release(ctx,
     if not node_instance_id:
         release_instance_ids = []
         for node in ctx.nodes:
-          for instance in node.instances:
-              if 'cloudify.nodes.helm.Release' in instance.node.type_hierarchy:
-                  release_instance_ids.append(instance.id)
+            for i in node.instances:
+                if 'cloudify.nodes.helm.Release' in i.node.type_hierarchy:
+                    release_instance_ids.append(i.id)
         if len(release_instance_ids) != 1:
             raise NonRecoverableError(
                 'One node instance of type cloudify.nodes.helm.Release is '

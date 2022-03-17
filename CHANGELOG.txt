@@ -16,3 +16,7 @@
 0.2.4: add RD-3650-max-sleep-time
 0.2.5: Make sure that file content is written to file.
 0.2.6: Deduplicate flags from properties and input overrides. This only deduplicates the key value pair. Duplicate keys are still supported.
+0.2.7:
+  - Resolve node instance ID to upgrade release if not provided.
+  - Resolve values file address if relative provided.
+  - Remove unsupported flags on uninstall.
