@@ -65,6 +65,22 @@ def upgrade_release(ctx,
                     flags,
                     set_values,
                     values_file):
+
+    if not node_instance_id:
+        release_instance_ids = []
+        for node in ctx.nodes:
+          for instance in node.instances:
+              if 'cloudify.nodes.helm.Release' in instance.node.type_hierarchy:
+                  release_instance_ids.append(instance.id)
+        if len(release_instance_ids) != 1:
+            raise NonRecoverableError(
+                'One node instance of type cloudify.nodes.helm.Release is '
+                'required as an argument to the upgrade_release workflow. '
+                'If none is provided, '
+                'one instance is expected to exist in the deployment.'
+            )
+        node_instance_id = release_instance_ids[0]
+
     if type(flags) is not list:
         raise NonRecoverableError('Flags parameter must be a list.')
     if not chart:

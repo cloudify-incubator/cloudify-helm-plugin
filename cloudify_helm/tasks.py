@@ -168,6 +168,10 @@ def uninstall_release(ctx,
         kwargs.get(FLAGS_FIELD),
         ctx.node.properties.get('max_sleep_time')
     )
+    if FLAGS_FIELD in args_dict:
+        for n in range(0, len(args_dict[FLAGS_FIELD])):
+            if args_dict[FLAGS_FIELD][n].get('name') == 'version':
+                del args_dict[FLAGS_FIELD][n]['name']
     helm.uninstall(
         kubeconfig=kubeconfig,
         token=token,
