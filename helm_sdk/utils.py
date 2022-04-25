@@ -12,7 +12,7 @@
 #    * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
-
+import json
 import os
 import copy
 
@@ -86,7 +86,13 @@ def prepare_set_parameters(set_values):
     for set_dict in set_values:
         set_list.append('--set')
         try:
-            set_list.append(set_dict["name"] + "=" + set_dict["value"])
+            if isinstance(set_dict["value"], (list, dict)):
+                value = json.dumps(set_dict["value"])
+            elif not isinstance(set_dict["value"], str):
+                value = str(set_dict["value"])
+            else:
+                value = set_dict["value"]
+            set_list.append(set_dict["name"] + "=" + value)
         except KeyError:
             raise CloudifyHelmSDKError(
                 "\"set\" parameter name or value is missing.")
