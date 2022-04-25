@@ -20,3 +20,5 @@
   - Resolve node instance ID to upgrade release if not provided.
   - Resolve values file address if relative provided.
   - Remove unsupported flags on uninstall.
+0.2.8:
+  - RD-4746 Cast non strings to strings when setting command line vars.
