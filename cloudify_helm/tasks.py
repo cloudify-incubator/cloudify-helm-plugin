@@ -171,7 +171,7 @@ def uninstall_release(ctx,
     if FLAGS_FIELD in args_dict:
         for n in range(0, len(args_dict[FLAGS_FIELD])):
             if args_dict[FLAGS_FIELD][n].get('name') == 'version':
-                del args_dict[FLAGS_FIELD][n]['name']
+                del args_dict[FLAGS_FIELD][n]
     helm.uninstall(
         kubeconfig=kubeconfig,
         token=token,
