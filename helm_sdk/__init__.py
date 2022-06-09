@@ -154,7 +154,7 @@ class Helm(object):
                   additional_env=None,
                   additional_args=None,
                   **_):
-        cmd = ['uninstall', name]
+        cmd = ['uninstall', name, '--wait']
         self.handle_auth_params(cmd, kubeconfig, token, apiserver, ca_file)
         flags = flags or []
         validate_no_collisions_between_params_and_flags(flags)
