@@ -77,7 +77,7 @@ class HelmSDKTest(HelmTestBase):
         self.helm.uninstall('release1',
                             mock_flags,
                             kubeconfig='/path/to/config')
-        cmd_expected = [HELM_BINARY, 'uninstall', 'release1',
+        cmd_expected = [HELM_BINARY, 'uninstall', 'release1', '--wait',
                         '--kubeconfig=/path/to/config', '--dry-run',
                         '--timeout=100']
         mock_execute.assert_called_once_with(cmd_expected,
