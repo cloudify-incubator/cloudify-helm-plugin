@@ -43,9 +43,11 @@ class TestUtils(unittest.TestCase):
             set_no_name = [{'value': 'y'}]
             prepare_set_parameters(set_no_name)
         # Now set_dict_no_val is a valid set parameter dictionary
-        valid_set_list = [{'name': 'x', 'value': 'y'}]
+        valid_set_list = [{'name': 'x', 'value': 'y'},
+                          {'name': 'string', 'value': '"hello world"'}]
         self.assertEqual(prepare_set_parameters(valid_set_list),
-                         ['--set', "x='y'"])
+                         ['--set', "x='y'", '--set',
+                          'string=\'"hello world"\''])
 
     def test_validate_no_collisions_between_params_and_flags(self):
         fake_flags = [{'name': 'kube-apiserver', 'value': 'https://0.0.0.0'}]
