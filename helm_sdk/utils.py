@@ -90,6 +90,8 @@ def prepare_set_parameters(set_values):
                 value = json.dumps(set_dict["value"])
             elif not isinstance(set_dict["value"], str):
                 value = str(set_dict["value"])
+            elif isinstance(set_dict["value"], str):
+                value = repr(str(set_dict["value"]))
             else:
                 value = set_dict["value"]
             set_list.append(set_dict["name"] + "=" + value)
