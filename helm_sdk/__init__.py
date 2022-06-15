@@ -165,11 +165,16 @@ class Helm(object):
 
     def repo_add(self,
                  name,
-                 repo_url,
+                 repo_url=None,
+                 source_path=None,
                  flags=None,
                  additional_args=None,
                  **_):
-        cmd = ['repo', 'add', name, repo_url]
+        self.logger.info('**** repo_add ***')
+        self.logger.info('**** repo_url: {}'.format(repo_url))
+        self.logger.info('**** source_path: {}'.format(source_path))
+
+        cmd = ['repo', 'add', name, repo_url or source_path]
         flags = flags or []
         cmd.extend([prepare_parameter(flag) for flag in flags])
         self.execute(self._helm_command(cmd), additional_args=additional_args)

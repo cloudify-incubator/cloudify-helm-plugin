@@ -277,10 +277,14 @@ def use_existing_repo_on_helm(ctx, helm):
     :return Nothing, raises NonRecoverableError exception if repository
     doesen't exist.
     """
+    ctx.logger.info('****** use_existing_repo_on_helm **********')
+
     if ctx.node.properties.get(USE_EXTERNAL_RESOURCE):
         repos_list = helm.repo_list()
+        ctx.logger.info('****** repos_list: {}'.format(repos_list))
         resource_config = ctx.node.properties.get(RESOURCE_CONFIG, {})
         for repo in repos_list:
+            ctx.logger.info('****** repo: {}'.format(repo))
             if repo.get('name') == resource_config.get('name') and \
                     repo.get('url') == resource_config.get('repo_url'):
                 return True
