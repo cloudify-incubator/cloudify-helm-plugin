@@ -15,7 +15,7 @@
 
 import os
 
-from cloudify_common_sdk.utils import get_deployment_dir
+from cloudify_common_sdk.utils import get_deployment_dir, get_node_instance_dir
 
 from cloudify.decorators import operation
 from cloudify.exceptions import NonRecoverableError
@@ -140,6 +140,14 @@ def install_release(ctx,
         kwargs.get(FLAGS_FIELD),
         ctx.node.properties.get('max_sleep_time')
     )
+
+    if 'chart' in args_dict:
+        from urllib.parse import urlparse
+        url = urlparse(args_dict.get('chart'))
+        if not url.scheme:
+            args_dict['chart'] = ctx.download_resource(url.path,
+                                                       get_node_instance_dir())
+
     output = helm.install(
         values_file=values_file,
         kubeconfig=kubeconfig,
