@@ -25,7 +25,12 @@ import yaml
 
 from cloudify import ctx
 from cloudify.exceptions import NonRecoverableError, HttpException
+from cloudify_common_sdk.resource_downloader import (unzip_archive,
+                                                     untar_archive,
+                                                     TAR_FILE_EXTENSTIONS)
+
 from cloudify_common_sdk.utils import get_deployment_dir
+
 
 from helm_sdk import Helm
 from helm_sdk.utils import run_subprocess
@@ -49,6 +54,28 @@ from .constants import (
     HELM_ENV_VARS_LIST,
     AWS_CLI_TO_INSTALL,
     USE_EXTERNAL_RESOURCE)
+
+
+def _create_source_path(source_tmp_path):
+    # didn't download anything so check the provided path
+    # if file and absolute path or not
+    if not os.path.isabs(source_tmp_path):
+        # bundled and need to be downloaded from blueprint
+        source_tmp_path = ctx.download_resource(source_tmp_path)
+
+    if os.path.isfile(source_tmp_path):
+        file_name = source_tmp_path.rsplit('/', 1)[1]
+        file_type = file_name.rsplit('.', 1)[1]
+        # check type
+        if file_type == 'zip':
+            unzipped_source = unzip_archive(source_tmp_path, False)
+            os.remove(source_tmp_path)
+            source_tmp_path = unzipped_source
+        elif file_type in TAR_FILE_EXTENSTIONS:
+            unzipped_source = untar_archive(source_tmp_path, False)
+            os.remove(source_tmp_path)
+            source_tmp_path = unzipped_source
+    return source_tmp_path
 
 
 def get_helm_executable_path(properties, runtime_properties):
