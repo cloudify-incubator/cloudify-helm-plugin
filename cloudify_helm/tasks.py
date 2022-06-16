@@ -14,8 +14,13 @@
 #    * limitations under the License.
 
 import os
+from contextlib import contextmanager
+from urllib.parse import urlparse
+import shutil
 
-from cloudify_common_sdk.utils import get_deployment_dir, get_node_instance_dir
+from cloudify_common_sdk.utils import (get_deployment_dir,
+                                       get_node_instance_dir,
+                                       copy_directory)
 
 from cloudify.decorators import operation
 from cloudify.exceptions import NonRecoverableError
@@ -29,7 +34,8 @@ from .utils import (
     get_helm_executable_path,
     use_existing_repo_on_helm,
     create_temporary_env_of_helm,
-    delete_temporary_env_of_helm)
+    delete_temporary_env_of_helm,
+    _create_source_path)
 from .constants import (
     HOST,
     NAME_FIELD,
@@ -140,25 +146,41 @@ def install_release(ctx,
         kwargs.get(FLAGS_FIELD),
         ctx.node.properties.get('max_sleep_time')
     )
+    url = urlparse(args_dict.get('chart', None))
 
-    if 'chart' in args_dict:
-        from urllib.parse import urlparse
-        url = urlparse(args_dict.get('chart'))
-        if not url.scheme:
-            args_dict['chart'] = ctx.download_resource(url.path,
-                                                       get_node_instance_dir())
+    with install_target(ctx, url, args_dict) as args_dict:
+        output = helm.install(
+            values_file=values_file,
+            kubeconfig=kubeconfig,
+            token=token,
+            apiserver=ctx.node.properties.get(CLIENT_CONFIG, {}).get(
+                CONFIGURATION, {}).get(API_OPTIONS, {}).get(HOST),
+            additional_env=env_vars,
+            ca_file=ca_file,
+            **args_dict)
+        ctx.instance.runtime_properties['install_output'] = output
 
-    output = helm.install(
-        values_file=values_file,
-        kubeconfig=kubeconfig,
-        token=token,
-        apiserver=ctx.node.properties.get(
-            CLIENT_CONFIG, {}).get(CONFIGURATION, {}).get(API_OPTIONS, {}).get(
-            HOST),
-        additional_env=env_vars,
-        ca_file=ca_file,
-        **args_dict)
-    ctx.instance.runtime_properties['install_output'] = output
+
+@contextmanager
+def install_target(ctx, url, args_dict):
+    if url.path and not any([url.path.endswith('.tgz'),
+                             url.path.endswith('.zip'),
+                             url.path.endswith('.tar.gz')]):
+        yield args_dict
+    else:
+        source_tmp_path = ctx.download_resource(url.path)
+        ctx.logger.debug('Downloaded temporary source path {}'
+                         .format(source_tmp_path))
+        # source_tmp_path deleted
+        new_tmp_path = _create_source_path(source_tmp_path)
+        target = os.path.join(get_node_instance_dir(), url.path)
+        copy_directory(new_tmp_path, target)
+        args_dict['chart'] = target
+        yield args_dict
+        try:
+            shutil.rmtree(new_tmp_path)
+        except OSError:
+            pass
 
 
 @operation
