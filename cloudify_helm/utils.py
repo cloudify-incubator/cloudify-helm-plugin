@@ -15,13 +15,12 @@
 
 import os
 import sys
+import yaml
 import shutil
 import tarfile
 import tempfile
 from contextlib import contextmanager
 from subprocess import CalledProcessError
-
-import yaml
 
 from cloudify import ctx
 from cloudify.exceptions import NonRecoverableError, HttpException
@@ -56,7 +55,7 @@ from .constants import (
     USE_EXTERNAL_RESOURCE)
 
 
-def _create_source_path(source_tmp_path):
+def create_source_path(source_tmp_path):
     # didn't download anything so check the provided path
     # if file and absolute path or not
     if not os.path.isabs(source_tmp_path):

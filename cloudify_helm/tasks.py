@@ -14,9 +14,9 @@
 #    * limitations under the License.
 
 import os
-from contextlib import contextmanager
-from urllib.parse import urlparse
 import shutil
+from urllib.parse import urlparse
+from contextlib import contextmanager
 
 from cloudify_common_sdk.utils import (get_deployment_dir,
                                        get_node_instance_dir,
@@ -35,7 +35,7 @@ from .utils import (
     use_existing_repo_on_helm,
     create_temporary_env_of_helm,
     delete_temporary_env_of_helm,
-    _create_source_path)
+    create_source_path)
 from .constants import (
     HOST,
     NAME_FIELD,
@@ -172,7 +172,7 @@ def install_target(ctx, url, args_dict):
         ctx.logger.debug('Downloaded temporary source path {}'
                          .format(source_tmp_path))
         # source_tmp_path deleted
-        new_tmp_path = _create_source_path(source_tmp_path)
+        new_tmp_path = create_source_path(source_tmp_path)
         target = os.path.join(get_node_instance_dir(), url.path)
         copy_directory(new_tmp_path, target)
         args_dict['chart'] = target
