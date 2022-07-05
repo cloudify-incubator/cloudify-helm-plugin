@@ -24,3 +24,4 @@
   - RD-4746 Cast non strings to strings when setting command line vars.
   - RD-4986 fix uninstall_release del args_dict[FLAGS_FIELD][n]
   - RD-4901 add '--wait' to cmd in uninstall function
+  - RD-5289-check-version-for-using-with-flag-wait for uninstall function

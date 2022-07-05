@@ -20,7 +20,8 @@ from helm_sdk.utils import (
     run_subprocess,
     prepare_parameter,
     prepare_set_parameters,
-    validate_no_collisions_between_params_and_flags)
+    validate_no_collisions_between_params_and_flags,
+    check_flag_wait_is_supported)
 
 # Helm cli flags names
 HELM_KUBECONFIG_FLAG = 'kubeconfig'
@@ -154,7 +155,13 @@ class Helm(object):
                   additional_env=None,
                   additional_args=None,
                   **_):
-        cmd = ['uninstall', name, '--wait']
+
+        if check_flag_wait_is_supported(self):
+            cmd = ['uninstall', name, '--wait']
+        else:
+            cmd = ['uninstall', name]
+            self.logger.debug('Versions of helm before 3.9.0 do not support'
+                              ' "--wait" flag.')
         self.handle_auth_params(cmd, kubeconfig, token, apiserver, ca_file)
         flags = flags or []
         validate_no_collisions_between_params_and_flags(flags)
