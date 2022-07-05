@@ -160,6 +160,8 @@ class Helm(object):
             cmd = ['uninstall', name, '--wait']
         else:
             cmd = ['uninstall', name]
+            self.logger.debug('Versions of helm before 3.9.0 do not support'
+                              ' "--wait" flag.')
         self.handle_auth_params(cmd, kubeconfig, token, apiserver, ca_file)
         flags = flags or []
         validate_no_collisions_between_params_and_flags(flags)
