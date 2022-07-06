@@ -13,6 +13,7 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 
+import re
 import json
 
 from .exceptions import CloudifyHelmSDKError
@@ -20,8 +21,8 @@ from helm_sdk.utils import (
     run_subprocess,
     prepare_parameter,
     prepare_set_parameters,
-    validate_no_collisions_between_params_and_flags,
-    check_flag_wait_is_supported)
+    validate_no_collisions_between_params_and_flags)
+from cloudify_common_sdk.utils import v1_gteq_v2
 
 # Helm cli flags names
 HELM_KUBECONFIG_FLAG = 'kubeconfig'
@@ -156,7 +157,7 @@ class Helm(object):
                   additional_args=None,
                   **_):
 
-        if check_flag_wait_is_supported(self):
+        if self.check_flag_wait_is_supported():
             cmd = ['uninstall', name, '--wait']
         else:
             cmd = ['uninstall', name]
@@ -248,3 +249,13 @@ class Helm(object):
             additional_args=additional_args,
             return_output=True)
         return json.loads(output)
+
+    def get_helm_version(self):
+        cmd = ['version', '--short']
+        output = self.execute(self._helm_command(cmd))
+        version = re.search(r'([\d.]+)', output)
+        if version:
+            return version.group(1)
+
+    def check_flag_wait_is_supported(self):
+        return v1_gteq_v2(self.get_helm_version(), '3.9.0')
