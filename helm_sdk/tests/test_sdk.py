@@ -71,7 +71,7 @@ class HelmSDKTest(HelmTestBase):
                               mock_set_args,
                               token='demotoken')
 
-    @patch('helm_sdk.check_flag_wait_is_supported', return_value=True)
+    @patch('helm_sdk.Helm.check_flag_wait_is_supported', return_value=True)
     def test_uninstall_with_kubekonfig(self, *_):
         mock_execute = mock.Mock()
         self.helm.execute = mock_execute
@@ -85,7 +85,7 @@ class HelmSDKTest(HelmTestBase):
         mock_execute.assert_called_once_with(cmd_expected,
                                              additional_args=None)
 
-    @patch('helm_sdk.check_flag_wait_is_supported', return_value=True)
+    @patch('helm_sdk.Helm.check_flag_wait_is_supported', return_value=True)
     def test_uninstall_no_token_and_no_kubeconfig(self, *_):
         with self.assertRaisesRegexp(CloudifyHelmSDKError,
                                      'Must provide kubeconfig file path.'):
@@ -93,7 +93,7 @@ class HelmSDKTest(HelmTestBase):
                                 mock_flags,
                                 apiserver='https://1.0.0.0')
 
-    @patch('helm_sdk.check_flag_wait_is_supported', return_value=True)
+    @patch('helm_sdk.Helm.check_flag_wait_is_supported', return_value=True)
     def test_uninstall_no_apiserver_and_no_kubeconfig(self, *_):
         with self.assertRaisesRegexp(CloudifyHelmSDKError,
                                      'Must provide kubeconfig file path.'):
