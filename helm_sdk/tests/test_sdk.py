@@ -14,7 +14,7 @@
 #    * limitations under the License.
 
 import mock
-
+from mock import patch
 from . import HelmTestBase, HELM_BINARY
 from helm_sdk.exceptions import CloudifyHelmSDKError
 
@@ -71,9 +71,11 @@ class HelmSDKTest(HelmTestBase):
                               mock_set_args,
                               token='demotoken')
 
-    def test_uninstall_with_kubekonfig(self):
+    @patch('helm_sdk.check_flag_wait_is_supported', return_value=True)
+    def test_uninstall_with_kubekonfig(self, *_):
         mock_execute = mock.Mock()
         self.helm.execute = mock_execute
+
         self.helm.uninstall('release1',
                             mock_flags,
                             kubeconfig='/path/to/config')
@@ -83,14 +85,16 @@ class HelmSDKTest(HelmTestBase):
         mock_execute.assert_called_once_with(cmd_expected,
                                              additional_args=None)
 
-    def test_uninstall_no_token_and_no_kubeconfig(self):
+    @patch('helm_sdk.check_flag_wait_is_supported', return_value=True)
+    def test_uninstall_no_token_and_no_kubeconfig(self, *_):
         with self.assertRaisesRegexp(CloudifyHelmSDKError,
                                      'Must provide kubeconfig file path.'):
             self.helm.uninstall('release1',
                                 mock_flags,
                                 apiserver='https://1.0.0.0')
 
-    def test_uninstall_no_apiserver_and_no_kubeconfig(self):
+    @patch('helm_sdk.check_flag_wait_is_supported', return_value=True)
+    def test_uninstall_no_apiserver_and_no_kubeconfig(self, *_):
         with self.assertRaisesRegexp(CloudifyHelmSDKError,
                                      'Must provide kubeconfig file path.'):
             self.helm.uninstall('release1',
