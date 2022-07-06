@@ -157,7 +157,7 @@ class Helm(object):
                   additional_args=None,
                   **_):
 
-        if check_flag_wait_is_supported(self):
+        if self.check_flag_wait_is_supported():
             cmd = ['uninstall', name, '--wait']
         else:
             cmd = ['uninstall', name]
@@ -259,6 +259,5 @@ class Helm(object):
         if version:
             return version.group(1)
 
-
-def check_flag_wait_is_supported(self):
-    return v1_gteq_v2(self.get_helm_version(), '3.9.0')
+    def check_flag_wait_is_supported(self):
+        return v1_gteq_v2(self.get_helm_version(), '3.9.0')
