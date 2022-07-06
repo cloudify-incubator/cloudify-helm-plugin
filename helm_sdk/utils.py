@@ -13,14 +13,11 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 
-import re
 import os
 import json
 import copy
-
 from cloudify_common_sdk.filters import obfuscate_passwords
 from cloudify_common_sdk.processes import general_executor, process_execution
-from cloudify_common_sdk.utils import v1_gteq_v2
 from helm_sdk.exceptions import CloudifyHelmSDKError
 
 FLAGS_LIST_TO_VALIDATE = ['kube-apiserver', 'kube-token', 'kubeconfig']
@@ -109,15 +106,3 @@ def validate_no_collisions_between_params_and_flags(flags):
             'Please do not pass {flags_list} under "flags" property,'
             'each of them has a known property.'.format(
                 flags_list=FLAGS_LIST_TO_VALIDATE))
-
-
-def get_helm_version(self):
-    cmd = ['version', '--short']
-    output = self.execute(self._helm_command(cmd))
-    version = re.search(r'([\d.]+)', output)
-    if version:
-        return version.group(1)
-
-
-def check_flag_wait_is_supported(self):
-    return v1_gteq_v2(get_helm_version(self), '3.9.0')
