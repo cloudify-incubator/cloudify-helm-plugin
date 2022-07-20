@@ -317,7 +317,7 @@ workflows:
     mapping: helm.cloudify_helm.workflows.update_repositories
     parameters:
       node_instance_id:
-        default: ''
+        type: node_instance
         description: |
            Node instance ID's of helm clients to refresh repositories for(type:cloudify.nodes.helm.Repo).
       flags:
@@ -327,7 +327,7 @@ workflows:
     mapping: helm.cloudify_helm.workflows.upgrade_release
     parameters:
       node_instance_id:
-        default: ''
+        type: node_instance
         description: |
            Node instance ID's of helm clients to refresh repositories for(type:cloudify.nodes.helm.Repo).
       chart:

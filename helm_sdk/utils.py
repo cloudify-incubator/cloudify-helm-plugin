@@ -14,11 +14,10 @@
 #    * limitations under the License.
 
 import os
+import json
 import copy
-
 from cloudify_common_sdk.filters import obfuscate_passwords
 from cloudify_common_sdk.processes import general_executor, process_execution
-
 from helm_sdk.exceptions import CloudifyHelmSDKError
 
 FLAGS_LIST_TO_VALIDATE = ['kube-apiserver', 'kube-token', 'kubeconfig']
@@ -86,7 +85,15 @@ def prepare_set_parameters(set_values):
     for set_dict in set_values:
         set_list.append('--set')
         try:
-            set_list.append(set_dict["name"] + "=" + set_dict["value"])
+            if isinstance(set_dict["value"], (list, dict)):
+                value = json.dumps(set_dict["value"])
+            elif not isinstance(set_dict["value"], str):
+                value = str(set_dict["value"])
+            elif isinstance(set_dict["value"], str):
+                value = repr(str(set_dict["value"]))
+            else:
+                value = set_dict["value"]
+            set_list.append(set_dict["name"] + "=" + value)
         except KeyError:
             raise CloudifyHelmSDKError(
                 "\"set\" parameter name or value is missing.")

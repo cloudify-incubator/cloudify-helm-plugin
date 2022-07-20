@@ -14,7 +14,7 @@
 #    * limitations under the License.
 
 import mock
-
+from mock import patch
 from . import HelmTestBase, HELM_BINARY
 from helm_sdk.exceptions import CloudifyHelmSDKError
 
@@ -47,7 +47,7 @@ class HelmSDKTest(HelmTestBase):
         cmd_expected = [HELM_BINARY, 'install', 'release1', 'my_chart',
                         '--wait', '--output=json',
                         '--kubeconfig=/path/to/config', '--dry-run',
-                        '--timeout=100', '--set', 'x=y', '--set', 'a=b']
+                        '--timeout=100', '--set', "x='y'", '--set', "a='b'"]
         mock_execute.assert_called_once_with(cmd_expected,
                                              additional_args=None,
                                              return_output=True)
@@ -71,26 +71,30 @@ class HelmSDKTest(HelmTestBase):
                               mock_set_args,
                               token='demotoken')
 
-    def test_uninstall_with_kubekonfig(self):
+    @patch('helm_sdk.Helm.check_flag_wait_is_supported', return_value=True)
+    def test_uninstall_with_kubekonfig(self, *_):
         mock_execute = mock.Mock()
         self.helm.execute = mock_execute
+
         self.helm.uninstall('release1',
                             mock_flags,
                             kubeconfig='/path/to/config')
-        cmd_expected = [HELM_BINARY, 'uninstall', 'release1',
+        cmd_expected = [HELM_BINARY, 'uninstall', 'release1', '--wait',
                         '--kubeconfig=/path/to/config', '--dry-run',
                         '--timeout=100']
         mock_execute.assert_called_once_with(cmd_expected,
                                              additional_args=None)
 
-    def test_uninstall_no_token_and_no_kubeconfig(self):
+    @patch('helm_sdk.Helm.check_flag_wait_is_supported', return_value=True)
+    def test_uninstall_no_token_and_no_kubeconfig(self, *_):
         with self.assertRaisesRegexp(CloudifyHelmSDKError,
                                      'Must provide kubeconfig file path.'):
             self.helm.uninstall('release1',
                                 mock_flags,
                                 apiserver='https://1.0.0.0')
 
-    def test_uninstall_no_apiserver_and_no_kubeconfig(self):
+    @patch('helm_sdk.Helm.check_flag_wait_is_supported', return_value=True)
+    def test_uninstall_no_apiserver_and_no_kubeconfig(self, *_):
         with self.assertRaisesRegexp(CloudifyHelmSDKError,
                                      'Must provide kubeconfig file path.'):
             self.helm.uninstall('release1',
@@ -134,8 +138,8 @@ class HelmSDKTest(HelmTestBase):
                                 kubeconfig='/path/to/config')
         cmd_expected = [HELM_BINARY, 'upgrade', 'release1', 'my_chart',
                         '--atomic', '-o=json', '--kubeconfig=/path/to/config',
-                        '--dry-run', '--timeout=100', '--set', 'x=y', '--set',
-                        'a=b']
+                        '--dry-run', '--timeout=100', '--set', "x='y'",
+                        '--set', "a='b'"]
         mock_execute.assert_called_once_with(
             cmd_expected, additional_args=None, return_output=True)
         self.assertEqual(out, {"name": "release1"})
