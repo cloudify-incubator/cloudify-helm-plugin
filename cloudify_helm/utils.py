@@ -28,7 +28,7 @@ from cloudify_common_sdk.resource_downloader import (unzip_archive,
                                                      untar_archive,
                                                      TAR_FILE_EXTENSTIONS)
 
-from cloudify_common_sdk.utils import get_instance, get_deployment_dir
+from cloudify_common_sdk.utils import get_ctx_instance, get_deployment_dir
 
 
 from helm_sdk import Helm
@@ -36,6 +36,7 @@ from helm_sdk.utils import run_subprocess
 from .configuration import KubeConfigConfigurationVariants
 from .authentication import KubernetesApiAuthenticationVariants
 from .constants import (
+    HOST,
     API_KEY,
     API_OPTIONS,
     HELM_CONFIG,
@@ -171,7 +172,7 @@ def get_values_file(ctx, ignore_properties_values_file, values_file=None):
 
 
 @contextmanager
-def get_ssl_ca_file(ca_from_shared_cluster):
+def get_ssl_ca_file(ca_from_shared_cluster=None):
     configuration_property = ctx.node.properties.get(CLIENT_CONFIG, {}).get(
         CONFIGURATION, {})
     current_value = ca_from_shared_cluster or configuration_property.get(
@@ -225,12 +226,16 @@ def get_cluster_node_instance_from_rels(rels, rel_type=None, node_type=None):
             return x
 
 
-@contextmanager
-def get_connection_details_from_shared_cluster():
-    node_instance = get_instance(ctx)
+def get_connection_details_from_shared_cluster(props):
+    node_instance = get_ctx_instance(ctx)
     x = get_cluster_node_instance_from_rels(node_instance.relationships)
     if not x:
-        return None, None, None
+        return props.get(CLIENT_CONFIG, {}).get(CONFIGURATION, {}).get(
+            API_OPTIONS, {}).get(HOST),\
+               props.get(CLIENT_CONFIG, {}).get(CONFIGURATION, {}).get(
+                   API_OPTIONS, {}).get('api_key'),\
+               props.get(CLIENT_CONFIG, {}).get(CONFIGURATION, {}).get(
+                   API_OPTIONS, {}).get('ssl_ca_cert')
     endpoint = x.target.instance.runtime_properties['k8s-ip']
     token = x.target.instance.runtime_properties['k8s-service-account-token']
     ssl_ca_cert = x.target.instance.runtime_properties['k8s-cacert']
@@ -434,7 +439,7 @@ def install_aws_cli_if_needed(kubeconfig=None):
 
 def check_aws_cmd_in_kubeconfig(kubeconfig):
     with open(kubeconfig) as kube_file:
-        kubeconfig_dict = yaml.load(kube_file)
+        kubeconfig_dict = yaml.safe_load(kube_file)
     ctx.logger.debug("Trying to get users from kubeconfig")
     users = kubeconfig_dict.get('users', {})
     for user in users:

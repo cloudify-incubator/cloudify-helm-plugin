@@ -64,12 +64,13 @@ class Helm(object):
         cmd.extend(args)
         return cmd
 
-    @staticmethod
-    def handle_auth_params(cmd,
+    def handle_auth_params(self,
+                           cmd,
                            kubeconfig=None,
                            token=None,
                            apiserver=None,
-                           ca_file=None):
+                           ca_file=None,
+                           ca_file_key=None):
         """
             Validation of authentication params.
             Until helm will support --insecure, kubeconfig must be provided.
@@ -97,9 +98,10 @@ class Helm(object):
                 APPEND_FLAG_STRING.format(name=HELM_KUBE_API_SERVER_FLAG,
                                           value=apiserver))
         if ca_file:
+            self.check_flag_kube_ca_cert_is_supported()
             cmd.append(
-                APPEND_FLAG_STRING.format(name=HELM_KUBE_CA_FILE_FLAG,
-                                          value=ca_file))
+                APPEND_FLAG_STRING.format(
+                    name=ca_file_key or HELM_KUBE_CA_FILE_FLAG, value=ca_file))
 
     def install(self,
                 name,
@@ -128,7 +130,8 @@ class Helm(object):
         :return output of install command.
         """
         cmd = ['install', name, chart, '--wait', '--output=json']
-        self.handle_auth_params(cmd, kubeconfig, token, apiserver, ca_file)
+        self.handle_auth_params(
+            cmd, kubeconfig, token, apiserver, ca_file)
         if values_file:
             cmd.append(APPEND_FLAG_STRING.format(name=HELM_VALUES_FLAG,
                                                  value=values_file))
@@ -161,7 +164,11 @@ class Helm(object):
             cmd = ['uninstall', name, '--wait']
         else:
             cmd = ['uninstall', name]
-        self.handle_auth_params(cmd, kubeconfig, token, apiserver, ca_file)
+        self.handle_auth_params(
+            cmd, kubeconfig,
+            token,
+            apiserver,
+            ca_file)
         flags = flags or []
         validate_no_collisions_between_params_and_flags(flags)
         cmd.extend([prepare_parameter(flag) for flag in flags])
@@ -259,3 +266,11 @@ class Helm(object):
 
     def check_flag_wait_is_supported(self):
         return v1_gteq_v2(self.get_helm_version(), '3.9.0')
+
+    def check_flag_kube_ca_cert_is_supported(self):
+        if not v1_gteq_v2(self.get_helm_version(), '3.9.0'):
+            raise CloudifyHelmSDKError(
+                'Unable to authenticate with CA Cert, '
+                'the {} flag is not supported with helm version {}. '
+                'Please upgrade to 3.9.0 or later.'.format(
+                    HELM_KUBE_CA_FILE_FLAG, self.get_helm_version()))

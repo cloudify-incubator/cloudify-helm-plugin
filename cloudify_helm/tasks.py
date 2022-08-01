@@ -37,14 +37,10 @@ from .utils import (
     delete_temporary_env_of_helm,
     create_source_path)
 from .constants import (
-    HOST,
     NAME_FIELD,
     FLAGS_FIELD,
     VALUES_FILE,
-    API_OPTIONS,
     HELM_CONFIG,
-    CONFIGURATION,
-    CLIENT_CONFIG,
     RESOURCE_CONFIG,
     EXECUTABLE_PATH,
     HELM_ENV_VARS_LIST,
@@ -132,6 +128,7 @@ def install_release(ctx,
                     token=None,
                     env_vars=None,
                     ca_file=None,
+                    host=None,
                     **kwargs):
     """
     Execute helm install.
@@ -153,8 +150,7 @@ def install_release(ctx,
             values_file=values_file,
             kubeconfig=kubeconfig,
             token=token,
-            apiserver=ctx.node.properties.get(CLIENT_CONFIG, {}).get(
-                CONFIGURATION, {}).get(API_OPTIONS, {}).get(HOST),
+            apiserver=host,
             additional_env=env_vars,
             ca_file=ca_file,
             **args_dict)
@@ -192,6 +188,7 @@ def uninstall_release(ctx,
                       token=None,
                       env_vars=None,
                       ca_file=None,
+                      host=None,
                       **kwargs):
     args_dict = prepare_args(
         ctx.node.properties.get('resource_config', {}),
@@ -205,9 +202,7 @@ def uninstall_release(ctx,
     helm.uninstall(
         kubeconfig=kubeconfig,
         token=token,
-        apiserver=ctx.node.properties.get(
-            CLIENT_CONFIG, {}).get(CONFIGURATION, {}).get(API_OPTIONS, {}).get(
-            HOST),
+        apiserver=host,
         additional_env=env_vars,
         ca_file=ca_file,
         **args_dict)
@@ -268,6 +263,7 @@ def upgrade_release(ctx,
                     flags=None,
                     env_vars=None,
                     ca_file=None,
+                    host=None,
                     **_):
     """
     Execute helm upgrade.
@@ -292,9 +288,7 @@ def upgrade_release(ctx,
         values_file=values_file,
         kubeconfig=kubeconfig,
         token=token,
-        apiserver=ctx.node.properties.get(
-            CLIENT_CONFIG, {}).get(CONFIGURATION, {}).get(API_OPTIONS, {}).get(
-            HOST),
+        apiserver=host,
         additional_env=env_vars,
         ca_file=ca_file,
     )
