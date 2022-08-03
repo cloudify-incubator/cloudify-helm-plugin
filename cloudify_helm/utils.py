@@ -28,7 +28,7 @@ from cloudify_common_sdk.resource_downloader import (unzip_archive,
                                                      untar_archive,
                                                      TAR_FILE_EXTENSTIONS)
 
-from cloudify_common_sdk.utils import get_deployment_dir
+from cloudify_common_sdk.utils import get_ctx_instance, get_deployment_dir
 
 
 from helm_sdk import Helm
@@ -36,6 +36,7 @@ from helm_sdk.utils import run_subprocess
 from .configuration import KubeConfigConfigurationVariants
 from .authentication import KubernetesApiAuthenticationVariants
 from .constants import (
+    HOST,
     API_KEY,
     API_OPTIONS,
     HELM_CONFIG,
@@ -171,11 +172,11 @@ def get_values_file(ctx, ignore_properties_values_file, values_file=None):
 
 
 @contextmanager
-def get_ssl_ca_file():
+def get_ssl_ca_file(ca_from_shared_cluster=None):
     configuration_property = ctx.node.properties.get(CLIENT_CONFIG, {}).get(
         CONFIGURATION, {})
-    current_value = configuration_property.get(API_OPTIONS, {}).get(
-        SSL_CA_CERT)
+    current_value = ca_from_shared_cluster or configuration_property.get(
+        API_OPTIONS, {}).get(SSL_CA_CERT)
 
     if current_value and check_if_resource_inside_blueprint_folder(
             current_value):
@@ -211,6 +212,34 @@ def get_ssl_ca_file():
     else:
         ctx.logger.info("CA file not found.")
         yield
+
+
+def get_cluster_node_instance_from_rels(rels, rel_type=None, node_type=None):
+    CLUSTER_TYPE = 'cloudify.kubernetes.resources.SharedCluster'
+    CLUSTER_REL = 'cloudify.relationships.helm.connected_to_shared_cluster'
+
+    rel_type = rel_type or CLUSTER_REL
+    node_type = node_type or CLUSTER_TYPE
+    for x in rels:
+        if rel_type in x.type_hierarchy and \
+                node_type in x.target.node.type_hierarchy:
+            return x
+
+
+def get_connection_details_from_shared_cluster(props):
+    node_instance = get_ctx_instance(ctx)
+    x = get_cluster_node_instance_from_rels(node_instance.relationships)
+    if not x:
+        return props.get(CLIENT_CONFIG, {}).get(CONFIGURATION, {}).get(
+            API_OPTIONS, {}).get(HOST),\
+               props.get(CLIENT_CONFIG, {}).get(CONFIGURATION, {}).get(
+                   API_OPTIONS, {}).get('api_key'),\
+               props.get(CLIENT_CONFIG, {}).get(CONFIGURATION, {}).get(
+                   API_OPTIONS, {}).get('ssl_ca_cert')
+    endpoint = x.target.instance.runtime_properties['k8s-ip']
+    token = x.target.instance.runtime_properties['k8s-service-account-token']
+    ssl_ca_cert = x.target.instance.runtime_properties['k8s-cacert']
+    return endpoint, token, ssl_ca_cert
 
 
 def check_if_resource_inside_blueprint_folder(path):
@@ -344,10 +373,10 @@ def delete_temporary_env_of_helm(ctx):
                     dir=dir_to_delete))
 
 
-def get_auth_token(ctx):
+def get_auth_token(ctx, token_from_shared_cluster):
     authentication_property = ctx.node.properties.get(CLIENT_CONFIG, {}).get(
         AUTHENTICATION, {})
-    token = KubernetesApiAuthenticationVariants(
+    token = token_from_shared_cluster or KubernetesApiAuthenticationVariants(
         ctx.logger,
         authentication_property,
     ).get_token()
@@ -410,7 +439,7 @@ def install_aws_cli_if_needed(kubeconfig=None):
 
 def check_aws_cmd_in_kubeconfig(kubeconfig):
     with open(kubeconfig) as kube_file:
-        kubeconfig_dict = yaml.load(kube_file)
+        kubeconfig_dict = yaml.safe_load(kube_file)
     ctx.logger.debug("Trying to get users from kubeconfig")
     users = kubeconfig_dict.get('users', {})
     for user in users:

@@ -26,7 +26,8 @@ from .utils import (
     get_values_file,
     prepare_aws_env,
     get_ssl_ca_file,
-    get_kubeconfig_file)
+    get_kubeconfig_file,
+    get_connection_details_from_shared_cluster)
 
 
 def with_helm(ignore_properties_values_file=False):
@@ -43,17 +44,26 @@ def with_helm(ignore_properties_values_file=False):
         @wraps(func)
         def f(*args, **kwargs):
             ctx = kwargs['ctx']
+            endpoint_from_shared_cluster, \
+                token_from_shared_cluster, \
+                ssl_ca_cert_from_shared_cluster = \
+                get_connection_details_from_shared_cluster(
+                    ctx.node.properties)
             with get_kubeconfig_file(ctx) as kubeconfig:
-                with get_values_file(ctx,
-                                     ignore_properties_values_file,
-                                     kwargs.get('values_file')) as values_file:
-                    with get_ssl_ca_file() as ssl_ca:
+                with get_values_file(
+                        ctx,
+                        ignore_properties_values_file,
+                        kwargs.get('values_file')) as values_file:
+                    with get_ssl_ca_file(ssl_ca_cert_from_shared_cluster) as \
+                            ssl_ca:
                         helm = helm_from_ctx(ctx)
                         kwargs['helm'] = helm
                         kwargs['kubeconfig'] = kubeconfig
                         kwargs['values_file'] = values_file
-                        kwargs['token'] = get_auth_token(ctx)
+                        kwargs['token'] = get_auth_token(
+                            ctx, token_from_shared_cluster)
                         kwargs['ca_file'] = ssl_ca
+                        kwargs['host'] = endpoint_from_shared_cluster
                         try:
                             return func(*args, **kwargs)
                         except Exception as e:
