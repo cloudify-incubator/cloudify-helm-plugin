@@ -31,6 +31,7 @@ from .utils import (
     copy_binary,
     helm_from_ctx,
     is_using_existing,
+    get_resource_config,
     get_helm_executable_path,
     use_existing_repo_on_helm,
     create_temporary_env_of_helm,
@@ -41,7 +42,6 @@ from .constants import (
     FLAGS_FIELD,
     VALUES_FILE,
     HELM_CONFIG,
-    RESOURCE_CONFIG,
     EXECUTABLE_PATH,
     HELM_ENV_VARS_LIST,
     USE_EXTERNAL_RESOURCE)
@@ -138,8 +138,9 @@ def install_release(ctx,
     :param values_file: values file path
     :return output of `helm install` command
     """
+    resource_config = get_resource_config()
     args_dict = prepare_args(
-        ctx.node.properties.get('resource_config', {}),
+        resource_config,
         kwargs.get(FLAGS_FIELD),
         ctx.node.properties.get('max_sleep_time')
     )
@@ -190,8 +191,9 @@ def uninstall_release(ctx,
                       ca_file=None,
                       host=None,
                       **kwargs):
+    resource_config = get_resource_config()
     args_dict = prepare_args(
-        ctx.node.properties.get('resource_config', {}),
+        resource_config,
         kwargs.get(FLAGS_FIELD),
         ctx.node.properties.get('max_sleep_time')
     )
@@ -212,8 +214,9 @@ def uninstall_release(ctx,
 @with_helm()
 def add_repo(ctx, helm, **kwargs):
     if not use_existing_repo_on_helm(ctx, helm):
+        resource_config = get_resource_config()
         args_dict = prepare_args(
-            ctx.node.properties.get('resource_config', {}),
+            resource_config,
             kwargs.get(FLAGS_FIELD),
             ctx.node.properties.get('max_sleep_time')
         )
@@ -224,8 +227,9 @@ def add_repo(ctx, helm, **kwargs):
 @with_helm()
 def remove_repo(ctx, helm, **kwargs):
     if not ctx.node.properties.get(USE_EXTERNAL_RESOURCE):
+        resource_config = get_resource_config()
         args_dict = prepare_args(
-            ctx.node.properties.get('resource_config', {}),
+            resource_config,
             kwargs.get(FLAGS_FIELD),
             ctx.node.properties.get('max_sleep_time')
         )
@@ -279,9 +283,9 @@ def upgrade_release(ctx,
         "the command failed check file access permissions.")
     if os.path.isfile(chart):
         ctx.logger.info("Local chart file: {path} found.".format(path=chart))
+    resource_config = get_resource_config()
     output = helm.upgrade(
-        release_name=ctx.node.properties.get(
-            RESOURCE_CONFIG, {}).get(NAME_FIELD),
+        release_name=resource_config.get(NAME_FIELD),
         chart=chart,
         flags=flags,
         set_values=set_values,

@@ -29,10 +29,7 @@ from cloudify_common_sdk.resource_downloader import (unzip_archive,
                                                      TAR_FILE_EXTENSTIONS)
 
 from cloudify_common_sdk.utils import get_ctx_instance, get_deployment_dir
-from cloudify_common_sdk.secure_property_management import (
-    store_property,
-    get_stored_property)
-
+from cloudify_common_sdk.secure_property_management import get_stored_property
 
 from helm_sdk import Helm
 from helm_sdk.utils import run_subprocess
@@ -57,10 +54,6 @@ from .constants import (
     HELM_ENV_VARS_LIST,
     AWS_CLI_TO_INSTALL,
     USE_EXTERNAL_RESOURCE)
-
-
-def update_resource_config(new_values, target=False):
-    store_property(ctx, RESOURCE_CONFIG, new_values, target)
 
 
 def get_resource_config(target=False, force=None):
