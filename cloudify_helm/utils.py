@@ -29,6 +29,9 @@ from cloudify_common_sdk.resource_downloader import (unzip_archive,
                                                      TAR_FILE_EXTENSTIONS)
 
 from cloudify_common_sdk.utils import get_ctx_instance, get_deployment_dir
+from cloudify_common_sdk.secure_property_management import (
+    store_property,
+    get_stored_property)
 
 
 from helm_sdk import Helm
@@ -54,6 +57,15 @@ from .constants import (
     HELM_ENV_VARS_LIST,
     AWS_CLI_TO_INSTALL,
     USE_EXTERNAL_RESOURCE)
+
+
+def update_resource_config(new_values, target=False):
+    store_property(ctx, RESOURCE_CONFIG, new_values, target)
+
+
+def get_resource_config(target=False, force=None):
+    """Get the cloudify.nodes.terraform.Module resource_config"""
+    return get_stored_property(ctx, RESOURCE_CONFIG, target, force)
 
 
 def create_source_path(source_tmp_path):
@@ -142,11 +154,13 @@ def get_kubeconfig_file(ctx):
 
 @contextmanager
 def get_values_file(ctx, ignore_properties_values_file, values_file=None):
-    try:
-        values_file = values_file if ignore_properties_values_file else \
-            ctx.node.properties.get(RESOURCE_CONFIG, {}).get('values_file')
-    except AttributeError:
-        pass
+
+    if ignore_properties_values_file:
+        values_file = values_file
+    else:
+        resource_config = get_resource_config()
+        values_file = resource_config.get('values_file')
+
     ctx.logger.debug("values file path:{path}".format(path=values_file))
     if values_file and not ignore_properties_values_file:
         # It means we took values file path from resource_config
@@ -334,7 +348,7 @@ def use_existing_repo_on_helm(ctx, helm):
     """
     if ctx.node.properties.get(USE_EXTERNAL_RESOURCE):
         repos_list = helm.repo_list()
-        resource_config = ctx.node.properties.get(RESOURCE_CONFIG, {})
+        resource_config = get_resource_config()
         for repo in repos_list:
             if repo.get('name') == resource_config.get('name') and \
                     repo.get('url') == resource_config.get('repo_url'):
