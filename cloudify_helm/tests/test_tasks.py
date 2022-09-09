@@ -17,6 +17,7 @@ import os
 import mock
 import shutil
 import tempfile
+import unittest
 
 from cloudify.state import current_ctx
 from cloudify.exceptions import NonRecoverableError
@@ -43,6 +44,7 @@ from ..constants import (
     CONFIG_DIR_ENV_VAR,
     CACHE_DIR_ENV_VAR,
     DATA_DIR_ENV_VAR)
+
 
 
 class TestTasks(TestBase):
@@ -290,10 +292,7 @@ class TestTasks(TestBase):
                     flags=[],
                     additional_args={'max_sleep_time': 300})
 
-    def test_install_release(self):
-        properties = self.mock_install_release_properties()
-        ctx = self.mock_ctx(properties,
-                            self.mock_runtime_properties())
+    def helper_install_release(self, properties, ctx):
         kwargs = {
             'ctx': ctx
         }
@@ -316,6 +315,41 @@ class TestTasks(TestBase):
                     ca_file=None,
                     additional_env={},
                     additional_args={'max_sleep_time': 300})
+
+    def test_install_release_general(self):
+        properties = self.mock_install_release_properties()
+        ctx = self.mock_ctx(properties,
+                            self.mock_runtime_properties())
+        self.helper_install_release(properties, ctx)
+
+    def test_install_release_http_chart(self):
+        properties = self.mock_install_release_properties()
+        # replace chart with http-base
+        properties["resource_config"]["chart"] = "http://test/package.tgz"
+        ctx = self.mock_ctx(properties,
+                            self.mock_runtime_properties())
+        self.helper_install_release(properties, ctx)
+
+    def test_install_release_local_resources(self):
+        properties = self.mock_install_release_properties()
+        input_resouce = "./resources/package.tgz"
+        properties["resource_config"]["chart"] = input_resouce
+        test_resources={input_resouce: input_resouce}
+        ctx = self.mock_ctx(properties,
+                            self.mock_runtime_properties(),
+                            test_resources = test_resources)
+
+        self.helper_install_release(properties, ctx)
+
+    def test_install_release_local_resources_rel(self):
+        properties = self.mock_install_release_properties()
+        input_resouce = "resources/package.tgz"
+        properties["resource_config"]["chart"] = input_resouce
+        test_resources={input_resouce: input_resouce}
+        ctx = self.mock_ctx(properties,
+                            self.mock_runtime_properties(),
+                            test_resources = test_resources)
+        self.helper_install_release(properties, ctx)
 
     def test_uninstall_release(self):
         properties = self.mock_install_release_properties()

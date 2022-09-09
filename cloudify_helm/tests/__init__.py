@@ -28,11 +28,13 @@ class TestBase(unittest.TestCase):
 
     def mock_ctx(self,
                  test_properties,
-                 test_runtime_properties=None):
+                 test_runtime_properties=None,
+                 test_resources=None):
         ctx = MockCloudifyContext(
             node_id="test_id",
             node_name="test_name",
             deployment_id='test_deployment',
+            resources=test_resources,
             properties=test_properties,
             runtime_properties=test_runtime_properties,
         )
