@@ -277,10 +277,8 @@ class Helm(object):
 
     def status(self,
                release_name,
-               chart=None,
                flags=None,
                set_values=None,
-               values_file=None,
                kubeconfig=None,
                token=None,
                apiserver=None,
@@ -291,17 +289,13 @@ class Helm(object):
         """
         Execute helm status command.
         :param release_name: name of the release to upgrade.
-        :param chart: The chart to upgrade the release with.
-        The chart argument can be either: a chart reference('example/mariadb'),
-        a packaged chart, or a fully qualified URL.
         :param flags: list of flags to add to the upgrade command.
         :param set_values: list of variables and their values for --set.
         :param kubeconfig: path to kubeconfig file.
-        :param values_file: values file path.
         :param token: bearer token used for authentication.
         :param apiserver: the address and the port for the Kubernetes API
         server.
-        :return output of helm upgrade command.
+        :return status of helm upgrade command.
         """
         cmd = ['status', release_name, '-o=json']
         self.handle_auth_params(cmd, kubeconfig, token, apiserver, ca_file)

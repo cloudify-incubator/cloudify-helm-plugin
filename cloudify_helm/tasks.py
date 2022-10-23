@@ -222,6 +222,13 @@ def add_repo(ctx, helm, **kwargs):
 
 @operation
 @with_helm()
+def repo_list(ctx, helm, **kwargs):
+    output = helm.repo_list()
+    ctx.instance.runtime_properties['list_output'] = output
+
+
+@operation
+@with_helm()
 def remove_repo(ctx, helm, **kwargs):
     if not ctx.node.properties.get(USE_EXTERNAL_RESOURCE):
         args_dict = prepare_args(
@@ -230,7 +237,6 @@ def remove_repo(ctx, helm, **kwargs):
             ctx.node.properties.get('max_sleep_time')
         )
         helm.repo_remove(**args_dict)
-
 
 @operation
 def inject_env_properties(ctx, **_):
