@@ -27,3 +27,5 @@
   - RD-5289-check-version-for-using-with-flag-wait for uninstall function
 0.3.0:
   - RD-3678 - shared cluster relationship.
+0.3.1:
+  - RD-6054 - support check status command.

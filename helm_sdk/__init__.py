@@ -274,3 +274,46 @@ class Helm(object):
                 'the {} flag is not supported with helm version {}. '
                 'Please upgrade to 3.9.0 or later.'.format(
                     HELM_KUBE_CA_FILE_FLAG, self.get_helm_version()))
+
+    def status(self,
+               release_name,
+               chart=None,
+               flags=None,
+               set_values=None,
+               values_file=None,
+               kubeconfig=None,
+               token=None,
+               apiserver=None,
+               ca_file=None,
+               additional_env=None,
+               additional_args=None,
+               **_):
+        """
+        Execute helm status command.
+        :param release_name: name of the release to upgrade.
+        :param chart: The chart to upgrade the release with.
+        The chart argument can be either: a chart reference('example/mariadb'),
+        a packaged chart, or a fully qualified URL.
+        :param flags: list of flags to add to the upgrade command.
+        :param set_values: list of variables and their values for --set.
+        :param kubeconfig: path to kubeconfig file.
+        :param values_file: values file path.
+        :param token: bearer token used for authentication.
+        :param apiserver: the address and the port for the Kubernetes API
+        server.
+        :return output of helm upgrade command.
+        """
+        cmd = ['status', release_name, '-o=json']
+        self.handle_auth_params(cmd, kubeconfig, token, apiserver, ca_file)
+        flags = flags or []
+        validate_no_collisions_between_params_and_flags(flags)
+        cmd.extend([prepare_parameter(flag) for flag in flags])
+        set_arguments = set_values or []
+        cmd.extend(prepare_set_parameters(set_arguments))
+        if additional_env:
+            self.env.update(additional_env)
+        output = self.execute(
+            self._helm_command(cmd),
+            additional_args=additional_args,
+            return_output=True)
+        return json.loads(output)
