@@ -238,6 +238,7 @@ def remove_repo(ctx, helm, **kwargs):
         )
         helm.repo_remove(**args_dict)
 
+
 @operation
 def inject_env_properties(ctx, **_):
     for dir_property_name in [EXECUTABLE_PATH] + HELM_ENV_VARS_LIST:
