@@ -29,7 +29,10 @@ executors:
 commands:
   prepare_test_manager:
     steps:
-      - run: ecosystem-test prepare-test-manager -l $TEST_LICENSE -es aws_access_key_id=${aws_access_key_id} -es aws_secret_access_key=${aws_secret_access_key} -es kubernetes_token=$null_value -es kubernetes_config=$null_value  --bundle-path workspace/build/cloudify-plugins-bundle.tgz
+      - run: ecosystem-test prepare-test-manager -l $TEST_LICENSE -es aws_access_key_id=${aws_access_key_id} -es aws_secret_access_key=${aws_secret_access_key} -es kubernetes_token=$null_value -es kubernetes_config=$null_value --yum-package python-netaddr --yum-package git -p $(find ~/project/workspace/build/ -name *centos-Core*x86_64.wgn)  ~/project/plugin.yaml
+      - run: ecosystem-test upload-plugin utilities
+      - run: ecosystem-test upload-plugin ansible
+      - run: ecosystem-test upload-plugin kubernetes
 
   run_eks_helm_test:
     steps:
