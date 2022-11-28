@@ -15,6 +15,7 @@
 
 import os
 import shutil
+import DeepDiff
 from urllib.parse import urlparse
 from contextlib import contextmanager
 
@@ -229,6 +230,20 @@ def repo_list(ctx, helm, **kwargs):
 
 @operation
 @with_helm()
+def repo_check_drift(ctx, helm, **kwargs):
+    ctx.logger.info(
+        'If you ran check status before check drift, the status is going to '
+        'match the current status and no drift could be detected.')
+    output = helm.repo_list()
+    if 'list_output' not in ctx.instance.runtime_properties:
+        ctx.instance.runtime_properties['list_output'] = output
+        return DeepDiff(output, output)
+    else:
+        return DeepDiff(ctx.instance.runtime_properties['list_output'], output)
+
+
+@operation
+@with_helm()
 def remove_repo(ctx, helm, **kwargs):
     if not ctx.node.properties.get(USE_EXTERNAL_RESOURCE):
         args_dict = prepare_args(
@@ -337,3 +352,48 @@ def check_release_status(ctx,
         ca_file=ca_file,
     )
     ctx.instance.runtime_properties['status_output'] = output
+
+
+@operation
+@with_helm(ignore_properties_values_file=True)
+@prepare_aws
+def check_release_drift(ctx,
+                         helm,
+                         kubeconfig=None,
+                         set_values=None,
+                         token=None,
+                         flags=None,
+                         env_vars=None,
+                         ca_file=None,
+                         host=None,
+                         **_):
+    """
+    Execute helm status.
+    :param ctx: cloudify context.
+    :param helm: helm client object.
+    :param kubeconfig: kubeconfig path.
+    :return output of `helm upgrade` command
+    """
+    ctx.logger.info(
+        'If you ran check status before check drift, the status is going to '
+        'match the current status and no drift could be detected.')
+    ctx.logger.debug(
+        "Checking if used local packaged chart file, If local file used and "
+        "the command failed check file access permissions.")
+    output = helm.status(
+        release_name=ctx.node.properties.get(
+            RESOURCE_CONFIG, {}).get(NAME_FIELD),
+        flags=flags,
+        set_values=set_values,
+        kubeconfig=kubeconfig,
+        token=token,
+        apiserver=host,
+        additional_env=env_vars,
+        ca_file=ca_file,
+    )
+    if 'status_output' in ctx.instance.runtime_properties:
+        ctx.instance.runtime_properties['status_output'] = output
+        return DeepDiff(output, output)
+    else:
+        return DeepDiff(ctx.instance.runtime_properties['status_output'],
+                        output)
