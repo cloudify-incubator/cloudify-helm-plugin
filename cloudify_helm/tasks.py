@@ -161,24 +161,28 @@ def install_release(ctx,
 
 @contextmanager
 def install_target(ctx, url, args_dict):
+    ctx.logger.debug(
+        "install_target with {url}".format(url=url))
     if url.path and not any([url.path.endswith('.tgz'),
                              url.path.endswith('.zip'),
                              url.path.endswith('.tar.gz')]):
+        # this is a <repo>/<chart>
         yield args_dict
-    else:
+    elif url.path and url.scheme.startswith("http"):
+        # let helm use the url
+        yield args_dict
+    elif url.path and '' in url.scheme:
+        # use the local file as input and create the copy
+        # resources/package.tgz
         source_tmp_path = ctx.download_resource(url.path)
         ctx.logger.debug('Downloaded temporary source path {}'
                          .format(source_tmp_path))
         # source_tmp_path deleted
-        new_tmp_path = create_source_path(source_tmp_path)
-        target = os.path.join(get_node_instance_dir(), url.path)
-        copy_directory(new_tmp_path, target)
-        args_dict['chart'] = target
+        #new_tmp_path = create_source_path(source_tmp_path)
+        #target = os.path.join(get_node_instance_dir(), url.path)
+        #copy_directory(new_tmp_path, target)
+        args_dict['chart'] = source_tmp_path
         yield args_dict
-        try:
-            shutil.rmtree(new_tmp_path)
-        except OSError:
-            pass
 
 
 @operation
