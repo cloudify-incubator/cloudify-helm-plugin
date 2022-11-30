@@ -31,6 +31,7 @@ from .utils import (
     copy_binary,
     helm_from_ctx,
     is_using_existing,
+    get_resource_config,
     get_helm_executable_path,
     use_existing_repo_on_helm,
     create_temporary_env_of_helm,
@@ -138,8 +139,9 @@ def install_release(ctx,
     :param values_file: values file path
     :return output of `helm install` command
     """
+    resource_config = get_resource_config()
     args_dict = prepare_args(
-        ctx.node.properties.get('resource_config', {}),
+        resource_config,
         kwargs.get(FLAGS_FIELD),
         ctx.node.properties.get('max_sleep_time')
     )
@@ -194,8 +196,9 @@ def uninstall_release(ctx,
                       ca_file=None,
                       host=None,
                       **kwargs):
+    resource_config = get_resource_config()
     args_dict = prepare_args(
-        ctx.node.properties.get('resource_config', {}),
+        resource_config,
         kwargs.get(FLAGS_FIELD),
         ctx.node.properties.get('max_sleep_time')
     )
@@ -216,8 +219,9 @@ def uninstall_release(ctx,
 @with_helm()
 def add_repo(ctx, helm, **kwargs):
     if not use_existing_repo_on_helm(ctx, helm):
+        resource_config = get_resource_config()
         args_dict = prepare_args(
-            ctx.node.properties.get('resource_config', {}),
+            resource_config,
             kwargs.get(FLAGS_FIELD),
             ctx.node.properties.get('max_sleep_time')
         )
@@ -226,10 +230,18 @@ def add_repo(ctx, helm, **kwargs):
 
 @operation
 @with_helm()
+def repo_list(ctx, helm, **kwargs):
+    output = helm.repo_list()
+    ctx.instance.runtime_properties['list_output'] = output
+
+
+@operation
+@with_helm()
 def remove_repo(ctx, helm, **kwargs):
     if not ctx.node.properties.get(USE_EXTERNAL_RESOURCE):
+        resource_config = get_resource_config()
         args_dict = prepare_args(
-            ctx.node.properties.get('resource_config', {}),
+            resource_config,
             kwargs.get(FLAGS_FIELD),
             ctx.node.properties.get('max_sleep_time')
         )
@@ -283,9 +295,9 @@ def upgrade_release(ctx,
         "the command failed check file access permissions.")
     if os.path.isfile(chart):
         ctx.logger.info("Local chart file: {path} found.".format(path=chart))
+    resource_config = get_resource_config()
     output = helm.upgrade(
-        release_name=ctx.node.properties.get(
-            RESOURCE_CONFIG, {}).get(NAME_FIELD),
+        release_name=resource_config.get(NAME_FIELD),
         chart=chart,
         flags=flags,
         set_values=set_values,
@@ -297,3 +309,40 @@ def upgrade_release(ctx,
         ca_file=ca_file,
     )
     ctx.instance.runtime_properties['install_output'] = output
+
+
+@operation
+@with_helm(ignore_properties_values_file=True)
+@prepare_aws
+def check_release_status(ctx,
+                         helm,
+                         kubeconfig=None,
+                         set_values=None,
+                         token=None,
+                         flags=None,
+                         env_vars=None,
+                         ca_file=None,
+                         host=None,
+                         **_):
+    """
+    Execute helm status.
+    :param ctx: cloudify context.
+    :param helm: helm client object.
+    :param kubeconfig: kubeconfig path.
+    :return output of `helm upgrade` command
+    """
+    ctx.logger.debug(
+        "Checking if used local packaged chart file, If local file used and "
+        "the command failed check file access permissions.")
+    output = helm.status(
+        release_name=ctx.node.properties.get(
+            RESOURCE_CONFIG, {}).get(NAME_FIELD),
+        flags=flags,
+        set_values=set_values,
+        kubeconfig=kubeconfig,
+        token=token,
+        apiserver=host,
+        additional_env=env_vars,
+        ca_file=ca_file,
+    )
+    ctx.instance.runtime_properties['status_output'] = output
