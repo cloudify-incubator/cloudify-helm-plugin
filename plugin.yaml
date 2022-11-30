@@ -252,7 +252,6 @@ node_types:
               <<: *flags_input
         check_drift:
           implementation: helm.cloudify_helm.tasks.check_release_drift
-          input: { }
       helm:
         upgrade_release:
           implementation: helm.cloudify_helm.tasks.upgrade_release
@@ -303,8 +302,7 @@ node_types:
             flags:
               <<: *flags_input
         check_drift:
-          implementation: helm.cloudify_helm.tasks.check_drift
-          input: {}
+          implementation: helm.cloudify_helm.tasks.repo_check_drift
       helm:
         update_repo:
           # update repositories for this repo helm client.

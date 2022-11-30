@@ -15,7 +15,7 @@
 
 import os
 import shutil
-import DeepDiff
+from deepdiff import DeepDiff
 from urllib.parse import urlparse
 from contextlib import contextmanager
 
