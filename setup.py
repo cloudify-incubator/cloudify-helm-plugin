@@ -44,7 +44,7 @@ setup(
     license='LICENSE',
     install_requires=[
         "cloudify-common>=4.5.5",
-        "cloudify-utilities-plugins-sdk>=0.0.61",
+        "cloudify-utilities-plugins-sdk>=0.0.82",
         'oauth2client'  # used in GCPServiceAccountAuthentication
     ],
     test_requires=[
