@@ -195,7 +195,8 @@ class TestTasks(TestBase):
         expected['additional_args'] = {'max_sleep_time': 300}
         assert result == expected
 
-    def test_add_repo(self):
+    @mock.patch('cloudify_helm.utils.get_stored_property')
+    def test_add_repo(self, get_resource_config):
         properties = {
             "helm_config": {
                 "executable_path": "/path/to/helm"
@@ -212,6 +213,7 @@ class TestTasks(TestBase):
 
         ctx = self.mock_ctx(properties,
                             self.mock_runtime_properties())
+        get_resource_config.return_value = properties['resource_config']
         current_ctx.set(ctx)
         kwargs = {
             'ctx': ctx
@@ -227,7 +229,8 @@ class TestTasks(TestBase):
                     flags=[],
                     additional_args='{max_sleep_time: 300}')
 
-    def test_add_repo_use_external_resource(self):
+    @mock.patch('cloudify_helm.utils.get_stored_property')
+    def test_add_repo_use_external_resource(self, get_stored_property):
         properties = {
             "helm_config": {
                 "executable_path": "/path/to/helm"
@@ -248,6 +251,7 @@ class TestTasks(TestBase):
         kwargs = {
             'ctx': ctx
         }
+        get_stored_property.return_value = properties.get('resource_config')
         mock_client_repo_list_response = \
             [{"name": "stable",
               "url": "https://kubernetes-charts.storage.googleapis.com/"}]
@@ -259,7 +263,8 @@ class TestTasks(TestBase):
                     add_repo(**kwargs)
                     fake_repo_add.assert_not_called()
 
-    def test_remove_repo(self):
+    @mock.patch('cloudify_helm.utils.get_stored_property')
+    def test_remove_repo(self, get_stored_property):
         properties = {
             "helm_config": {
                 "executable_path": "/path/to/helm"
@@ -276,6 +281,7 @@ class TestTasks(TestBase):
 
         ctx = self.mock_ctx(properties,
                             self.mock_runtime_properties())
+        get_stored_property.return_value = properties.get('resource_config')
         kwargs = {
             'ctx': ctx
         }
@@ -290,8 +296,10 @@ class TestTasks(TestBase):
                     flags=[],
                     additional_args={'max_sleep_time': 300})
 
-    def test_install_release(self):
+    @mock.patch('cloudify_helm.utils.get_stored_property')
+    def test_install_release(self, get_stored_property):
         properties = self.mock_install_release_properties()
+        get_stored_property.return_value = properties.get('resource_config')
         ctx = self.mock_ctx(properties,
                             self.mock_runtime_properties())
         kwargs = {
@@ -317,8 +325,10 @@ class TestTasks(TestBase):
                     additional_env={},
                     additional_args={'max_sleep_time': 300})
 
-    def test_uninstall_release(self):
+    @mock.patch('cloudify_helm.utils.get_stored_property')
+    def test_uninstall_release(self, get_stored_property):
         properties = self.mock_install_release_properties()
+        get_stored_property.return_value = properties.get('resource_config')
         ctx = self.mock_ctx(properties,
                             self.mock_runtime_properties())
         kwargs = {
@@ -331,7 +341,8 @@ class TestTasks(TestBase):
                 uninstall_release(**kwargs)
                 fake_uninstall.assert_called_once()
 
-    def test_upgrade_release_no_chart(self):
+    @mock.patch('cloudify_helm.utils.get_stored_property')
+    def test_upgrade_release_no_chart(self, get_stored_property):
         properties = self.mock_install_release_properties()
         ctx = self.mock_ctx(properties,
                             self.mock_runtime_properties())
@@ -339,6 +350,8 @@ class TestTasks(TestBase):
             'ctx': ctx
         }
         current_ctx.set(ctx)
+        get_stored_property.return_value = properties.get(
+            'resource_config')
         with self.assertRaisesRegexp(NonRecoverableError,
                                      'Must provide chart for'
                                      ' upgrade release.'):
@@ -346,10 +359,12 @@ class TestTasks(TestBase):
                             return_value=True):
                 upgrade_release(**kwargs)
 
-    def test_upgrade_release(self):
+    @mock.patch('cloudify_helm.utils.get_stored_property')
+    def test_upgrade_release(self, get_stored_property):
         properties = self.mock_install_release_properties()
         properties['resource_config'][
             'values_file'] = 'initial/path/to/values/file'
+        get_stored_property.return_value = properties.get('resource_config')
         ctx = self.mock_ctx(properties,
                             self.mock_runtime_properties())
         kwargs = {
