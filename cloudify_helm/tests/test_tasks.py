@@ -17,7 +17,6 @@ import os
 import mock
 import shutil
 import tempfile
-import unittest
 
 from cloudify.state import current_ctx
 from cloudify.exceptions import NonRecoverableError
@@ -44,7 +43,6 @@ from ..constants import (
     CONFIG_DIR_ENV_VAR,
     CACHE_DIR_ENV_VAR,
     DATA_DIR_ENV_VAR)
-
 
 
 class TestTasks(TestBase):
@@ -351,42 +349,55 @@ class TestTasks(TestBase):
                     additional_env={},
                     additional_args={'max_sleep_time': 300})
 
-    def test_install_release_general(self):
+    @mock.patch('cloudify_helm.utils.get_stored_property')
+    def test_install_release_general(self, get_stored_property):
         properties = self.mock_install_release_properties()
         ctx = self.mock_ctx(properties,
                             self.mock_runtime_properties())
+        get_stored_property.return_value = properties.get(
+            'resource_config')
         self.helper_install_release(properties, ctx)
 
-    def test_install_release_http_chart(self):
+    @mock.patch('cloudify_helm.utils.get_stored_property')
+    def test_install_release_http_chart(self, get_stored_property):
         properties = self.mock_install_release_properties()
         # replace chart with http-base
         properties["resource_config"]["chart"] = "http://test/package.tgz"
         ctx = self.mock_ctx(properties,
                             self.mock_runtime_properties())
+        get_stored_property.return_value = properties.get(
+            'resource_config')
         self.helper_install_release(properties, ctx)
 
-    def test_install_release_local_resources(self):
+    @mock.patch('cloudify_helm.utils.get_stored_property')
+    def test_install_release_local_resources(self, get_stored_property):
         properties = self.mock_install_release_properties()
         input_resouce = "./resources/package.tgz"
         properties["resource_config"]["chart"] = input_resouce
-        test_resources={input_resouce: input_resouce}
+        test_resources = {input_resouce: input_resouce}
         ctx = self.mock_ctx(properties,
                             self.mock_runtime_properties(),
-                            test_resources = test_resources)
+                            test_resources=test_resources)
+        get_stored_property.return_value = properties.get(
+            'resource_config')
 
         self.helper_install_release(properties, ctx)
 
-    def test_install_release_local_resources_rel(self):
+    @mock.patch('cloudify_helm.utils.get_stored_property')
+    def test_install_release_local_resources_rel(self, get_stored_property):
         properties = self.mock_install_release_properties()
         input_resouce = "resources/package.tgz"
         properties["resource_config"]["chart"] = input_resouce
-        test_resources={input_resouce: input_resouce}
+        test_resources = {input_resouce: input_resouce}
         ctx = self.mock_ctx(properties,
                             self.mock_runtime_properties(),
-                            test_resources = test_resources)
+                            test_resources=test_resources)
+        get_stored_property.return_value = properties.get(
+            'resource_config')
         self.helper_install_release(properties, ctx)
 
-    def test_uninstall_release(self):
+    @mock.patch('cloudify_helm.utils.get_stored_property')
+    def test_uninstall_release(self, get_stored_property):
         properties = self.mock_install_release_properties()
         ctx = self.mock_ctx(properties,
                             self.mock_runtime_properties())
@@ -394,6 +405,8 @@ class TestTasks(TestBase):
             'ctx': ctx
         }
         current_ctx.set(ctx)
+        get_stored_property.return_value = properties.get(
+            'resource_config')
         with mock.patch('helm_sdk.Helm.uninstall') as fake_uninstall:
             with mock.patch('cloudify_helm.utils.os.path.exists',
                             return_value=True):

@@ -14,13 +14,10 @@
 #    * limitations under the License.
 
 import os
-import shutil
 from urllib.parse import urlparse
 from contextlib import contextmanager
 
-from cloudify_common_sdk.utils import (get_deployment_dir,
-                                       get_node_instance_dir,
-                                       copy_directory)
+from cloudify_common_sdk.utils import get_deployment_dir
 
 from cloudify.decorators import operation
 from cloudify.exceptions import NonRecoverableError
@@ -35,8 +32,7 @@ from .utils import (
     get_helm_executable_path,
     use_existing_repo_on_helm,
     create_temporary_env_of_helm,
-    delete_temporary_env_of_helm,
-    create_source_path)
+    delete_temporary_env_of_helm)
 from .constants import (
     NAME_FIELD,
     FLAGS_FIELD,
@@ -177,10 +173,6 @@ def install_target(ctx, url, args_dict):
         source_tmp_path = ctx.download_resource(url.path)
         ctx.logger.debug('Downloaded temporary source path {}'
                          .format(source_tmp_path))
-        # source_tmp_path deleted
-        #new_tmp_path = create_source_path(source_tmp_path)
-        #target = os.path.join(get_node_instance_dir(), url.path)
-        #copy_directory(new_tmp_path, target)
         args_dict['chart'] = source_tmp_path
         yield args_dict
 
