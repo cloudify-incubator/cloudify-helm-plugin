@@ -391,7 +391,7 @@ def check_release_drift(ctx,
         additional_env=env_vars,
         ca_file=ca_file,
     )
-    if 'status_output' in ctx.instance.runtime_properties:
+    if 'status_output' not in ctx.instance.runtime_properties:
         ctx.instance.runtime_properties['status_output'] = output
         return DeepDiff(output, output)
     else:
