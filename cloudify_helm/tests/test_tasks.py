@@ -195,7 +195,8 @@ class TestTasks(TestBase):
         expected['additional_args'] = {'max_sleep_time': 300}
         assert result == expected
 
-    def test_add_repo(self):
+    @mock.patch('cloudify_helm.utils.get_stored_property')
+    def test_add_repo(self, get_resource_config):
         properties = {
             "helm_config": {
                 "executable_path": "/path/to/helm"
@@ -212,6 +213,7 @@ class TestTasks(TestBase):
 
         ctx = self.mock_ctx(properties,
                             self.mock_runtime_properties())
+        get_resource_config.return_value = properties['resource_config']
         current_ctx.set(ctx)
         kwargs = {
             'ctx': ctx
@@ -227,7 +229,8 @@ class TestTasks(TestBase):
                     flags=[],
                     additional_args='{max_sleep_time: 300}')
 
-    def test_add_repo_use_external_resource(self):
+    @mock.patch('cloudify_helm.utils.get_stored_property')
+    def test_add_repo_use_external_resource(self, get_stored_property):
         properties = {
             "helm_config": {
                 "executable_path": "/path/to/helm"
@@ -248,6 +251,7 @@ class TestTasks(TestBase):
         kwargs = {
             'ctx': ctx
         }
+        get_stored_property.return_value = properties.get('resource_config')
         mock_client_repo_list_response = \
             [{"name": "stable",
               "url": "https://kubernetes-charts.storage.googleapis.com/"}]
@@ -259,7 +263,8 @@ class TestTasks(TestBase):
                     add_repo(**kwargs)
                     fake_repo_add.assert_not_called()
 
-    def test_remove_repo(self):
+    @mock.patch('cloudify_helm.utils.get_stored_property')
+    def test_remove_repo(self, get_stored_property):
         properties = {
             "helm_config": {
                 "executable_path": "/path/to/helm"
@@ -276,6 +281,7 @@ class TestTasks(TestBase):
 
         ctx = self.mock_ctx(properties,
                             self.mock_runtime_properties())
+        get_stored_property.return_value = properties.get('resource_config')
         kwargs = {
             'ctx': ctx
         }
@@ -290,8 +296,34 @@ class TestTasks(TestBase):
                     flags=[],
                     additional_args={'max_sleep_time': 300})
 
-    def test_install_release(self):
+    def helper_install_release(self, properties, ctx):
+        kwargs = {
+            'ctx': ctx
+        }
+        current_ctx.set(ctx)
+        with mock.patch('helm_sdk.Helm.install') as fake_install:
+            with mock.patch('cloudify_helm.utils.os.path.exists',
+                            return_value=True):
+                install_release(**kwargs)
+                fake_install.assert_called_once_with(
+                    name=properties[RESOURCE_CONFIG]["name"],
+                    chart=properties[RESOURCE_CONFIG]["chart"],
+                    flags=[],
+                    set_values=properties[RESOURCE_CONFIG]["set_values"],
+                    values_file=None,
+                    kubeconfig=None,
+                    token=properties[CLIENT_CONFIG][CONFIGURATION][API_OPTIONS]
+                    [API_KEY],
+                    apiserver=properties[CLIENT_CONFIG][CONFIGURATION]
+                    [API_OPTIONS][HOST],
+                    ca_file=None,
+                    additional_env={},
+                    additional_args={'max_sleep_time': 300})
+
+    @mock.patch('cloudify_helm.utils.get_stored_property')
+    def test_install_release(self, get_stored_property):
         properties = self.mock_install_release_properties()
+        get_stored_property.return_value = properties.get('resource_config')
         ctx = self.mock_ctx(properties,
                             self.mock_runtime_properties())
         kwargs = {
@@ -317,7 +349,55 @@ class TestTasks(TestBase):
                     additional_env={},
                     additional_args={'max_sleep_time': 300})
 
-    def test_uninstall_release(self):
+    @mock.patch('cloudify_helm.utils.get_stored_property')
+    def test_install_release_general(self, get_stored_property):
+        properties = self.mock_install_release_properties()
+        ctx = self.mock_ctx(properties,
+                            self.mock_runtime_properties())
+        get_stored_property.return_value = properties.get(
+            'resource_config')
+        self.helper_install_release(properties, ctx)
+
+    @mock.patch('cloudify_helm.utils.get_stored_property')
+    def test_install_release_http_chart(self, get_stored_property):
+        properties = self.mock_install_release_properties()
+        # replace chart with http-base
+        properties["resource_config"]["chart"] = "http://test/package.tgz"
+        ctx = self.mock_ctx(properties,
+                            self.mock_runtime_properties())
+        get_stored_property.return_value = properties.get(
+            'resource_config')
+        self.helper_install_release(properties, ctx)
+
+    @mock.patch('cloudify_helm.utils.get_stored_property')
+    def test_install_release_local_resources(self, get_stored_property):
+        properties = self.mock_install_release_properties()
+        input_resouce = "./resources/package.tgz"
+        properties["resource_config"]["chart"] = input_resouce
+        test_resources = {input_resouce: input_resouce}
+        ctx = self.mock_ctx(properties,
+                            self.mock_runtime_properties(),
+                            test_resources=test_resources)
+        get_stored_property.return_value = properties.get(
+            'resource_config')
+
+        self.helper_install_release(properties, ctx)
+
+    @mock.patch('cloudify_helm.utils.get_stored_property')
+    def test_install_release_local_resources_rel(self, get_stored_property):
+        properties = self.mock_install_release_properties()
+        input_resouce = "resources/package.tgz"
+        properties["resource_config"]["chart"] = input_resouce
+        test_resources = {input_resouce: input_resouce}
+        ctx = self.mock_ctx(properties,
+                            self.mock_runtime_properties(),
+                            test_resources=test_resources)
+        get_stored_property.return_value = properties.get(
+            'resource_config')
+        self.helper_install_release(properties, ctx)
+
+    @mock.patch('cloudify_helm.utils.get_stored_property')
+    def test_uninstall_release(self, get_stored_property):
         properties = self.mock_install_release_properties()
         ctx = self.mock_ctx(properties,
                             self.mock_runtime_properties())
@@ -325,13 +405,16 @@ class TestTasks(TestBase):
             'ctx': ctx
         }
         current_ctx.set(ctx)
+        get_stored_property.return_value = properties.get(
+            'resource_config')
         with mock.patch('helm_sdk.Helm.uninstall') as fake_uninstall:
             with mock.patch('cloudify_helm.utils.os.path.exists',
                             return_value=True):
                 uninstall_release(**kwargs)
                 fake_uninstall.assert_called_once()
 
-    def test_upgrade_release_no_chart(self):
+    @mock.patch('cloudify_helm.utils.get_stored_property')
+    def test_upgrade_release_no_chart(self, get_stored_property):
         properties = self.mock_install_release_properties()
         ctx = self.mock_ctx(properties,
                             self.mock_runtime_properties())
@@ -339,6 +422,8 @@ class TestTasks(TestBase):
             'ctx': ctx
         }
         current_ctx.set(ctx)
+        get_stored_property.return_value = properties.get(
+            'resource_config')
         with self.assertRaisesRegexp(NonRecoverableError,
                                      'Must provide chart for'
                                      ' upgrade release.'):
@@ -346,10 +431,12 @@ class TestTasks(TestBase):
                             return_value=True):
                 upgrade_release(**kwargs)
 
-    def test_upgrade_release(self):
+    @mock.patch('cloudify_helm.utils.get_stored_property')
+    def test_upgrade_release(self, get_stored_property):
         properties = self.mock_install_release_properties()
         properties['resource_config'][
             'values_file'] = 'initial/path/to/values/file'
+        get_stored_property.return_value = properties.get('resource_config')
         ctx = self.mock_ctx(properties,
                             self.mock_runtime_properties())
         kwargs = {

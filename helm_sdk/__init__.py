@@ -146,8 +146,7 @@ class Helm(object):
             self._helm_command(cmd),
             additional_args=additional_args,
             return_output=True)
-        if output:
-            return json.loads(output)
+        return self.load_json(output)
 
     def uninstall(self,
                   name,
@@ -200,7 +199,7 @@ class Helm(object):
     def repo_list(self):
         cmd = ['repo', 'list', '--output=json']
         output = self.execute(self._helm_command(cmd), return_output=True)
-        return json.loads(output)
+        return self.load_json(output)
 
     def repo_update(self, flags, additional_args=None, **_):
         cmd = ['repo', 'update']
@@ -255,7 +254,7 @@ class Helm(object):
             self._helm_command(cmd),
             additional_args=additional_args,
             return_output=True)
-        return json.loads(output)
+        return self.load_json(output)
 
     def get_helm_version(self):
         cmd = ['version', '--short']
@@ -311,3 +310,11 @@ class Helm(object):
             additional_args=additional_args,
             return_output=True)
         return json.loads(output)
+
+    def load_json(self, output):
+        if output:
+            try:
+                output = json.loads(output)
+            except json.decoder.JSONDecodeError:
+                self.logger.error('Failed to load output as JSON.')
+        return output
