@@ -37,7 +37,7 @@ data_types:
       Each property represents separate supported variant of configuration.
       For now, until Helm support "--insecure" one of "blueprint_file_name",
       "manager_file_path" and "file_content" must be used.
-      "api_key" inputs will override kubeconfig data.
+      "api_key" inputs will override kubeconfig data .
     properties:
       blueprint_file_name:
         type: string
@@ -232,7 +232,7 @@ node_types:
         required: true
       max_sleep_time:
         type: integer
-        default: 300
+        default: 900
     interfaces:
       cloudify.interfaces.validation:
         check_status:

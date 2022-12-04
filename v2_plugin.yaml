@@ -232,7 +232,7 @@ node_types:
         required: true
       max_sleep_time:
         type: integer
-        default: 300
+        default: 900
     interfaces:
       cloudify.interfaces.validation:
         check_status:
@@ -252,7 +252,6 @@ node_types:
               <<: *flags_input
         check_drift:
           implementation: helm.cloudify_helm.tasks.check_release_drift
-          input: { }
       helm:
         upgrade_release:
           implementation: helm.cloudify_helm.tasks.upgrade_release
@@ -304,7 +303,6 @@ node_types:
               <<: *flags_input
         check_drift:
           implementation: helm.cloudify_helm.tasks.repo_check_drift
-          input: { }
       helm:
         update_repo:
           # update repositories for this repo helm client.
