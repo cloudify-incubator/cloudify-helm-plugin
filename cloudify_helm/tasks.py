@@ -14,13 +14,12 @@
 #    * limitations under the License.
 
 import os
-import shutil
+from deepdiff import DeepDiff
+
 from urllib.parse import urlparse
 from contextlib import contextmanager
 
-from cloudify_common_sdk.utils import (get_deployment_dir,
-                                       get_node_instance_dir,
-                                       copy_directory)
+from cloudify_common_sdk.utils import get_deployment_dir
 
 from cloudify.decorators import operation
 from cloudify.exceptions import NonRecoverableError
@@ -31,11 +30,11 @@ from .utils import (
     copy_binary,
     helm_from_ctx,
     is_using_existing,
+    get_resource_config,
     get_helm_executable_path,
     use_existing_repo_on_helm,
     create_temporary_env_of_helm,
-    delete_temporary_env_of_helm,
-    create_source_path)
+    delete_temporary_env_of_helm)
 from .constants import (
     NAME_FIELD,
     FLAGS_FIELD,
@@ -138,8 +137,9 @@ def install_release(ctx,
     :param values_file: values file path
     :return output of `helm install` command
     """
+    resource_config = get_resource_config()
     args_dict = prepare_args(
-        ctx.node.properties.get('resource_config', {}),
+        resource_config,
         kwargs.get(FLAGS_FIELD),
         ctx.node.properties.get('max_sleep_time')
     )
@@ -159,24 +159,24 @@ def install_release(ctx,
 
 @contextmanager
 def install_target(ctx, url, args_dict):
+    ctx.logger.debug(
+        "install_target with {url}".format(url=url))
     if url.path and not any([url.path.endswith('.tgz'),
                              url.path.endswith('.zip'),
                              url.path.endswith('.tar.gz')]):
+        # this is a <repo>/<chart>
         yield args_dict
-    else:
+    elif url.path and url.scheme.startswith("http"):
+        # let helm use the url
+        yield args_dict
+    elif url.path and '' in url.scheme:
+        # use the local file as input and create the copy
+        # resources/package.tgz
         source_tmp_path = ctx.download_resource(url.path)
         ctx.logger.debug('Downloaded temporary source path {}'
                          .format(source_tmp_path))
-        # source_tmp_path deleted
-        new_tmp_path = create_source_path(source_tmp_path)
-        target = os.path.join(get_node_instance_dir(), url.path)
-        copy_directory(new_tmp_path, target)
-        args_dict['chart'] = target
+        args_dict['chart'] = source_tmp_path
         yield args_dict
-        try:
-            shutil.rmtree(new_tmp_path)
-        except OSError:
-            pass
 
 
 @operation
@@ -190,8 +190,9 @@ def uninstall_release(ctx,
                       ca_file=None,
                       host=None,
                       **kwargs):
+    resource_config = get_resource_config()
     args_dict = prepare_args(
-        ctx.node.properties.get('resource_config', {}),
+        resource_config,
         kwargs.get(FLAGS_FIELD),
         ctx.node.properties.get('max_sleep_time')
     )
@@ -212,8 +213,9 @@ def uninstall_release(ctx,
 @with_helm()
 def add_repo(ctx, helm, **kwargs):
     if not use_existing_repo_on_helm(ctx, helm):
+        resource_config = get_resource_config()
         args_dict = prepare_args(
-            ctx.node.properties.get('resource_config', {}),
+            resource_config,
             kwargs.get(FLAGS_FIELD),
             ctx.node.properties.get('max_sleep_time')
         )
@@ -229,10 +231,25 @@ def repo_list(ctx, helm, **kwargs):
 
 @operation
 @with_helm()
+def repo_check_drift(ctx, helm, **kwargs):
+    ctx.logger.info(
+        'If you ran check status before check drift, the status is going to '
+        'match the current status and no drift could be detected.')
+    output = helm.repo_list()
+    if 'list_output' not in ctx.instance.runtime_properties:
+        ctx.instance.runtime_properties['list_output'] = output
+        return DeepDiff(output, output)
+    else:
+        return DeepDiff(ctx.instance.runtime_properties['list_output'], output)
+
+
+@operation
+@with_helm()
 def remove_repo(ctx, helm, **kwargs):
     if not ctx.node.properties.get(USE_EXTERNAL_RESOURCE):
+        resource_config = get_resource_config()
         args_dict = prepare_args(
-            ctx.node.properties.get('resource_config', {}),
+            resource_config,
             kwargs.get(FLAGS_FIELD),
             ctx.node.properties.get('max_sleep_time')
         )
@@ -286,9 +303,9 @@ def upgrade_release(ctx,
         "the command failed check file access permissions.")
     if os.path.isfile(chart):
         ctx.logger.info("Local chart file: {path} found.".format(path=chart))
+    resource_config = get_resource_config()
     output = helm.upgrade(
-        release_name=ctx.node.properties.get(
-            RESOURCE_CONFIG, {}).get(NAME_FIELD),
+        release_name=resource_config.get(NAME_FIELD),
         chart=chart,
         flags=flags,
         set_values=set_values,
@@ -337,3 +354,48 @@ def check_release_status(ctx,
         ca_file=ca_file,
     )
     ctx.instance.runtime_properties['status_output'] = output
+
+
+@operation
+@with_helm(ignore_properties_values_file=True)
+@prepare_aws
+def check_release_drift(ctx,
+                        helm,
+                        kubeconfig=None,
+                        set_values=None,
+                        token=None,
+                        flags=None,
+                        env_vars=None,
+                        ca_file=None,
+                        host=None,
+                        **_):
+    """
+    Execute helm status.
+    :param ctx: cloudify context.
+    :param helm: helm client object.
+    :param kubeconfig: kubeconfig path.
+    :return output of `helm upgrade` command
+    """
+    ctx.logger.info(
+        'If you ran check status before check drift, the status is going to '
+        'match the current status and no drift could be detected.')
+    ctx.logger.debug(
+        "Checking if used local packaged chart file, If local file used and "
+        "the command failed check file access permissions.")
+    output = helm.status(
+        release_name=ctx.node.properties.get(
+            RESOURCE_CONFIG, {}).get(NAME_FIELD),
+        flags=flags,
+        set_values=set_values,
+        kubeconfig=kubeconfig,
+        token=token,
+        apiserver=host,
+        additional_env=env_vars,
+        ca_file=ca_file,
+    )
+    if 'status_output' not in ctx.instance.runtime_properties:
+        ctx.instance.runtime_properties['status_output'] = output
+        return DeepDiff(output, output)
+    else:
+        return DeepDiff(ctx.instance.runtime_properties['status_output'],
+                        output)
