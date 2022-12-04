@@ -14,7 +14,6 @@
 #    * limitations under the License.
 
 import os
-import shutil
 from deepdiff import DeepDiff
 
 from urllib.parse import urlparse
@@ -361,15 +360,15 @@ def check_release_status(ctx,
 @with_helm(ignore_properties_values_file=True)
 @prepare_aws
 def check_release_drift(ctx,
-                         helm,
-                         kubeconfig=None,
-                         set_values=None,
-                         token=None,
-                         flags=None,
-                         env_vars=None,
-                         ca_file=None,
-                         host=None,
-                         **_):
+                        helm,
+                        kubeconfig=None,
+                        set_values=None,
+                        token=None,
+                        flags=None,
+                        env_vars=None,
+                        ca_file=None,
+                        host=None,
+                        **_):
     """
     Execute helm status.
     :param ctx: cloudify context.
