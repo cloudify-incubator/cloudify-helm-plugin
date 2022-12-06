@@ -157,7 +157,13 @@ def install_release(ctx,
             **args_dict)
         ctx.instance.runtime_properties['install_output'] = output
 
-    helm_list_output = helm.list(release_name)
+    helm_list_output = helm.list(release_name,
+                                 kubeconfig=kubeconfig,
+                                 token=token,
+                                 apiserver=host,
+                                 additional_env=env_vars,
+                                 ca_file=ca_file
+                                 )
     ctx.logger.info("**install_release- Helm list: {}".format(helm_list_output))
     ctx.instance.runtime_properties['helm_list'] = helm_list_output
     # TODO: Get release name
@@ -315,8 +321,9 @@ def upgrade_release(ctx,
     if os.path.isfile(chart):
         ctx.logger.info("Local chart file: {path} found.".format(path=chart))
     resource_config = get_resource_config()
+    release_name = resource_config.get(NAME_FIELD)
     output = helm.upgrade(
-        release_name=resource_config.get(NAME_FIELD),
+        release_name=release_name,
         chart=chart,
         flags=flags,
         set_values=set_values,
@@ -328,8 +335,13 @@ def upgrade_release(ctx,
         ca_file=ca_file,
     )
     ctx.instance.runtime_properties['install_output'] = output
-    release_name = ctx.node.properties.get(RESOURCE_CONFIG, {}).get(NAME_FIELD)
-    helm_list_output = helm.list(release_name)
+    helm_list_output = helm.list(release_name,
+                                 kubeconfig=kubeconfig,
+                                 token=token,
+                                 apiserver=host,
+                                 additional_env=env_vars,
+                                 ca_file=ca_file
+                                 )
     ctx.instance.runtime_properties['helm_list'] = helm_list_output
     # TODO: Store helm list in runtime properties
 
@@ -357,9 +369,9 @@ def check_release_status(ctx,
     ctx.logger.debug(
         "Checking if used local packaged chart file, If local file used and "
         "the command failed check file access permissions.")
+    release_name = ctx.node.properties.get(RESOURCE_CONFIG, {}).get(NAME_FIELD)
     output = helm.status(
-        release_name=ctx.node.properties.get(
-            RESOURCE_CONFIG, {}).get(NAME_FIELD),
+        release_name=release_name,
         flags=flags,
         set_values=set_values,
         kubeconfig=kubeconfig,
@@ -369,8 +381,13 @@ def check_release_status(ctx,
         ca_file=ca_file,
     )
     ctx.instance.runtime_properties['status_output'] = output
-    release_name = ctx.node.properties.get(RESOURCE_CONFIG, {}).get(NAME_FIELD)
-    helm_list_output = helm.list(release_name)
+    helm_list_output = helm.list(release_name,
+                                 kubeconfig=kubeconfig,
+                                 token=token,
+                                 apiserver=host,
+                                 additional_env=env_vars,
+                                 ca_file=ca_file
+                                 )
     ctx.instance.runtime_properties['helm_list'] = helm_list_output
     # TODO: Store helm list in runtime properties
 
@@ -402,19 +419,26 @@ def check_release_drift(ctx,
         "Checking if used local packaged chart file, If local file used and "
         "the command failed check file access permissions.")
 
-    helm_diff = {'helm list': {},
-                 'helm status': {}}
+    helm_diff = {'helm_list': {},
+                 'helm_status': {}}
 
     # helm list
     release_name = ctx.node.properties.get(RESOURCE_CONFIG, {}).get(NAME_FIELD)
-    helm_list_output = helm.list(release_name)
+    helm_list_output = helm.list(release_name,
+                                 kubeconfig=kubeconfig,
+                                 token=token,
+                                 apiserver=host,
+                                 additional_env=env_vars,
+                                 ca_file=ca_file
+                                 )
     ctx.logger.info("** check_release_drift- Helm list: {}"
                     .format(helm_list_output))
 
-    if 'helm list' in ctx.instance.runtime_properties:
+    if 'helm_list' in ctx.instance.runtime_properties:
         helm_diff['helm_list'] = DeepDiff(
             ctx.instance.runtime_properties['helm_list'], helm_list_output)
-
+        ctx.logger.info("** check_release_drift- runtime_properties: {}"
+                        .format(ctx.instance.runtime_properties['helm_list']))
     # TODO: Store helm list in local variable
     # TODO: Get helm list previous output
     # TODO: Compare previous helm output to current local variable of helm list
@@ -431,7 +455,7 @@ def check_release_drift(ctx,
         ca_file=ca_file,
     )
     if 'status_output' in ctx.instance.runtime_properties:
-        helm_diff['helm status'] = DeepDiff(
+        helm_diff['helm_status'] = DeepDiff(
             ctx.instance.runtime_properties['status_output'],
             helm_status_output)
 
@@ -440,5 +464,5 @@ def check_release_drift(ctx,
         return helm_diff
     elif helm_diff['helm_list']:
         return helm_diff['helm_list']
-    elif helm_diff['helm status']:
-        return helm_diff['helm status']
+    elif helm_diff['helm_status']:
+        return helm_diff['helm_status']

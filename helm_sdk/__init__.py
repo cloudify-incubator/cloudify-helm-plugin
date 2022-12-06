@@ -15,6 +15,7 @@
 
 import re
 import json
+from cloudify import ctx
 
 from .exceptions import CloudifyHelmSDKError
 from helm_sdk.utils import (
@@ -273,8 +274,19 @@ class Helm(object):
                 'Please upgrade to 3.9.0 or later.'.format(
                     HELM_KUBE_CA_FILE_FLAG, self.get_helm_version()))
 
-    def list(self, release_name):
-        cmd = ['list', '--filter', release_name]
+    def list(self,
+             release_name,
+             kubeconfig=None,
+             token=None,
+             apiserver=None,
+             additional_env=None,
+             ca_file=None):
+
+        cmd = ['list', '--filter', r"^{0}$".format(release_name), '-o json']
+        ctx.logger.info(' *** cmd : {}'.format(cmd))
+        self.handle_auth_params(cmd, kubeconfig, token, apiserver, ca_file)
+        if additional_env:
+            self.env.update(additional_env)
         output = self.execute(self._helm_command(cmd), return_output=True)
         return json.loads(output)
 
