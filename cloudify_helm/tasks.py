@@ -138,6 +138,7 @@ def install_release(ctx,
     :return output of `helm install` command
     """
     resource_config = get_resource_config()
+    release_name = resource_config.get(NAME_FIELD)
     args_dict = prepare_args(
         resource_config,
         kwargs.get(FLAGS_FIELD),
@@ -155,6 +156,12 @@ def install_release(ctx,
             ca_file=ca_file,
             **args_dict)
         ctx.instance.runtime_properties['install_output'] = output
+
+    helm_list_output = helm.list(release_name)
+    ctx.logger.info("**install_release- Helm list: {}".format(helm_list_output))
+    ctx.instance.runtime_properties['helm_list'] = helm_list_output
+    # TODO: Get release name
+    # TODO: Store helm list in runtime properties
 
 
 @contextmanager
@@ -214,6 +221,7 @@ def uninstall_release(ctx,
 def add_repo(ctx, helm, **kwargs):
     if not use_existing_repo_on_helm(ctx, helm):
         resource_config = get_resource_config()
+        ctx.logger.info('** resource_config: {}'.format(resource_config))
         args_dict = prepare_args(
             resource_config,
             kwargs.get(FLAGS_FIELD),
@@ -240,6 +248,9 @@ def repo_check_drift(ctx, helm, **kwargs):
         ctx.instance.runtime_properties['list_output'] = output
         return DeepDiff(output, output)
     else:
+        ctx.logger.info('* ctx.instance.runtime_properties['']: {}'.format(ctx.instance.runtime_properties['list_output']))
+        ctx.logger.info('* output: {}'.format(output))
+        ctx.logger.info('* r: {}'.format(DeepDiff(ctx.instance.runtime_properties['list_output'], output)))
         return DeepDiff(ctx.instance.runtime_properties['list_output'], output)
 
 
@@ -317,6 +328,10 @@ def upgrade_release(ctx,
         ca_file=ca_file,
     )
     ctx.instance.runtime_properties['install_output'] = output
+    release_name = ctx.node.properties.get(RESOURCE_CONFIG, {}).get(NAME_FIELD)
+    helm_list_output = helm.list(release_name)
+    ctx.instance.runtime_properties['helm_list'] = helm_list_output
+    # TODO: Store helm list in runtime properties
 
 
 @operation
@@ -354,6 +369,10 @@ def check_release_status(ctx,
         ca_file=ca_file,
     )
     ctx.instance.runtime_properties['status_output'] = output
+    release_name = ctx.node.properties.get(RESOURCE_CONFIG, {}).get(NAME_FIELD)
+    helm_list_output = helm.list(release_name)
+    ctx.instance.runtime_properties['helm_list'] = helm_list_output
+    # TODO: Store helm list in runtime properties
 
 
 @operation
@@ -382,9 +401,27 @@ def check_release_drift(ctx,
     ctx.logger.debug(
         "Checking if used local packaged chart file, If local file used and "
         "the command failed check file access permissions.")
-    output = helm.status(
-        release_name=ctx.node.properties.get(
-            RESOURCE_CONFIG, {}).get(NAME_FIELD),
+
+    helm_diff = {'helm list': {},
+                 'helm status': {}}
+
+    # helm list
+    release_name = ctx.node.properties.get(RESOURCE_CONFIG, {}).get(NAME_FIELD)
+    helm_list_output = helm.list(release_name)
+    ctx.logger.info("** check_release_drift- Helm list: {}"
+                    .format(helm_list_output))
+
+    if 'helm list' in ctx.instance.runtime_properties:
+        helm_diff['helm_list'] = DeepDiff(
+            ctx.instance.runtime_properties['helm_list'], helm_list_output)
+
+    # TODO: Store helm list in local variable
+    # TODO: Get helm list previous output
+    # TODO: Compare previous helm output to current local variable of helm list
+
+    # helm status
+    helm_status_output = helm.status(
+        release_name=release_name,
         flags=flags,
         set_values=set_values,
         kubeconfig=kubeconfig,
@@ -393,9 +430,15 @@ def check_release_drift(ctx,
         additional_env=env_vars,
         ca_file=ca_file,
     )
-    if 'status_output' not in ctx.instance.runtime_properties:
-        ctx.instance.runtime_properties['status_output'] = output
-        return DeepDiff(output, output)
-    else:
-        return DeepDiff(ctx.instance.runtime_properties['status_output'],
-                        output)
+    if 'status_output' in ctx.instance.runtime_properties:
+        helm_diff['helm status'] = DeepDiff(
+            ctx.instance.runtime_properties['status_output'],
+            helm_status_output)
+
+    ctx.logger.info("** check_release_drift- helm_diff: {}".format(helm_diff))
+    if helm_diff['helm_status'] and helm_diff['helm_list']:
+        return helm_diff
+    elif helm_diff['helm_list']:
+        return helm_diff['helm_list']
+    elif helm_diff['helm status']:
+        return helm_diff['helm status']

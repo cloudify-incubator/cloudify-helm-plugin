@@ -38,8 +38,7 @@ class Helm(object):
     def __init__(self,
                  logger,
                  binary_path,
-                 environment_variables
-                 ):
+                 environment_variables):
         self.binary_path = binary_path
         self.logger = logger
         if not isinstance(environment_variables, dict):
@@ -273,6 +272,11 @@ class Helm(object):
                 'the {} flag is not supported with helm version {}. '
                 'Please upgrade to 3.9.0 or later.'.format(
                     HELM_KUBE_CA_FILE_FLAG, self.get_helm_version()))
+
+    def list(self, release_name):
+        cmd = ['list', '--filter', release_name]
+        output = self.execute(self._helm_command(cmd), return_output=True)
+        return json.loads(output)
 
     def status(self,
                release_name,
