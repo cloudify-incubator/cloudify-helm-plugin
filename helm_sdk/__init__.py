@@ -202,6 +202,7 @@ class Helm(object):
         return self.load_json(output)
 
     def repo_update(self, flags, additional_args=None, **_):
+        ctx.logger.info('** in repo_update **')
         cmd = ['repo', 'update']
         flags = flags or []
         cmd.extend([prepare_parameter(flag) for flag in flags])

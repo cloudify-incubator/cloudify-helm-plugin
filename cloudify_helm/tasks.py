@@ -234,6 +234,10 @@ def add_repo(ctx, helm, **kwargs):
             ctx.node.properties.get('max_sleep_time')
         )
         helm.repo_add(**args_dict)
+        ctx.logger.info('** add repo - repo_list {}'.format(helm.repo_list()))
+
+    else:
+        update_repo(ctx, **kwargs)
 
 
 @operation
@@ -287,6 +291,7 @@ def inject_env_properties(ctx, **_):
 
 @operation
 def update_repo(ctx, **kwargs):
+    ctx.logger.info('**** update_repo')
     helm = helm_from_ctx(ctx)
     helm.repo_update(flags=kwargs.get(FLAGS_FIELD))
 
@@ -418,6 +423,8 @@ def check_release_drift(ctx,
     ctx.logger.debug(
         "Checking if used local packaged chart file, If local file used and "
         "the command failed check file access permissions.")
+
+    update_repo(ctx, **_)
 
     helm_diff = {'helm_list': {},
                  'helm_status': {}}
