@@ -14,12 +14,14 @@
 #    * limitations under the License.
 
 import os
+import re
 from deepdiff import DeepDiff
+from packaging import version
 
 from urllib.parse import urlparse
 from contextlib import contextmanager
 
-from cloudify_common_sdk.utils import get_deployment_dir
+from cloudify_common_sdk.utils import get_deployment_dir, get_deployment
 
 from cloudify.decorators import operation
 from cloudify.exceptions import NonRecoverableError
@@ -164,10 +166,7 @@ def install_release(ctx,
                                  additional_env=env_vars,
                                  ca_file=ca_file
                                  )
-    ctx.logger.info("**install_release- Helm list: {}".format(helm_list_output))
     ctx.instance.runtime_properties['helm_list'] = helm_list_output
-    # TODO: Get release name
-    # TODO: Store helm list in runtime properties
 
 
 @contextmanager
@@ -227,24 +226,35 @@ def uninstall_release(ctx,
 def add_repo(ctx, helm, **kwargs):
     if not use_existing_repo_on_helm(ctx, helm):
         resource_config = get_resource_config()
-        ctx.logger.info('** resource_config: {}'.format(resource_config))
         args_dict = prepare_args(
             resource_config,
             kwargs.get(FLAGS_FIELD),
             ctx.node.properties.get('max_sleep_time')
         )
         helm.repo_add(**args_dict)
-        ctx.logger.info('** add repo - repo_list {}'.format(helm.repo_list()))
 
-    else:
-        update_repo(ctx, **kwargs)
+
+@operation
+def show_chart(helm, release_name, repo_url):
+    output = helm.show_chart(release_name, repo_url)
+    return convert_string_to_dict(output)
+
+
+def convert_string_to_dict(txt):
+    output = {}
+    rows = txt.split('\n')
+    for row in rows:
+        words = row.split(':')
+        if len(words) == 2:
+            output[words[0]] = words[1]
+    return output
 
 
 @operation
 @with_helm()
 def repo_list(ctx, helm, **kwargs):
     output = helm.repo_list()
-    ctx.instance.runtime_properties['list_output'] = output
+    ctx.instance.runtime_properties['repo_list'] = output
 
 
 @operation
@@ -254,14 +264,11 @@ def repo_check_drift(ctx, helm, **kwargs):
         'If you ran check status before check drift, the status is going to '
         'match the current status and no drift could be detected.')
     output = helm.repo_list()
-    if 'list_output' not in ctx.instance.runtime_properties:
-        ctx.instance.runtime_properties['list_output'] = output
+    if 'repo_list' not in ctx.instance.runtime_properties:
+        ctx.instance.runtime_properties['repo_list'] = output
         return DeepDiff(output, output)
     else:
-        ctx.logger.info('* ctx.instance.runtime_properties['']: {}'.format(ctx.instance.runtime_properties['list_output']))
-        ctx.logger.info('* output: {}'.format(output))
-        ctx.logger.info('* r: {}'.format(DeepDiff(ctx.instance.runtime_properties['list_output'], output)))
-        return DeepDiff(ctx.instance.runtime_properties['list_output'], output)
+        return DeepDiff(ctx.instance.runtime_properties['repo_list'], output)
 
 
 @operation
@@ -291,7 +298,6 @@ def inject_env_properties(ctx, **_):
 
 @operation
 def update_repo(ctx, **kwargs):
-    ctx.logger.info('**** update_repo')
     helm = helm_from_ctx(ctx)
     helm.repo_update(flags=kwargs.get(FLAGS_FIELD))
 
@@ -313,6 +319,12 @@ def upgrade_release(ctx,
                     **_):
     """
     Execute helm upgrade.
+    :param set_values:
+    :param host:
+    :param ca_file:
+    :param env_vars:
+    :param flags:
+    :param token:
     :param ctx: cloudify context.
     :param helm: helm client object.
     :param chart: The chart to upgrade the release with.
@@ -348,7 +360,6 @@ def upgrade_release(ctx,
                                  ca_file=ca_file
                                  )
     ctx.instance.runtime_properties['helm_list'] = helm_list_output
-    # TODO: Store helm list in runtime properties
 
 
 @operation
@@ -374,6 +385,7 @@ def check_release_status(ctx,
     ctx.logger.debug(
         "Checking if used local packaged chart file, If local file used and "
         "the command failed check file access permissions.")
+
     release_name = ctx.node.properties.get(RESOURCE_CONFIG, {}).get(NAME_FIELD)
     output = helm.status(
         release_name=release_name,
@@ -386,6 +398,7 @@ def check_release_status(ctx,
         ca_file=ca_file,
     )
     ctx.instance.runtime_properties['status_output'] = output
+
     helm_list_output = helm.list(release_name,
                                  kubeconfig=kubeconfig,
                                  token=token,
@@ -394,7 +407,6 @@ def check_release_status(ctx,
                                  ca_file=ca_file
                                  )
     ctx.instance.runtime_properties['helm_list'] = helm_list_output
-    # TODO: Store helm list in runtime properties
 
 
 @operation
@@ -403,34 +415,61 @@ def check_release_status(ctx,
 def check_release_drift(ctx,
                         helm,
                         kubeconfig=None,
-                        set_values=None,
                         token=None,
-                        flags=None,
                         env_vars=None,
                         ca_file=None,
                         host=None,
                         **_):
     """
-    Execute helm status.
+    Execute helm release Drift.
     :param ctx: cloudify context.
     :param helm: helm client object.
-    :param kubeconfig: kubeconfig path.
-    :return output of `helm upgrade` command
+    :return output of `helm drifted or not drifted '
     """
-    ctx.logger.info(
-        'If you ran check status before check drift, the status is going to '
-        'match the current status and no drift could be detected.')
-    ctx.logger.debug(
-        "Checking if used local packaged chart file, If local file used and "
-        "the command failed check file access permissions.")
+    # blueprint inputs
+    version_blueprint = None
+    input_blueprint = get_deployment_inputs(ctx)
+    release_name = input_blueprint['release_name']
+    # helm-chart
+    chart_name = input_blueprint['chart_name']
+    # helm-chart-test
+    repo_url = input_blueprint['repo_url']
+    # https://nelynehemia.github.io/helm-chart/
+    if 'version' in input_blueprint:
+        version_blueprint = input_blueprint['version']
 
-    update_repo(ctx, **_)
+    # runtime properties
+    version_runtime_prop = None
+    if 'helm_list' in ctx.instance.runtime_properties:
+        # [
+        #   {
+        #     "name": "helm-chart",
+        #     "namespace": "default",
+        #     "revision": "1",
+        #     "updated": "2022-12-08 14:38:49.162025 +0000 UTC",
+        #     "status": "deployed",
+        #     "chart": "helm-chart-test-0.1.9",
+        #     "app_version": "1.16.0"
+        #   }
+        # ]
+        for release in ctx.instance.runtime_properties['helm_list']:
+            if release_name == release.get('name'):
+                chart_tgz = release.get('chart')
+        version_runtime_prop = re.search(r's*([\d.]+)', chart_tgz).group(1)
 
-    helm_diff = {'helm_list': {},
-                 'helm_status': {}}
+    # repo
+    details_chart = show_chart(helm, chart_name, repo_url)
+    # details_chart: {
+    # 	'apiVersion': ' v2',
+    # 	'appVersion': ' 1.16.0',
+    # 	'description': ' A Helm chart for Kubernetes update2',
+    # 	'name': ' helm-chart-test',
+    # 	'type': ' application',
+    # 	'version': ' 0.2.0'
+    # }
+    version_show_repo = details_chart.get('version')
 
-    # helm list
-    release_name = ctx.node.properties.get(RESOURCE_CONFIG, {}).get(NAME_FIELD)
+    # list
     helm_list_output = helm.list(release_name,
                                  kubeconfig=kubeconfig,
                                  token=token,
@@ -438,38 +477,51 @@ def check_release_drift(ctx,
                                  additional_env=env_vars,
                                  ca_file=ca_file
                                  )
-    ctx.logger.info("** check_release_drift- Helm list: {}"
-                    .format(helm_list_output))
+    # helm_list_output: [{
+    # 	'name': 'helm-chart',
+    # 	'namespace': 'default',
+    # 	'revision': '1',
+    # 	'updated': '2022-12-08 14:38:49.162025 +0000 UTC',
+    # 	'status': 'deployed',
+    # 	'chart': 'helm-chart-test-0.1.9',
+    # 	'app_version': '1.16.0'
+    # }]
 
-    if 'helm_list' in ctx.instance.runtime_properties:
-        helm_diff['helm_list'] = DeepDiff(
-            ctx.instance.runtime_properties['helm_list'], helm_list_output)
-        ctx.logger.info("** check_release_drift- runtime_properties: {}"
-                        .format(ctx.instance.runtime_properties['helm_list']))
-    # TODO: Store helm list in local variable
-    # TODO: Get helm list previous output
-    # TODO: Compare previous helm output to current local variable of helm list
+    for release in helm_list_output:
+        if release_name == release.get('name'):
+            chart_name = release.get('chart')
+    version_helm_list = re.search(r's*([\d.]+)', chart_name).group(1)
 
-    # helm status
-    helm_status_output = helm.status(
-        release_name=release_name,
-        flags=flags,
-        set_values=set_values,
-        kubeconfig=kubeconfig,
-        token=token,
-        apiserver=host,
-        additional_env=env_vars,
-        ca_file=ca_file,
-    )
-    if 'status_output' in ctx.instance.runtime_properties:
-        helm_diff['helm_status'] = DeepDiff(
-            ctx.instance.runtime_properties['status_output'],
-            helm_status_output)
+    ctx.logger.info('** version_runtime_prop: {}'.format(version_runtime_prop))
+    ctx.logger.info('** version_show_repo: {}'.format(version_show_repo))
+    ctx.logger.info('** version_helm_list: {}'.format(version_helm_list))
 
-    ctx.logger.info("** check_release_drift- helm_diff: {}".format(helm_diff))
-    if helm_diff['helm_status'] and helm_diff['helm_list']:
-        return helm_diff
-    elif helm_diff['helm_list']:
-        return helm_diff['helm_list']
-    elif helm_diff['helm_status']:
-        return helm_diff['helm_status']
+    # Blueprint priority
+    if v1_begger_v2(version_runtime_prop, version_blueprint):
+        return 'drifted: The version that is in runtime_properties is higher'\
+               ' than what is in Blueprint.'
+    if v1_equal_v2(version_blueprint, version_helm_list):
+        return 'not drifted'
+
+    # repo > runtime_properties
+    if v1_begger_v2(version_show_repo, version_runtime_prop):
+        return 'drifted -> The version that is in repo is higher in helm_list.'
+    # helm_list > runtime_properties
+    if v1_begger_v2(version_helm_list, version_runtime_prop):
+        return 'drifted -> The version that is in helm_list is higher in ' \
+               'runtime_properties '
+    else:
+        return 'not drifted'
+
+
+def v1_equal_v2(v1, v2):
+    return version.parse(v1) == version.parse(v2)
+
+
+def v1_begger_v2(v1, v2):
+    return version.parse(v1) > version.parse(v2)
+
+
+def get_deployment_inputs(ctx):
+    deployment = get_deployment(ctx.deployment.id)
+    return deployment.inputs

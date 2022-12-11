@@ -15,7 +15,6 @@
 
 import re
 import json
-from cloudify import ctx
 
 from .exceptions import CloudifyHelmSDKError
 from helm_sdk.utils import (
@@ -196,17 +195,22 @@ class Helm(object):
         cmd.extend([prepare_parameter(flag) for flag in flags])
         self.execute(self._helm_command(cmd), additional_args=additional_args)
 
+    def show_chart(self, chart_name, repo_url):
+        cmd = ['show', 'chart', chart_name, '--repo', repo_url]
+        output = self.execute(self._helm_command(cmd), return_output=True)
+        return self.load_json(output)
+
     def repo_list(self):
         cmd = ['repo', 'list', '--output=json']
         output = self.execute(self._helm_command(cmd), return_output=True)
         return self.load_json(output)
 
     def repo_update(self, flags, additional_args=None, **_):
-        ctx.logger.info('** in repo_update **')
         cmd = ['repo', 'update']
         flags = flags or []
         cmd.extend([prepare_parameter(flag) for flag in flags])
-        self.execute(self._helm_command(cmd), additional_args=additional_args)
+        self.execute(self._helm_command(cmd),
+                     additional_args=additional_args)
 
     def upgrade(self,
                 release_name,
@@ -284,7 +288,6 @@ class Helm(object):
              ca_file=None):
 
         cmd = ['list', '--filter', r"^{0}$".format(release_name), '-o json']
-        ctx.logger.info(' *** cmd : {}'.format(cmd))
         self.handle_auth_params(cmd, kubeconfig, token, apiserver, ca_file)
         if additional_env:
             self.env.update(additional_env)
