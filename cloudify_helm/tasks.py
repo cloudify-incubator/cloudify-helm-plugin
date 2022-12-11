@@ -319,12 +319,6 @@ def upgrade_release(ctx,
                     **_):
     """
     Execute helm upgrade.
-    :param set_values:
-    :param host:
-    :param ca_file:
-    :param env_vars:
-    :param flags:
-    :param token:
     :param ctx: cloudify context.
     :param helm: helm client object.
     :param chart: The chart to upgrade the release with.

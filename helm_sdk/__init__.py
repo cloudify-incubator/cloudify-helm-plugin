@@ -38,7 +38,8 @@ class Helm(object):
     def __init__(self,
                  logger,
                  binary_path,
-                 environment_variables):
+                 environment_variables
+                 ):
         self.binary_path = binary_path
         self.logger = logger
         if not isinstance(environment_variables, dict):
@@ -209,8 +210,7 @@ class Helm(object):
         cmd = ['repo', 'update']
         flags = flags or []
         cmd.extend([prepare_parameter(flag) for flag in flags])
-        self.execute(self._helm_command(cmd),
-                     additional_args=additional_args)
+        self.execute(self._helm_command(cmd), additional_args=additional_args)
 
     def upgrade(self,
                 release_name,
