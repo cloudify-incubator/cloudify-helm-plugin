@@ -491,11 +491,12 @@ def check_release_drift(ctx,
     ctx.logger.info('** version_helm_list: {}'.format(version_helm_list))
 
     # Blueprint priority
-    if v1_begger_v2(version_runtime_prop, version_blueprint):
-        return 'drifted: The version that is in runtime_properties is higher'\
-               ' than what is in Blueprint.'
-    if v1_equal_v2(version_blueprint, version_helm_list):
-        return 'not drifted'
+    if version_blueprint:
+        if v1_begger_v2(version_runtime_prop, version_blueprint):
+            return 'drifted: The version that is in runtime_properties ' \
+                   'is higher than what is in Blueprint.'
+        if v1_equal_v2(version_blueprint, version_helm_list):
+            return 'not drifted'
 
     # repo > runtime_properties
     if v1_begger_v2(version_show_repo, version_runtime_prop):
@@ -509,11 +510,11 @@ def check_release_drift(ctx,
 
 
 def v1_equal_v2(v1, v2):
-    return version.parse(v1) == version.parse(v2)
+    return version.parse(str(v1)) == version.parse(str(v2))
 
 
 def v1_begger_v2(v1, v2):
-    return version.parse(v1) > version.parse(v2)
+    return version.parse(str(v1)) > version.parse(str(v2))
 
 
 def get_deployment_inputs(ctx):
