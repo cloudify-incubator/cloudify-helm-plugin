@@ -17,6 +17,7 @@ import os
 import re
 from deepdiff import DeepDiff
 from packaging import version
+from cloudify import ctx
 
 from urllib.parse import urlparse
 from contextlib import contextmanager
@@ -140,7 +141,7 @@ def install_release(ctx,
     :return output of `helm install` command
     """
     resource_config = get_resource_config()
-    release_name = resource_config.get(NAME_FIELD)
+    release_name = resource_config.get(NAME_FIELD, None)
     args_dict = prepare_args(
         resource_config,
         kwargs.get(FLAGS_FIELD),
@@ -236,15 +237,35 @@ def add_repo(ctx, helm, **kwargs):
 
 @operation
 def show_chart(helm, release_name, repo_url):
+    """
+    Execute helm show chart CHART_NAME --repo REPO_URL
+    :param helm:
+    :param release_name:
+    :param repo_url:
+    :return:
+    show the chart's definition in type string.
+    For example:
+    apiVersion: xx
+    appVersion: x.x.x
+    description: xxx
+    name: helm-chart-name
+    type: application
+    version: x.x.x
+    """
     output = helm.show_chart(release_name, repo_url)
     return convert_string_to_dict(output)
 
 
 def convert_string_to_dict(txt):
+    """
+    :param txt: string type
+    :return: dict
+    """
     output = {}
     rows = txt.split('\n')
     for row in rows:
         words = row.split(':')
+        # Make sure it's not empty like ['']
         if len(words) == 2:
             output[words[0]] = words[1]
     return output
@@ -263,6 +284,7 @@ def repo_check_drift(ctx, helm, **kwargs):
     ctx.logger.info(
         'If you ran check status before check drift, the status is going to '
         'match the current status and no drift could be detected.')
+
     output = helm.repo_list()
     if 'repo_list' not in ctx.instance.runtime_properties:
         ctx.instance.runtime_properties['repo_list'] = output
@@ -332,7 +354,7 @@ def upgrade_release(ctx,
     if os.path.isfile(chart):
         ctx.logger.info("Local chart file: {path} found.".format(path=chart))
     resource_config = get_resource_config()
-    release_name = resource_config.get(NAME_FIELD)
+    release_name = resource_config.get(NAME_FIELD, None)
     output = helm.upgrade(
         release_name=release_name,
         chart=chart,
@@ -420,32 +442,23 @@ def check_release_drift(ctx,
     :param helm: helm client object.
     :return output of `helm drifted or not drifted '
     """
-    # blueprint inputs
-    version_blueprint = None
-    input_blueprint = get_deployment_inputs(ctx)
-    release_name = input_blueprint['release_name']
-    # helm-chart
-    chart_name = input_blueprint['chart_name']
-    # helm-chart-test
-    repo_url = input_blueprint['repo_url']
-    # https://nelynehemia.github.io/helm-chart/
-    if 'version' in input_blueprint:
-        version_blueprint = input_blueprint['version']
+    resource_config = get_resource_config()
+    release_name = resource_config.get(NAME_FIELD, None)
+
+    # get release_name, repo_url, chart_name, version_input
+    repo_resource_config = get_repo_resource_config(release_name)
+    release_name = repo_resource_config.get('name', None)
+    repo_url = repo_resource_config.get('repo_url', None)
+    install_output = ctx.instance.runtime_properties.get('install_output')
+    chart_name = install_output['chart']['metadata'].get('name', None)
+    version_input = None
+    for flag in resource_config.get('flags', None):
+        if 'version' in flag.get('name'):
+            version_input = flag['value']
 
     # runtime properties
     version_runtime_prop = None
     if 'helm_list' in ctx.instance.runtime_properties:
-        # [
-        #   {
-        #     "name": "helm-chart",
-        #     "namespace": "default",
-        #     "revision": "1",
-        #     "updated": "2022-12-08 14:38:49.162025 +0000 UTC",
-        #     "status": "deployed",
-        #     "chart": "helm-chart-test-0.1.9",
-        #     "app_version": "1.16.0"
-        #   }
-        # ]
         for release in ctx.instance.runtime_properties['helm_list']:
             if release_name == release.get('name'):
                 chart_tgz = release.get('chart')
@@ -453,15 +466,7 @@ def check_release_drift(ctx,
 
     # repo
     details_chart = show_chart(helm, chart_name, repo_url)
-    # details_chart: {
-    # 	'apiVersion': ' v2',
-    # 	'appVersion': ' 1.16.0',
-    # 	'description': ' A Helm chart for Kubernetes update2',
-    # 	'name': ' helm-chart-test',
-    # 	'type': ' application',
-    # 	'version': ' 0.2.0'
-    # }
-    version_show_repo = details_chart.get('version')
+    version_show_repo = details_chart.get('version', None)
 
     # list
     helm_list_output = helm.list(release_name,
@@ -471,40 +476,39 @@ def check_release_drift(ctx,
                                  additional_env=env_vars,
                                  ca_file=ca_file
                                  )
-    # helm_list_output: [{
-    # 	'name': 'helm-chart',
-    # 	'namespace': 'default',
-    # 	'revision': '1',
-    # 	'updated': '2022-12-08 14:38:49.162025 +0000 UTC',
-    # 	'status': 'deployed',
-    # 	'chart': 'helm-chart-test-0.1.9',
-    # 	'app_version': '1.16.0'
-    # }]
-
     for release in helm_list_output:
-        if release_name == release.get('name'):
-            chart_name = release.get('chart')
+        if release_name == release.get('name', None):
+            chart_name = release.get('chart', None)
     version_helm_list = re.search(r's*([\d.]+)', chart_name).group(1)
 
-    ctx.logger.info('** version_runtime_prop: {}'.format(version_runtime_prop))
-    ctx.logger.info('** version_show_repo: {}'.format(version_show_repo))
-    ctx.logger.info('** version_helm_list: {}'.format(version_helm_list))
-
-    # Blueprint priority
-    if version_blueprint:
-        if v1_begger_v2(version_runtime_prop, version_blueprint):
-            return 'drifted: The version that is in runtime_properties ' \
-                   'is higher than what is in Blueprint.'
-        if v1_equal_v2(version_blueprint, version_helm_list):
+    # version from Input is priority
+    if version_input:
+        if v1_begger_v2(version_runtime_prop, version_input):
+            ctx.logger.info('The version in runtime_properties {prop} is '
+                            'higher than in Blueprint {input}'
+                            .format(prop=version_runtime_prop,
+                                    input=version_input))
+            return 'drifted'
+        if v1_equal_v2(version_input, version_helm_list):
+            ctx.logger.info('The version which is required in the flag '
+                            '{input} is equal to helm_list {list}'
+                            .format(input=version_input,
+                                    list=version_helm_list))
             return 'not drifted'
 
     # repo > runtime_properties
     if v1_begger_v2(version_show_repo, version_runtime_prop):
-        return 'drifted -> The version that is in repo is higher in helm_list.'
+        ctx.logger.info(
+            'The version that is in repo {repo} is higher in helm_list {prop}'
+            .format(repo=version_show_repo, prop=version_runtime_prop))
+        return 'drifted.'
     # helm_list > runtime_properties
     if v1_begger_v2(version_helm_list, version_runtime_prop):
-        return 'drifted -> The version that is in helm_list is higher in ' \
-               'runtime_properties '
+        ctx.logger.info(
+            'The version that is in helm_list {list} is higher in '
+            'runtime_properties {prop}'.format(list=version_helm_list,
+                                               prop=version_runtime_prop))
+        return 'drifted'
     else:
         return 'not drifted'
 
@@ -520,3 +524,27 @@ def v1_begger_v2(v1, v2):
 def get_deployment_inputs(ctx):
     deployment = get_deployment(ctx.deployment.id)
     return deployment.inputs
+
+
+def find_rels_by_node_type(node_instance, node_type):
+    return [x for x in node_instance.relationships
+            if node_type in x.target.node.type_hierarchy]
+
+
+def find_repo_nodes():
+    rels = find_rels_by_node_type(ctx.instance, 'cloudify.nodes.helm.Repo')
+    nodes = []
+    for rel in rels:
+        nodes.append(rel.target.node)
+    # TODO
+    # if not nodes:
+    #     raise something to will support if there isn׳t repo type
+    return nodes
+
+
+def get_repo_resource_config(release_name):
+    for node in find_repo_nodes():
+        if 'resource_config' in node.properties and \
+                node.properties['resource_config'].get('name', None) == \
+                release_name:
+            return node.properties['resource_config']
