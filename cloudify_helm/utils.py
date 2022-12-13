@@ -19,6 +19,7 @@ import yaml
 import shutil
 import tarfile
 import tempfile
+from packaging import version
 from contextlib import contextmanager
 from subprocess import CalledProcessError
 
@@ -531,3 +532,16 @@ def get_executable_path(executable, venv):
     :param venv: the venv to look for the executable in.
     """
     return '{0}/bin/{1}'.format(venv, executable) if venv else executable
+
+
+def v1_equal_v2(v1, v2):
+    return version.parse(str(v1)) == version.parse(str(v2))
+
+
+def v1_begger_v2(v1, v2):
+    return version.parse(str(v1)) > version.parse(str(v2))
+
+
+def find_rels_by_node_type(node_instance, node_type):
+    return [x for x in node_instance.relationships
+            if node_type in x.target.node.type_hierarchy]

@@ -16,13 +16,12 @@
 import os
 import re
 from deepdiff import DeepDiff
-from packaging import version
 from cloudify import ctx
 
 from urllib.parse import urlparse
 from contextlib import contextmanager
 
-from cloudify_common_sdk.utils import get_deployment_dir, get_deployment
+from cloudify_common_sdk.utils import get_deployment_dir
 
 from cloudify.decorators import operation
 from cloudify.exceptions import NonRecoverableError
@@ -37,7 +36,10 @@ from .utils import (
     get_helm_executable_path,
     use_existing_repo_on_helm,
     create_temporary_env_of_helm,
-    delete_temporary_env_of_helm)
+    delete_temporary_env_of_helm,
+    v1_equal_v2,
+    v1_begger_v2,
+    find_rels_by_node_type)
 from .constants import (
     NAME_FIELD,
     FLAGS_FIELD,
@@ -458,11 +460,12 @@ def check_release_drift(ctx,
 
     # runtime properties
     version_runtime_prop = None
-    if 'helm_list' in ctx.instance.runtime_properties:
-        for release in ctx.instance.runtime_properties['helm_list']:
-            if release_name == release.get('name'):
-                chart_tgz = release.get('chart')
-        version_runtime_prop = re.search(r's*([\d.]+)', chart_tgz).group(1)
+    helm_list = ctx.instance.runtime_properties.get('helm_list', [])
+    for release in helm_list:
+        if release_name == release.get('name'):
+            chart_tgz = release.get('chart')
+            version_runtime_prop = re.search(r's*([\d.]+)', chart_tgz).group(1)
+            break
 
     # repo
     details_chart = show_chart(helm, chart_name, repo_url)
@@ -488,47 +491,29 @@ def check_release_drift(ctx,
                             'higher than in Blueprint {input}'
                             .format(prop=version_runtime_prop,
                                     input=version_input))
-            return 'drifted'
+            return 'diff'
         if v1_equal_v2(version_input, version_helm_list):
             ctx.logger.info('The version which is required in the flag '
                             '{input} is equal to helm_list {list}'
                             .format(input=version_input,
                                     list=version_helm_list))
-            return 'not drifted'
+            return 'None'
 
     # repo > runtime_properties
     if v1_begger_v2(version_show_repo, version_runtime_prop):
         ctx.logger.info(
             'The version that is in repo {repo} is higher in helm_list {prop}'
             .format(repo=version_show_repo, prop=version_runtime_prop))
-        return 'drifted.'
+        return 'diff.'
     # helm_list > runtime_properties
     if v1_begger_v2(version_helm_list, version_runtime_prop):
         ctx.logger.info(
             'The version that is in helm_list {list} is higher in '
             'runtime_properties {prop}'.format(list=version_helm_list,
                                                prop=version_runtime_prop))
-        return 'drifted'
+        return 'diff'
     else:
-        return 'not drifted'
-
-
-def v1_equal_v2(v1, v2):
-    return version.parse(str(v1)) == version.parse(str(v2))
-
-
-def v1_begger_v2(v1, v2):
-    return version.parse(str(v1)) > version.parse(str(v2))
-
-
-def get_deployment_inputs(ctx):
-    deployment = get_deployment(ctx.deployment.id)
-    return deployment.inputs
-
-
-def find_rels_by_node_type(node_instance, node_type):
-    return [x for x in node_instance.relationships
-            if node_type in x.target.node.type_hierarchy]
+        return 'None'
 
 
 def find_repo_nodes():
@@ -536,9 +521,10 @@ def find_repo_nodes():
     nodes = []
     for rel in rels:
         nodes.append(rel.target.node)
-    # TODO
-    # if not nodes:
-    #     raise something to will support if there isn׳t repo type
+    if not nodes:
+        raise NonRecoverableError("Failed to run check_release_drift "
+                                  "because it did not find "
+                                  "'cloudify.nodes.helm.Repo'.")
     return nodes
 
 
