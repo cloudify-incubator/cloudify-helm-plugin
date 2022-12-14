@@ -538,7 +538,7 @@ def v1_equal_v2(v1, v2):
     return version.parse(str(v1)) == version.parse(str(v2))
 
 
-def v1_begger_v2(v1, v2):
+def v1_bigger_v2(v1, v2):
     return version.parse(str(v1)) > version.parse(str(v2))
 
 

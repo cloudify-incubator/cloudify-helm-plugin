@@ -37,7 +37,7 @@ from .utils import (
     create_temporary_env_of_helm,
     delete_temporary_env_of_helm,
     v1_equal_v2,
-    v1_begger_v2,
+    v1_bigger_v2,
     get_repo_resource_config,
     convert_string_to_dict)
 from .constants import (
@@ -470,7 +470,7 @@ def check_release_drift(ctx,
 
     # version from Input is priority
     if version_input:
-        if v1_begger_v2(version_runtime_prop, version_input):
+        if v1_bigger_v2(version_runtime_prop, version_input):
             ctx.logger.info('The version in runtime_properties {prop} is '
                             'higher than in Blueprint {input}'
                             .format(prop=version_runtime_prop,
@@ -484,13 +484,13 @@ def check_release_drift(ctx,
             return 'None'
 
     # repo > runtime_properties
-    if v1_begger_v2(version_show_repo, version_runtime_prop):
+    if v1_bigger_v2(version_show_repo, version_runtime_prop):
         ctx.logger.info(
             'The version that is in repo {repo} is higher in helm_list {prop}'
             .format(repo=version_show_repo, prop=version_runtime_prop))
         return 'diff.'
     # helm_list > runtime_properties
-    if v1_begger_v2(version_helm_list, version_runtime_prop):
+    if v1_bigger_v2(version_helm_list, version_runtime_prop):
         ctx.logger.info(
             'The version that is in helm_list {list} is higher in '
             'runtime_properties {prop}'.format(list=version_helm_list,
