@@ -196,6 +196,11 @@ class Helm(object):
         cmd.extend([prepare_parameter(flag) for flag in flags])
         self.execute(self._helm_command(cmd), additional_args=additional_args)
 
+    def show_chart(self, chart_name, repo_url):
+        cmd = ['show', 'chart', chart_name, '--repo', repo_url]
+        output = self.execute(self._helm_command(cmd), return_output=True)
+        return self.load_json(output)
+
     def repo_list(self):
         cmd = ['repo', 'list', '--output=json']
         output = self.execute(self._helm_command(cmd), return_output=True)
@@ -273,6 +278,21 @@ class Helm(object):
                 'the {} flag is not supported with helm version {}. '
                 'Please upgrade to 3.9.0 or later.'.format(
                     HELM_KUBE_CA_FILE_FLAG, self.get_helm_version()))
+
+    def list(self,
+             release_name,
+             kubeconfig=None,
+             token=None,
+             apiserver=None,
+             additional_env=None,
+             ca_file=None):
+
+        cmd = ['list', '--filter', r"^{0}$".format(release_name), '-o json']
+        self.handle_auth_params(cmd, kubeconfig, token, apiserver, ca_file)
+        if additional_env:
+            self.env.update(additional_env)
+        output = self.execute(self._helm_command(cmd), return_output=True)
+        return json.loads(output)
 
     def status(self,
                release_name,
