@@ -16,7 +16,6 @@
 import os
 import re
 from deepdiff import DeepDiff
-from cloudify import ctx
 
 from urllib.parse import urlparse
 from contextlib import contextmanager
@@ -39,7 +38,8 @@ from .utils import (
     delete_temporary_env_of_helm,
     v1_equal_v2,
     v1_begger_v2,
-    find_rels_by_node_type)
+    get_repo_resource_config,
+    convert_string_to_dict)
 from .constants import (
     NAME_FIELD,
     FLAGS_FIELD,
@@ -237,7 +237,6 @@ def add_repo(ctx, helm, **kwargs):
         helm.repo_add(**args_dict)
 
 
-@operation
 def show_chart(helm, release_name, repo_url):
     """
     Execute helm show chart CHART_NAME --repo REPO_URL
@@ -256,21 +255,6 @@ def show_chart(helm, release_name, repo_url):
     """
     output = helm.show_chart(release_name, repo_url)
     return convert_string_to_dict(output)
-
-
-def convert_string_to_dict(txt):
-    """
-    :param txt: string type
-    :return: dict
-    """
-    output = {}
-    rows = txt.split('\n')
-    for row in rows:
-        words = row.split(':')
-        # Make sure it's not empty like ['']
-        if len(words) == 2:
-            output[words[0]] = words[1]
-    return output
 
 
 @operation
@@ -514,23 +498,3 @@ def check_release_drift(ctx,
         return 'diff'
     else:
         return 'None'
-
-
-def find_repo_nodes():
-    rels = find_rels_by_node_type(ctx.instance, 'cloudify.nodes.helm.Repo')
-    nodes = []
-    for rel in rels:
-        nodes.append(rel.target.node)
-    if not nodes:
-        raise NonRecoverableError("Failed to run check_release_drift "
-                                  "because it did not find "
-                                  "'cloudify.nodes.helm.Repo'.")
-    return nodes
-
-
-def get_repo_resource_config(release_name):
-    for node in find_repo_nodes():
-        if 'resource_config' in node.properties and \
-                node.properties['resource_config'].get('name', None) == \
-                release_name:
-            return node.properties['resource_config']
