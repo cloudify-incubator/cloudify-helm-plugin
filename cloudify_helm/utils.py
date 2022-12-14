@@ -19,6 +19,7 @@ import yaml
 import shutil
 import tarfile
 import tempfile
+from packaging import version
 from contextlib import contextmanager
 from subprocess import CalledProcessError
 
@@ -531,3 +532,51 @@ def get_executable_path(executable, venv):
     :param venv: the venv to look for the executable in.
     """
     return '{0}/bin/{1}'.format(venv, executable) if venv else executable
+
+
+def v1_equal_v2(v1, v2):
+    return version.parse(str(v1)) == version.parse(str(v2))
+
+
+def v1_begger_v2(v1, v2):
+    return version.parse(str(v1)) > version.parse(str(v2))
+
+
+def find_rels_by_node_type(node_instance, node_type):
+    return [x for x in node_instance.relationships
+            if node_type in x.target.node.type_hierarchy]
+
+
+def convert_string_to_dict(txt):
+    """
+    :param txt: string type
+    :return: dict
+    """
+    output = {}
+    rows = txt.split('\n')
+    for row in rows:
+        words = row.split(':')
+        # Make sure it's not empty like ['']
+        if len(words) == 2:
+            output[words[0]] = words[1]
+    return output
+
+
+def find_repo_nodes():
+    rels = find_rels_by_node_type(ctx.instance, 'cloudify.nodes.helm.Repo')
+    nodes = []
+    for rel in rels:
+        nodes.append(rel.target.node)
+    if not nodes:
+        raise NonRecoverableError("Failed to run check_release_drift "
+                                  "because it did not find "
+                                  "'cloudify.nodes.helm.Repo'.")
+    return nodes
+
+
+def get_repo_resource_config(release_name):
+    for node in find_repo_nodes():
+        if 'resource_config' in node.properties and \
+                node.properties['resource_config'].get('name', None) == \
+                release_name:
+            return node.properties['resource_config']

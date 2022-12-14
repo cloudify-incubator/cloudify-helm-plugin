@@ -30,3 +30,4 @@
 0.3.1:
   - RD-6054 - support check status command.
   - RD-5554 If JSON Decode Fails pass exception.
+  - RD-6055-helm-check-drift (repo_check_drift AND check_release_drift)

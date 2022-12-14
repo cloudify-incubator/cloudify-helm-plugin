@@ -296,32 +296,38 @@ class TestTasks(TestBase):
                     flags=[],
                     additional_args={'max_sleep_time': 300})
 
-    def helper_install_release(self, properties, ctx):
+    @mock.patch('helm_sdk.Helm.install')
+    @mock.patch('helm_sdk.Helm.list')
+    def helper_install_release(self, properties, ctx, fake_list, fake_install):
         kwargs = {
             'ctx': ctx
         }
         current_ctx.set(ctx)
-        with mock.patch('helm_sdk.Helm.install') as fake_install:
-            with mock.patch('cloudify_helm.utils.os.path.exists',
-                            return_value=True):
-                install_release(**kwargs)
-                fake_install.assert_called_once_with(
-                    name=properties[RESOURCE_CONFIG]["name"],
-                    chart=properties[RESOURCE_CONFIG]["chart"],
-                    flags=[],
-                    set_values=properties[RESOURCE_CONFIG]["set_values"],
-                    values_file=None,
-                    kubeconfig=None,
-                    token=properties[CLIENT_CONFIG][CONFIGURATION][API_OPTIONS]
-                    [API_KEY],
-                    apiserver=properties[CLIENT_CONFIG][CONFIGURATION]
-                    [API_OPTIONS][HOST],
-                    ca_file=None,
-                    additional_env={},
-                    additional_args={'max_sleep_time': 300})
+        with mock.patch('cloudify_helm.utils.os.path.exists',
+                        return_value=True):
+            install_release(**kwargs)
+            fake_install.assert_called_once_with(
+                name=properties[RESOURCE_CONFIG]["name"],
+                chart=properties[RESOURCE_CONFIG]["chart"],
+                flags=[],
+                set_values=properties[RESOURCE_CONFIG]["set_values"],
+                values_file=None,
+                kubeconfig=None,
+                token=properties[CLIENT_CONFIG][CONFIGURATION][API_OPTIONS]
+                [API_KEY],
+                apiserver=properties[CLIENT_CONFIG][CONFIGURATION]
+                [API_OPTIONS][HOST],
+                ca_file=None,
+                additional_env={},
+                additional_args={'max_sleep_time': 300})
 
+    @mock.patch('helm_sdk.Helm.install')
+    @mock.patch('helm_sdk.Helm.list')
     @mock.patch('cloudify_helm.utils.get_stored_property')
-    def test_install_release(self, get_stored_property):
+    def test_install_release(self,
+                             get_stored_property,
+                             fake_list,
+                             fake_install):
         properties = self.mock_install_release_properties()
         get_stored_property.return_value = properties.get('resource_config')
         ctx = self.mock_ctx(properties,
@@ -330,24 +336,23 @@ class TestTasks(TestBase):
             'ctx': ctx
         }
         current_ctx.set(ctx)
-        with mock.patch('helm_sdk.Helm.install') as fake_install:
-            with mock.patch('cloudify_helm.utils.os.path.exists',
-                            return_value=True):
-                install_release(**kwargs)
-                fake_install.assert_called_once_with(
-                    name=properties[RESOURCE_CONFIG]["name"],
-                    chart=properties[RESOURCE_CONFIG]["chart"],
-                    flags=[],
-                    set_values=properties[RESOURCE_CONFIG]["set_values"],
-                    values_file=None,
-                    kubeconfig=None,
-                    token=properties[CLIENT_CONFIG][CONFIGURATION][API_OPTIONS]
-                    [API_KEY],
-                    apiserver=properties[CLIENT_CONFIG][CONFIGURATION]
-                    [API_OPTIONS][HOST],
-                    ca_file=None,
-                    additional_env={},
-                    additional_args={'max_sleep_time': 300})
+        with mock.patch('cloudify_helm.utils.os.path.exists',
+                        return_value=True):
+            install_release(**kwargs)
+            fake_install.assert_called_once_with(
+                name=properties[RESOURCE_CONFIG]["name"],
+                chart=properties[RESOURCE_CONFIG]["chart"],
+                flags=[],
+                set_values=properties[RESOURCE_CONFIG]["set_values"],
+                values_file=None,
+                kubeconfig=None,
+                token=properties[CLIENT_CONFIG][CONFIGURATION][API_OPTIONS]
+                [API_KEY],
+                apiserver=properties[CLIENT_CONFIG][CONFIGURATION]
+                [API_OPTIONS][HOST],
+                ca_file=None,
+                additional_env={},
+                additional_args={'max_sleep_time': 300})
 
     @mock.patch('cloudify_helm.utils.get_stored_property')
     def test_install_release_general(self, get_stored_property):
@@ -431,8 +436,13 @@ class TestTasks(TestBase):
                             return_value=True):
                 upgrade_release(**kwargs)
 
+    @mock.patch('helm_sdk.Helm.upgrade', return_value='Success!')
+    @mock.patch('helm_sdk.Helm.list')
     @mock.patch('cloudify_helm.utils.get_stored_property')
-    def test_upgrade_release(self, get_stored_property):
+    def test_upgrade_release(self,
+                             get_stored_property,
+                             fake_list,
+                             fake_upgrade):
         properties = self.mock_install_release_properties()
         properties['resource_config'][
             'values_file'] = 'initial/path/to/values/file'
@@ -445,23 +455,21 @@ class TestTasks(TestBase):
             'values_file': 'upgrade/path/to/values/file',
             'set_values': {"name": "a", "value": "b"}
         }
-        with mock.patch('helm_sdk.Helm.upgrade',
-                        return_value='Success!') as fake_upgrade:
-            with mock.patch('cloudify_helm.utils.os.path.exists',
+        with mock.patch('cloudify_helm.utils.os.path.exists',
+                        return_value=True):
+            with mock.patch('cloudify_helm.utils.os.path.isfile',
                             return_value=True):
-                with mock.patch('cloudify_helm.utils.os.path.isfile',
-                                return_value=True):
-                    upgrade_release(**kwargs)
-                    fake_upgrade.assert_called_once_with(
-                        release_name=properties[RESOURCE_CONFIG]["name"],
-                        chart='example/testchart',
-                        flags=None,
-                        set_values={"name": "a", "value": "b"},
-                        values_file='upgrade/path/to/values/file',
-                        kubeconfig=None,
-                        token=properties[CLIENT_CONFIG][CONFIGURATION]
-                        [API_OPTIONS][API_KEY],
-                        apiserver=properties[CLIENT_CONFIG][CONFIGURATION]
-                        [API_OPTIONS][HOST],
-                        ca_file=None,
-                        additional_env={})
+                upgrade_release(**kwargs)
+                fake_upgrade.assert_called_once_with(
+                    release_name=properties[RESOURCE_CONFIG]["name"],
+                    chart='example/testchart',
+                    flags=None,
+                    set_values={"name": "a", "value": "b"},
+                    values_file='upgrade/path/to/values/file',
+                    kubeconfig=None,
+                    token=properties[CLIENT_CONFIG][CONFIGURATION]
+                    [API_OPTIONS][API_KEY],
+                    apiserver=properties[CLIENT_CONFIG][CONFIGURATION]
+                    [API_OPTIONS][HOST],
+                    ca_file=None,
+                    additional_env={})
