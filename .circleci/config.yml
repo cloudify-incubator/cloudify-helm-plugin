@@ -62,21 +62,21 @@ workflows:
       - wagonorb/wagon:
           filters:
             branches:
-              only: /([0-9\.]*\-build|master|dev)/
+              only: /([0-9\.]*\-build|master|dev|RD-6698-helm-nightly-is-failing-because-allocate-address)/
       - wagonorb/arch64_wagon:
           filters:
             branches:
-              only: /([0-9\.]*\-build|master|dev)/
+              only: /([0-9\.]*\-build|master|dev|RD-6698-helm-nightly-is-failing-because-allocate-address)/
       - wagonorb/rhel_wagon:
           filters:
             branches:
-              only: /([0-9\.]*\-build|master|dev)/
+              only: /([0-9\.]*\-build|master|dev|RD-6698-helm-nightly-is-failing-because-allocate-address)/
           requires:
             - node/check_py3_compat_job
       - wagonorb/build_bundle:
           filters:
             branches:
-              only: /([0-9\.]*\-build|master|dev)/
+              only: /([0-9\.]*\-build|master|dev|RD-6698-helm-nightly-is-failing-because-allocate-address)/
           requires:
             - wagonorb/wagon
             - wagonorb/rhel_wagon
@@ -86,7 +86,7 @@ workflows:
              - wagonorb/build_bundle
           filters:
             branches:
-              only: /([0-9\.]*\-build|master|dev)/
+              only: /([0-9\.]*\-build|master|dev|RD-6698-helm-nightly-is-failing-because-allocate-address)/
       - releaseorb/release:
           filters:
             branches:
