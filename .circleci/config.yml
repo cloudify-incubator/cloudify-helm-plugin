@@ -27,12 +27,25 @@ executors:
 
 
 commands:
+
+  eks_prepare_test_manager:
+    steps:
+      - run: ls -alR
+      - run: ecosystem-test prepare-test-manager -l $TEST_LICENSE -es aws_access_key_id2=$aws_access_key_id -es aws_secret_access_key2=$aws_secret_access_key
+      - run: ecosystem-test upload-plugin -PN utilities
+      - run: ecosystem-test upload-plugin -PN ansible
+      - run: ecosystem-test upload-plugin -PN kubernetes
+
   prepare_test_manager:
     steps:
+      - run: ls -alR
       - run: ecosystem-test prepare-test-manager -l $TEST_LICENSE --generate-new-aws-token -es aws_access_key_id=${aws_access_key_id} -es aws_secret_access_key=${aws_secret_access_key} -es kubernetes_token=$null_value -es kubernetes_config=$null_value --yum-package python-netaddr --yum-package git -p $(find ~/project/workspace/build/ -name *centos-Core*x86_64.wgn)  ~/project/plugin.yaml
       - run: ecosystem-test upload-plugin -PN utilities
       - run: ecosystem-test upload-plugin -PN ansible
       - run: ecosystem-test upload-plugin -PN kubernetes
+      - run: |
+          docker exec -it cfy_manager mkdir -p /etc/cloudify/.cloudify/profiles/manager-local/
+          docker exec -it cfy_manager cp /root/.cloudify/profiles/manager-local/context.json /etc/cloudify/.cloudify/profiles/manager-local/context.json
 
   run_eks_helm_test:
     steps:
