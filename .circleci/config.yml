@@ -30,8 +30,7 @@ commands:
 
   prepare_test_manager:
     steps:
-      - run: ls -alR
-      - run: ecosystem-test prepare-test-manager -l $TEST_LICENSE --generate-new-aws-token -es aws_access_key_id=${aws_access_key_id} -es aws_secret_access_key=${aws_secret_access_key} -es kubernetes_token=$null_value -es kubernetes_config=$null_value --yum-package python-netaddr --yum-package git -p $(find ~/project/workspace/build/ -name *centos-Core*x86_64.wgn)  ~/project/plugin.yaml
+      - run: ecosystem-test prepare-test-manager -l $TEST_LICENSE -es aws_access_key_id=${aws_access_key_id} -es aws_secret_access_key=${aws_secret_access_key} -es kubernetes_token=$null_value -es kubernetes_config=$null_value --yum-package python-netaddr --yum-package git -p $(find ~/project/workspace/build/ -name *centos-Core*x86_64.wgn)  ~/project/plugin.yaml
       - run: ecosystem-test upload-plugin -PN utilities
       - run: ecosystem-test upload-plugin -PN ansible
       - run: ecosystem-test upload-plugin -PN kubernetes
@@ -40,7 +39,7 @@ commands:
     steps:
       - run: wget https://github.com/cloudify-community/blueprint-examples/releases/download/latest/kubernetes-helm-eks.zip
       - run: unzip kubernetes-helm-eks.zip
-      - run: ecosystem-test local-blueprint-test -b helm-eks/blueprint.yaml -i .circleci/eks-inputs.yaml -i eks_cluster_name=helm-plugin-test-$CIRCLE_BUILD_NUM --test-id=helm-eks --on-failure=uninstall-force --timeout=5400
+      - run: ecosystem-test local-blueprint-test -b helm-eks/blueprint.yaml -i eks_cluster_name=helm-plugin-test-$CIRCLE_BUILD_NUM --test-id=helm-eks --on-failure=uninstall-force --timeout=5400
 
 jobs:
   integration_tests_py3:
