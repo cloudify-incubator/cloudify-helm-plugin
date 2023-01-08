@@ -1,5 +1,5 @@
 ########
-# Copyright (c) 2019 Cloudify Platform Ltd. All rights reserved
+# Copyright (c) 2019 - 2023 Cloudify Platform Ltd. All rights reserved
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,6 +15,8 @@
 
 import re
 import json
+import yaml
+from tempfile import NamedTemporaryFile
 
 from .exceptions import CloudifyHelmSDKError
 from helm_sdk.utils import (
@@ -80,12 +82,17 @@ class Helm(object):
             server.
         """
 
-        if not kubeconfig and not (token and apiserver and ca_file):
+        if not kubeconfig and not (token and apiserver):
             raise CloudifyHelmSDKError(
                 'Must provide kubeconfig file path or token, apiserver and'
                 ' ca_file in order to authenticate with the cluster.')
 
-        if kubeconfig:
+        if (token and apiserver) and not ca_file:
+            self.logger.error('Token and API Server are provided, '
+                              'but CA file is not. '
+                              'Authentication may not be successful.')
+
+        if kubeconfig and isinstance(kubeconfig, str):
             cmd.append(APPEND_FLAG_STRING.format(name=HELM_KUBECONFIG_FLAG,
                                                  value=kubeconfig))
 
@@ -250,11 +257,74 @@ class Helm(object):
         cmd.extend(prepare_set_parameters(set_arguments))
         if additional_env:
             self.env.update(additional_env)
+        try:
+            output = self.execute(
+                self._helm_command(cmd),
+                additional_args=additional_args,
+                return_output=True)
+            output = self.load_json(output)
+        except Exception as e:
+            match = str(e).find(
+                'UPGRADE FAILED: "{}" has no deployed releases'.format(
+                    release_name))
+            if match >= 0:
+                self.logger.error(str(e))
+                self.logger.info('Upgrade failed, using install.')
+                output = self.install(
+                    chart=chart,
+                    values_file=values_file,
+                    kubeconfig=kubeconfig,
+                    token=token,
+                    apiserver=apiserver,
+                    additional_env=additional_env,
+                    ca_file=ca_file,
+                    **_)
+            else:
+                raise e
+        return output
+
+    def get(self,
+            release_name,
+            flags=None,
+            kubeconfig=None,
+            token=None,
+            apiserver=None,
+            ca_file=None,
+            additional_env=None,
+            additional_args=None,
+            **_):
+        """
+        Execute helm get all command.
+        :param release_name: name of the release to upgrade.
+        :param chart: The chart to upgrade the release with.
+        The chart argument can be either: a chart reference('example/mariadb'),
+        a packaged chart, or a fully qualified URL.
+        :param flags: list of flags to add to the upgrade command.
+        :param set_values: list of variables and their values for --set.
+        :param kubeconfig: path to kubeconfig file.
+        :param values_file: values file path.
+        :param token: bearer token used for authentication.
+        :param apiserver: the address and the port for the Kubernetes API
+        server.
+        :return output of helm upgrade command.
+        """
+        cmd = ['get', 'all', release_name]
+        self.handle_auth_params(cmd, kubeconfig, token, apiserver, ca_file)
+        flags = flags or []
+        validate_no_collisions_between_params_and_flags(flags)
+        cmd.extend([prepare_parameter(flag) for flag in flags])
+        cmd.extend(prepare_set_parameters([]))
+        if additional_env:
+            self.env.update(additional_env)
         output = self.execute(
             self._helm_command(cmd),
             additional_args=additional_args,
             return_output=True)
-        return self.load_json(output)
+        json_list = []
+        split_yamls = output.split('---')
+        for item in split_yamls[1:-1]:
+            json_list.append(yaml.safe_load(item))
+        return json_list
 
     def get_helm_version(self):
         cmd = ['version', '--short']
@@ -296,6 +366,7 @@ class Helm(object):
         server.
         :return status of helm upgrade command.
         """
+
         cmd = ['status', release_name, '-o=json']
         self.handle_auth_params(cmd, kubeconfig, token, apiserver, ca_file)
         flags = flags or []
@@ -309,7 +380,26 @@ class Helm(object):
             self._helm_command(cmd),
             additional_args=additional_args,
             return_output=True)
-        return json.loads(output)
+        loaded_output = json.loads(output)
+        if 'manifest' in loaded_output:
+            manifest = loaded_output['manifest']
+            manifest = manifest.split('\n')
+            file = NamedTemporaryFile()
+            with open(file.name, 'w') as infile:
+                infile.writelines(line + '\n' for line in manifest)
+            with open(file.name, 'r') as outfile:
+                manifest_content = outfile.read()
+            manifests = manifest_content.split('---')
+            manifest_jsons = {}
+            for manifest in manifests:
+                if not manifest or manifest == '---':
+                    continue
+                _, manifest_filename, manifest_content = \
+                    manifest.split('\n', 2)
+                manifest_jsons[manifest_filename[10:]] = yaml.safe_load(
+                    manifest_content)
+            loaded_output['manifest'] = manifest_jsons
+        return loaded_output
 
     def load_json(self, output):
         if output:

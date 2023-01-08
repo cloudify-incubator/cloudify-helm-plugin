@@ -30,3 +30,5 @@
 0.3.1:
   - RD-6054 - support check status command.
   - RD-5554 If JSON Decode Fails pass exception.
+0.3.2:
+  - RD-6057 Deployment Update

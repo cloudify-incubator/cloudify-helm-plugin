@@ -2,7 +2,7 @@ plugins:
   helm:
     executor: central_deployment_agent
     package_name: cloudify-helm-plugin
-    package_version: '0.3.1'
+    package_version: '0.3.2'
 
 dsl_definitions:
 
@@ -213,9 +213,16 @@ node_types:
         type: integer
         default: 300
     interfaces:
+      cloudify.interfaces.validation:
+        check_status:
+          implementation: helm.cloudify_helm.tasks.check_status_binary
+        check_drift:
+          implementation: helm.cloudify_helm.tasks.check_status_binary
       cloudify.interfaces.lifecycle:
         create:
           implementation: helm.cloudify_helm.tasks.install_binary
+        poststart:
+          implementation: helm.cloudify_helm.tasks.check_status_binary
         delete:
           implementation: helm.cloudify_helm.tasks.uninstall_binary
 
@@ -237,6 +244,8 @@ node_types:
       cloudify.interfaces.validation:
         check_status:
           implementation: helm.cloudify_helm.tasks.check_release_status
+        check_drift:
+          implementation: helm.cloudify_helm.tasks.check_release_drift
       cloudify.interfaces.lifecycle:
         start:
           implementation: helm.cloudify_helm.tasks.install_release
@@ -245,6 +254,8 @@ node_types:
               description: >
                  Flags to add only to `helm install` command.The format is the same as "flags".
               default: []
+        poststart:
+          implementation: helm.cloudify_helm.tasks.check_release_status
         delete:
           implementation: helm.cloudify_helm.tasks.uninstall_release
           inputs:
@@ -287,6 +298,8 @@ node_types:
     interfaces:
       cloudify.interfaces.validation:
         check_status:
+          implementation: helm.cloudify_helm.tasks.repo_list
+        check_drift:
           implementation: helm.cloudify_helm.tasks.repo_list
       cloudify.interfaces.lifecycle:
         start:
