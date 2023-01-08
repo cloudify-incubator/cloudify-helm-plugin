@@ -530,3 +530,15 @@ def get_executable_path(executable, venv):
     :param venv: the venv to look for the executable in.
     """
     return '{0}/bin/{1}'.format(venv, executable) if venv else executable
+
+
+def get_release_name(args_dict):
+    release_name = None
+    if 'name' in args_dict:
+        release_name = args_dict.pop('name')
+    if 'release_name' in args_dict:
+        release_name = args_dict.pop('release_name')
+    if not release_name:
+        raise NonRecoverableError(
+            'The parameters "name" or "release_name" was not provided.')
+    return release_name

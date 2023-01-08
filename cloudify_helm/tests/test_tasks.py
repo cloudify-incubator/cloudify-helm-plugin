@@ -15,6 +15,7 @@
 
 import os
 import mock
+import json
 import shutil
 import tempfile
 
@@ -43,6 +44,14 @@ from ..constants import (
     CONFIG_DIR_ENV_VAR,
     CACHE_DIR_ENV_VAR,
     DATA_DIR_ENV_VAR)
+
+mock_install_response = {
+    "name": "my_release",
+    "info": {"status": "deployed"},
+    "manifest": "---\n# Source: postgresql/templates/secrets.yaml\napiVersion: v1\nkind: Secret\nmetadata:\n  name: examplerelease-postgresql\n  namespace: \"default\"\n  labels:\n    app.kubernetes.io/name: postgresql\n    helm.sh/chart: postgresql-12.1.7\n    app.kubernetes.io/instance: examplerelease\n    app.kubernetes.io/managed-by: Helm\ntype: Opaque\ndata:\n  postgres-password: \"TXNuRFAxTTFaNA==\"\n  # We don't auto-generate LDAP password when it's not provided as we do for other passwords\n", # noqa
+    "version": 1,
+    "namespace": "default"
+}
 
 
 class TestTasks(TestBase):
@@ -78,7 +87,7 @@ class TestTasks(TestBase):
             "resource_config": {
                 "name": "my_release",
                 "chart": "my_chart",
-                "set_values": {"name": "x", "value": "y"},
+                "set_values": [{"name": "x", "value": "y"}],
                 "flags": []
             }
 
@@ -195,8 +204,17 @@ class TestTasks(TestBase):
         expected['additional_args'] = {'max_sleep_time': 300}
         assert result == expected
 
+    @mock.patch('helm_sdk.Helm.execute')
+    @mock.patch('cloudify_helm.utils.os.path.exists')
+    @mock.patch('helm_sdk.Helm.repo_add')
     @mock.patch('cloudify_helm.utils.get_stored_property')
-    def test_add_repo(self, get_resource_config):
+    def test_add_repo(self,
+                      get_resource_config,
+                      mock_repo_add,
+                      mock_exists,
+                      mock_execute):
+        mock_execute.return_value = json.dumps('{"foo": "bar"}')
+        mock_exists.return_value = True
         properties = {
             "helm_config": {
                 "executable_path": "/path/to/helm"
@@ -218,16 +236,13 @@ class TestTasks(TestBase):
         kwargs = {
             'ctx': ctx
         }
-        with mock.patch('helm_sdk.Helm.repo_add') as fake_repo_add:
-            with mock.patch('cloudify_helm.utils.os.path.exists',
-                            return_value=True):
-                add_repo(**kwargs)
-                fake_repo_add.assert_called_once_with(
-                    name="stable",
-                    repo_url="https://kubernetes-charts.storage.googleapis"
-                             ".com/",
-                    flags=[],
-                    additional_args='{max_sleep_time: 300}')
+        add_repo(**kwargs)
+        mock_repo_add.assert_called_once_with(
+            name="stable",
+            repo_url="https://kubernetes-charts.storage.googleapis"
+                     ".com/",
+            flags=[],
+            additional_args='{max_sleep_time: 300}')
 
     @mock.patch('cloudify_helm.utils.get_stored_property')
     def test_add_repo_use_external_resource(self, get_stored_property):
@@ -296,32 +311,58 @@ class TestTasks(TestBase):
                     flags=[],
                     additional_args={'max_sleep_time': 300})
 
-    def helper_install_release(self, properties, ctx):
+    @mock.patch('cloudify_helm.decorators.Kubernetes')
+    @mock.patch('helm_sdk.Helm.execute')
+    @mock.patch('helm_sdk.Helm.install')
+    @mock.patch('cloudify_helm.utils.os.path.isfile')
+    @mock.patch('cloudify_helm.utils.os.path.exists')
+    def helper_install_release(self,
+                               properties,
+                               ctx,
+                               os_path_exists,
+                               os_path_isfile,
+                               fake_install,
+                               mock_execute,
+                               *_):
+        mock_execute.return_value = json.dumps(mock_install_response)
+        os_path_exists.return_value = True
+        os_path_isfile.return_value = True
         kwargs = {
             'ctx': ctx
         }
         current_ctx.set(ctx)
-        with mock.patch('helm_sdk.Helm.install') as fake_install:
-            with mock.patch('cloudify_helm.utils.os.path.exists',
-                            return_value=True):
-                install_release(**kwargs)
-                fake_install.assert_called_once_with(
-                    name=properties[RESOURCE_CONFIG]["name"],
-                    chart=properties[RESOURCE_CONFIG]["chart"],
-                    flags=[],
-                    set_values=properties[RESOURCE_CONFIG]["set_values"],
-                    values_file=None,
-                    kubeconfig=None,
-                    token=properties[CLIENT_CONFIG][CONFIGURATION][API_OPTIONS]
-                    [API_KEY],
-                    apiserver=properties[CLIENT_CONFIG][CONFIGURATION]
-                    [API_OPTIONS][HOST],
-                    ca_file=None,
-                    additional_env={},
-                    additional_args={'max_sleep_time': 300})
+        install_release(**kwargs)
+        fake_install.assert_called_once_with(
+            release_name='my_release',
+            chart=properties[RESOURCE_CONFIG]['chart'],
+            flags=[],
+            set_values=properties[RESOURCE_CONFIG]["set_values"],
+            values_file=None,
+            kubeconfig=None,
+            token=properties[CLIENT_CONFIG][CONFIGURATION][API_OPTIONS]
+            [API_KEY],
+            apiserver=properties[CLIENT_CONFIG][CONFIGURATION]
+            [API_OPTIONS][HOST],
+            ca_file=None,
+            additional_env=None,
+            additional_args={'max_sleep_time': 300})
 
+    @mock.patch('cloudify_helm.decorators.Kubernetes')
+    @mock.patch('helm_sdk.Helm.execute')
+    @mock.patch('helm_sdk.Helm.install')
+    @mock.patch('cloudify_helm.utils.os.path.isfile')
+    @mock.patch('cloudify_helm.utils.os.path.exists')
     @mock.patch('cloudify_helm.utils.get_stored_property')
-    def test_install_release(self, get_stored_property):
+    def test_install_release(self,
+                             get_stored_property,
+                             os_path_exists,
+                             os_path_isfile,
+                             fake_install,
+                             mock_execute,
+                             *_):
+        mock_execute.return_value = json.dumps(mock_install_response)
+        os_path_exists.return_value = True
+        os_path_isfile.return_value = True
         properties = self.mock_install_release_properties()
         get_stored_property.return_value = properties.get('resource_config')
         ctx = self.mock_ctx(properties,
@@ -335,7 +376,7 @@ class TestTasks(TestBase):
                             return_value=True):
                 install_release(**kwargs)
                 fake_install.assert_called_once_with(
-                    name=properties[RESOURCE_CONFIG]["name"],
+                    release_name=properties[RESOURCE_CONFIG]["name"],
                     chart=properties[RESOURCE_CONFIG]["chart"],
                     flags=[],
                     set_values=properties[RESOURCE_CONFIG]["set_values"],
@@ -346,7 +387,7 @@ class TestTasks(TestBase):
                     apiserver=properties[CLIENT_CONFIG][CONFIGURATION]
                     [API_OPTIONS][HOST],
                     ca_file=None,
-                    additional_env={},
+                    additional_env=None,
                     additional_args={'max_sleep_time': 300})
 
     @mock.patch('cloudify_helm.utils.get_stored_property')
@@ -413,26 +454,52 @@ class TestTasks(TestBase):
                 uninstall_release(**kwargs)
                 fake_uninstall.assert_called_once()
 
-    @mock.patch('cloudify_helm.utils.get_stored_property')
-    def test_upgrade_release_no_chart(self, get_stored_property):
-        properties = self.mock_install_release_properties()
-        ctx = self.mock_ctx(properties,
-                            self.mock_runtime_properties())
-        kwargs = {
-            'ctx': ctx
-        }
-        current_ctx.set(ctx)
-        get_stored_property.return_value = properties.get(
-            'resource_config')
-        with self.assertRaisesRegexp(NonRecoverableError,
-                                     'Must provide chart for'
-                                     ' upgrade release.'):
-            with mock.patch('cloudify_helm.utils.os.path.exists',
-                            return_value=True):
-                upgrade_release(**kwargs)
+    # This test is no longer relevant, because we explicitly resolve the
+    # chart name.
+    # @mock.patch('cloudify_helm.tasks.decorators.with_connection_details')
+    # @mock.patch('cloudify_helm.tasks.with_kubernetes')
+    # @mock.patch('cloudify_helm.utils.get_stored_property')
+    # @mock.patch('cloudify_helm.utils.os.path.exists')
+    # def test_upgrade_release_no_chart(self,
+    #                                   os_path_exists,
+    #                                   get_stored_property,
+    #                                   with_kube,
+    #                                   connection_details,
+    #                                   *_):
+    #     with_kube.return_value = {
+    #         'kubernetes': mock.Mock()
+    #     }
+    #     os_path_exists.return_value = True
+    #     properties = self.mock_install_release_properties()
+    #     connection_details.return_value = properties.get('client_config')
+    #     ctx = self.mock_ctx(properties, self.mock_runtime_properties())
+    #     kwargs = {
+    #         'ctx': ctx
+    #     }
+    #     current_ctx.set(ctx)
+    #     get_stored_property.return_value = properties.get(
+    #         'resource_config')
+    #     with self.assertRaisesRegexp(
+    #             NonRecoverableError,
+    #             'Must provide chart for upgrade release.'):
+    #         upgrade_release(**kwargs)
 
+    @mock.patch('cloudify_helm.decorators.Kubernetes')
+    @mock.patch('helm_sdk.Helm.execute')
+    @mock.patch('helm_sdk.Helm.upgrade')
+    @mock.patch('cloudify_helm.utils.os.path.isfile')
+    @mock.patch('cloudify_helm.utils.os.path.exists')
     @mock.patch('cloudify_helm.utils.get_stored_property')
-    def test_upgrade_release(self, get_stored_property):
+    def test_upgrade_release(self,
+                             get_stored_property,
+                             os_path_exists,
+                             os_path_isfile,
+                             fake_upgrade,
+                             mock_execute,
+                             *_):
+        mock_execute.return_value = json.dumps(mock_install_response)
+        os_path_exists.return_value = True
+        os_path_isfile.return_value = True
         properties = self.mock_install_release_properties()
         properties['resource_config'][
             'values_file'] = 'initial/path/to/values/file'
@@ -443,25 +510,21 @@ class TestTasks(TestBase):
             'ctx': ctx,
             'chart': 'example/testchart',
             'values_file': 'upgrade/path/to/values/file',
-            'set_values': {"name": "a", "value": "b"}
+            'set_values': [{"name": "a", "value": "b"}],
         }
-        with mock.patch('helm_sdk.Helm.upgrade',
-                        return_value='Success!') as fake_upgrade:
-            with mock.patch('cloudify_helm.utils.os.path.exists',
-                            return_value=True):
-                with mock.patch('cloudify_helm.utils.os.path.isfile',
-                                return_value=True):
-                    upgrade_release(**kwargs)
-                    fake_upgrade.assert_called_once_with(
-                        release_name=properties[RESOURCE_CONFIG]["name"],
-                        chart='example/testchart',
-                        flags=None,
-                        set_values={"name": "a", "value": "b"},
-                        values_file='upgrade/path/to/values/file',
-                        kubeconfig=None,
-                        token=properties[CLIENT_CONFIG][CONFIGURATION]
-                        [API_OPTIONS][API_KEY],
-                        apiserver=properties[CLIENT_CONFIG][CONFIGURATION]
-                        [API_OPTIONS][HOST],
-                        ca_file=None,
-                        additional_env={})
+        upgrade_release(**kwargs)
+        fake_upgrade.assert_called_once_with(
+            release_name='my_release',
+            chart='my_chart',
+            flags=[],
+            set_values=[{"name": "x", "value": "y"}],
+            values_file='upgrade/path/to/values/file',
+            kubeconfig=None,
+            token=properties[CLIENT_CONFIG][CONFIGURATION]
+            [API_OPTIONS][API_KEY],
+            apiserver=properties[CLIENT_CONFIG][CONFIGURATION]
+            [API_OPTIONS][HOST],
+            ca_file=None,
+            additional_env=None,
+            additional_args={'max_sleep_time': 300}
+        )

@@ -30,6 +30,7 @@ from .utils import (
     get_binary,
     copy_binary,
     helm_from_ctx,
+    get_release_name,
     is_using_existing,
     get_resource_config,
     get_helm_executable_path,
@@ -181,7 +182,7 @@ def repo_check_drift(ctx, helm, **kwargs):
     output = helm.repo_list()
     if 'list_output' not in ctx.instance.runtime_properties:
         ctx.instance.runtime_properties['list_output'] = output
-    diff = DeepDiff(output, output)
+    diff = DeepDiff(ctx.instance.runtime_properties['list_output'], output)
     if diff:
         raise RuntimeError('The resource has drifted: {}'.format(diff))
 
@@ -248,11 +249,12 @@ def install_release(ctx,
         ctx.node.properties.get('max_sleep_time')
     )
     url = urlparse(args_dict.get('chart', None))
+    release_name = get_release_name(args_dict)
 
     with install_target(ctx, url, args_dict) as args_dict:
         if ctx.workflow_id == 'update':
             output = helm.upgrade(
-                release_name=resource_config.get(NAME_FIELD),
+                release_name=release_name,
                 values_file=values_file,
                 kubeconfig=kubeconfig,
                 token=token,
@@ -262,6 +264,7 @@ def install_release(ctx,
                 **args_dict)
         else:
             output = helm.install(
+                release_name=release_name,
                 values_file=values_file,
                 kubeconfig=kubeconfig,
                 token=token,
@@ -271,8 +274,7 @@ def install_release(ctx,
                 **args_dict)
         ctx.instance.runtime_properties['install_output'] = output
         helm_state = helm.status(
-            release_name=ctx.node.properties.get(
-                RESOURCE_CONFIG, {}).get(NAME_FIELD),
+            release_name=release_name,
             values_file=values_file,
             kubeconfig=kubeconfig,
             token=token,
@@ -353,8 +355,9 @@ def upgrade_release(ctx,
         kwargs.get(FLAGS_FIELD),
         ctx.node.properties.get('max_sleep_time')
     )
+    release_name = get_release_name(args_dict)
     output = helm.upgrade(
-        release_name=resource_config.get(NAME_FIELD),
+        release_name=release_name,
         values_file=values_file,
         kubeconfig=kubeconfig,
         token=token,
@@ -365,8 +368,7 @@ def upgrade_release(ctx,
     )
     ctx.instance.runtime_properties['install_output'] = output
     helm_state = helm.status(
-        release_name=ctx.node.properties.get(
-            RESOURCE_CONFIG, {}).get(NAME_FIELD),
+        release_name=release_name,
         values_file=values_file,
         kubeconfig=kubeconfig,
         token=token,

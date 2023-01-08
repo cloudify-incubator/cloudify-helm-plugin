@@ -14,6 +14,7 @@
 #    * limitations under the License.
 
 import mock
+import json
 from mock import patch
 from . import HelmTestBase, HELM_BINARY
 from helm_sdk.exceptions import CloudifyHelmSDKError
@@ -22,19 +23,48 @@ mock_flags = [{'name': 'dry-run'},
               {'name': 'timeout', 'value': '100'}]
 mock_set_args = [{'name': 'x', 'value': 'y'},
                  {'name': 'a', 'value': 'b'}]
+mock_install_response = {
+    "name": "examplerelease",
+    "info": {"status": "deployed"},
+    "manifest": "---\n# Source: postgresql/templates/secrets.yaml\napiVersion: v1\nkind: Secret\nmetadata:\n  name: examplerelease-postgresql\n  namespace: \"default\"\n  labels:\n    app.kubernetes.io/name: postgresql\n    helm.sh/chart: postgresql-12.1.7\n    app.kubernetes.io/instance: examplerelease\n    app.kubernetes.io/managed-by: Helm\ntype: Opaque\ndata:\n  postgres-password: \"TXNuRFAxTTFaNA==\"\n  # We don't auto-generate LDAP password when it's not provided as we do for other passwords\n", # noqa
+    "version": 1,
+    "namespace": "default"
+}
 
 
 class HelmSDKTest(HelmTestBase):
 
     def test_install_with_token_and_api(self):
-        with self.assertRaisesRegexp(CloudifyHelmSDKError,
-                                     'Must provide kubeconfig file path.'):
-            self.helm.install('release1',
-                              'my_chart',
-                              mock_flags,
-                              mock_set_args,
-                              token='demotoken',
-                              apiserver='https://1.0.0.0')
+        mock_execute = mock.Mock()
+        mock_execute.return_value = json.dumps(mock_install_response)
+        self.helm.execute = mock_execute
+        self.helm.install('release1',
+                          'my_chart',
+                          mock_flags,
+                          mock_set_args,
+                          token='demotoken',
+                          apiserver='https://1.0.0.0')
+        cmd_expected = [
+            '/tmp/helm',
+            'install',
+            'release1',
+            'my_chart',
+            '--wait',
+            '--output=json',
+            '--kube-token=demotoken',
+            '--kube-apiserver=https://1.0.0.0',
+            '--dry-run',
+            '--timeout=100',
+            '--set',
+            "x='y'",
+            '--set',
+            "a='b'"
+        ]
+        mock_execute.assert_called_once_with(
+            cmd_expected,
+            additional_args=None,
+            return_output=True
+        )
 
     def test_install_with_kubeconfig(self):
         mock_execute = mock.Mock(return_value='{"manifest":"resourceA"}')
@@ -119,14 +149,36 @@ class HelmSDKTest(HelmTestBase):
                                              additional_args=None)
 
     def test_upgrade_with_token_and_api(self):
-        with self.assertRaisesRegexp(CloudifyHelmSDKError,
-                                     'Must provide kubeconfig file path.'):
-            self.helm.upgrade('release1',
-                              'example/mariadb',
-                              mock_flags,
-                              mock_set_args,
-                              token='demotoken',
-                              apiserver='https://1.0.0.0')
+        mock_execute = mock.Mock()
+        mock_execute.return_value = json.dumps(mock_install_response)
+        self.helm.execute = mock_execute
+        self.helm.upgrade('release1',
+                          'example/mariadb',
+                          mock_flags,
+                          mock_set_args,
+                          token='demotoken',
+                          apiserver='https://1.0.0.0')
+        cmd_expected = [
+            '/tmp/helm',
+            'upgrade',
+            'release1',
+            'example/mariadb',
+            '--atomic',
+            '-o=json',
+            '--kube-token=demotoken',
+            '--kube-apiserver=https://1.0.0.0',
+            '--dry-run',
+            '--timeout=100',
+            '--set',
+            "x='y'",
+            '--set',
+            "a='b'"
+        ]
+        mock_execute.assert_called_once_with(
+            cmd_expected,
+            additional_args=None,
+            return_output=True
+        )
 
     def test_upgrade_with_kubeconfig(self):
         mock_execute = mock.Mock(return_value='{"name":"release1"}')
