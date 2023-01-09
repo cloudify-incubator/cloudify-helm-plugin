@@ -39,11 +39,9 @@ from .utils import (
     create_temporary_env_of_helm,
     delete_temporary_env_of_helm)
 from .constants import (
-    NAME_FIELD,
     FLAGS_FIELD,
     VALUES_FILE,
     HELM_CONFIG,
-    RESOURCE_CONFIG,
     EXECUTABLE_PATH,
     HELM_ENV_VARS_LIST,
     USE_EXTERNAL_RESOURCE)
@@ -105,6 +103,7 @@ def prepare_args(resource_config, flags=None, max_sleep_time=None):
     """
     Prepare arguments dictionary to helm  sdk function(like:helm.install,
     helm.repo_add).
+    :resource_config dict: node props.
     :param ctx: cloudify context.
     :param flags: flags that user passed - unique for install operation.
     :return arguments dictionary for helm.install function
@@ -238,6 +237,7 @@ def inject_env_properties(ctx, **_):
 def update_repo(ctx, **kwargs):
     helm = helm_from_ctx(ctx)
     helm.repo_update(flags=kwargs.get(FLAGS_FIELD))
+    ctx.instance.runtime_properties['repo_list'] = helm.repo_list()
 
 
 @operation
@@ -276,7 +276,7 @@ def install_release(ctx,
     with install_target(ctx, url, args_dict) as args_dict:
         if ctx.workflow_id == 'update':
             output = helm.upgrade(
-                release_name=release_name,
+                release_name,
                 values_file=values_file,
                 kubeconfig=kubeconfig,
                 token=token,
@@ -286,7 +286,7 @@ def install_release(ctx,
                 **args_dict)
         else:
             output = helm.install(
-                release_name=release_name,
+                release_name,
                 values_file=values_file,
                 kubeconfig=kubeconfig,
                 token=token,
@@ -296,7 +296,7 @@ def install_release(ctx,
                 **args_dict)
         ctx.instance.runtime_properties['install_output'] = output
         helm_state = helm.status(
-            release_name=release_name,
+            release_name,
             values_file=values_file,
             kubeconfig=kubeconfig,
             token=token,
@@ -332,7 +332,9 @@ def uninstall_release(ctx,
         for n in range(0, len(args_dict[FLAGS_FIELD])):
             if args_dict[FLAGS_FIELD][n].get('name') == 'version':
                 del args_dict[FLAGS_FIELD][n]
+    release_name = get_release_name(args_dict)
     helm.uninstall(
+        release_name,
         kubeconfig=kubeconfig,
         token=token,
         apiserver=host,
@@ -379,7 +381,7 @@ def upgrade_release(ctx,
     )
     release_name = get_release_name(args_dict)
     output = helm.upgrade(
-        release_name=release_name,
+        release_name,
         values_file=values_file,
         kubeconfig=kubeconfig,
         token=token,
@@ -451,15 +453,6 @@ def check_release_status(ctx,
             'Unexpected Helm Status. Expected "deployed", '
             'received: {}'.format(helm_state['info']['status']))
 
-    helm_list_output = helm.list(release_name,
-                                 kubeconfig=kubeconfig,
-                                 token=token,
-                                 apiserver=host,
-                                 additional_env=env_vars,
-                                 ca_file=ca_file
-                                 )
-    ctx.instance.runtime_properties['helm_list'] = helm_list_output
-
 
 @operation
 @decorators.with_connection_details
@@ -491,20 +484,15 @@ def check_release_drift(ctx,
     ctx.logger.debug(
         "Checking if used local packaged chart file, If local file used and "
         "the command failed check file access permissions.")
-    previous = get_resource_config(force=False)
-    current = ctx.node.properties.get(
-        RESOURCE_CONFIG, {})
-    if current != previous:
-        return DeepDiff(previous, current)
     resource_config = get_resource_config()
     args_dict = prepare_args(
         resource_config,
         flags,
         ctx.node.properties.get('max_sleep_time')
     )
+    release_name = get_release_name(args_dict)
     helm_state = helm.status(
-        release_name=ctx.node.properties.get(
-            RESOURCE_CONFIG, {}).get(NAME_FIELD),
+        release_name=release_name,
         values_file=values_file,
         kubeconfig=kubeconfig,
         token=token,

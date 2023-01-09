@@ -1,5 +1,5 @@
 ########
-# Copyright (c) 2019 Cloudify Platform Ltd. All rights reserved
+# Copyright (c) 2019 - 2023 Cloudify Platform Ltd. All rights reserved
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -333,7 +333,7 @@ class TestTasks(TestBase):
         current_ctx.set(ctx)
         install_release(**kwargs)
         fake_install.assert_called_once_with(
-            release_name='my_release',
+            'my_release',
             chart=properties[RESOURCE_CONFIG]['chart'],
             flags=[],
             set_values=properties[RESOURCE_CONFIG]["set_values"],
@@ -373,7 +373,7 @@ class TestTasks(TestBase):
         current_ctx.set(ctx)
         install_release(**kwargs)
         fake_install.assert_called_once_with(
-            release_name=properties[RESOURCE_CONFIG]["name"],
+            properties[RESOURCE_CONFIG]["name"],
             chart=properties[RESOURCE_CONFIG]["chart"],
             flags=[],
             set_values=properties[RESOURCE_CONFIG]["set_values"],
@@ -481,7 +481,7 @@ class TestTasks(TestBase):
         }
         upgrade_release(**kwargs)
         fake_upgrade.assert_called_once_with(
-            release_name='my_release',
+            'my_release',
             chart='my_chart',
             flags=[],
             set_values=[{"name": "x", "value": "y"}],
