@@ -1,5 +1,5 @@
 ########
-# Copyright (c) 2019 Cloudify Platform Ltd. All rights reserved
+# Copyright (c) 2019 - 2023 Cloudify Platform Ltd. All rights reserved
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,7 +14,6 @@
 #    * limitations under the License.
 
 import os
-import re
 from deepdiff import DeepDiff
 
 from urllib.parse import urlparse
@@ -34,14 +33,11 @@ from .utils import (
     get_release_name,
     is_using_existing,
     get_resource_config,
+    convert_string_to_dict,
     get_helm_executable_path,
     use_existing_repo_on_helm,
     create_temporary_env_of_helm,
-    delete_temporary_env_of_helm,
-    v1_equal_v2,
-    v1_bigger_v2,
-    get_repo_resource_config,
-    convert_string_to_dict)
+    delete_temporary_env_of_helm)
 from .constants import (
     NAME_FIELD,
     FLAGS_FIELD,
@@ -476,6 +472,7 @@ def check_release_drift(ctx,
                         kubeconfig=None,
                         values_file=None,
                         token=None,
+                        flags=None,
                         env_vars=None,
                         ca_file=None,
                         host=None,
@@ -530,4 +527,3 @@ def get_status(ctx_instance, helm_status):
 def get_diff(ctx_instance, kube_status):
     return DeepDiff(
         ctx_instance.runtime_properties['kubernetes_status'], kube_status)
-

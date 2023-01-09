@@ -387,7 +387,6 @@ class TestTasks(TestBase):
             additional_env=None,
             additional_args={'max_sleep_time': 300})
 
-
     @mock.patch('cloudify_helm.utils.get_stored_property')
     def test_install_release_general(self, get_stored_property):
         properties = self.mock_install_release_properties()
@@ -451,7 +450,6 @@ class TestTasks(TestBase):
                             return_value=True):
                 uninstall_release(**kwargs)
                 fake_uninstall.assert_called_once()
-
 
     @mock.patch('cloudify_helm.decorators.Kubernetes')
     @mock.patch('helm_sdk.Helm.execute')

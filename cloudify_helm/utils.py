@@ -544,6 +544,7 @@ def get_release_name(args_dict):
             'The parameters "name" or "release_name" was not provided.')
     return release_name
 
+
 def v1_equal_v2(v1, v2):
     return version.parse(str(v1)) == version.parse(str(v2))
 
