@@ -15,6 +15,7 @@
 
 import unittest
 
+from cloudify.state import current_ctx
 from cloudify.mocks import MockCloudifyContext
 
 
@@ -38,4 +39,5 @@ class TestBase(unittest.TestCase):
             properties=test_properties,
             runtime_properties=test_runtime_properties,
         )
+        current_ctx.set(ctx)
         return ctx

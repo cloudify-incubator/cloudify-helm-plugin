@@ -29,16 +29,12 @@ from cloudify_common_sdk.resource_downloader import (unzip_archive,
                                                      untar_archive,
                                                      TAR_FILE_EXTENSTIONS)
 
-from cloudify_common_sdk.utils import get_ctx_instance, get_deployment_dir
+from cloudify_common_sdk.utils import get_deployment_dir
 from cloudify_common_sdk.secure_property_management import get_stored_property
 
 from helm_sdk import Helm
 from helm_sdk.utils import run_subprocess
-from .configuration import KubeConfigConfigurationVariants
-from .authentication import KubernetesApiAuthenticationVariants
 from .constants import (
-    HOST,
-    API_KEY,
     API_OPTIONS,
     HELM_CONFIG,
     SSL_CA_CERT,
@@ -129,27 +125,6 @@ def is_using_existing(ctx):
 
 
 @contextmanager
-def get_kubeconfig_file(ctx):
-    """
-    This is contextmanager that responsible to handle kubeconfig file
-    resource.
-    :return Path of temporary file with kubeconfig, otherwise None.
-    """
-    configuration_property = ctx.node.properties.get(CLIENT_CONFIG, {}).get(
-        CONFIGURATION, {})
-
-    kubeconfig_file = KubeConfigConfigurationVariants(
-        ctx.logger,
-        configuration_property,
-        download_resource=ctx.download_resource).get_kubeconfig()
-    try:
-        yield kubeconfig_file
-    finally:
-        if kubeconfig_file is not None:
-            os.remove(kubeconfig_file)
-
-
-@contextmanager
 def get_values_file(ctx, ignore_properties_values_file, values_file=None):
 
     if ignore_properties_values_file:
@@ -223,32 +198,6 @@ def get_ssl_ca_file(ca_from_shared_cluster=None):
     else:
         ctx.logger.info('CA file not found.')
         yield
-
-
-def get_cluster_node_instance_from_rels(rels, rel_type=None, node_type=None):
-
-    rel_type = rel_type or CLUSTER_REL
-    node_type = node_type or CLUSTER_TYPE
-    for x in rels:
-        if rel_type in x.type_hierarchy and \
-                node_type in x.target.node.type_hierarchy:
-            return x
-
-
-def get_connection_details_from_shared_cluster(props):
-    node_instance = get_ctx_instance(ctx)
-    x = get_cluster_node_instance_from_rels(node_instance.relationships)
-    if not x:
-        return props.get(CLIENT_CONFIG, {}).get(CONFIGURATION, {}).get(
-            API_OPTIONS, {}).get(HOST),\
-               props.get(CLIENT_CONFIG, {}).get(CONFIGURATION, {}).get(
-                   API_OPTIONS, {}).get('api_key'),\
-               props.get(CLIENT_CONFIG, {}).get(CONFIGURATION, {}).get(
-                   API_OPTIONS, {}).get('ssl_ca_cert')
-    endpoint = x.target.instance.runtime_properties['k8s-ip']
-    token = x.target.instance.runtime_properties['k8s-service-account-token']
-    ssl_ca_cert = x.target.instance.runtime_properties['k8s-cacert']
-    return endpoint, token, ssl_ca_cert
 
 
 def check_if_resource_inside_blueprint_folder(path):
@@ -379,18 +328,6 @@ def delete_temporary_env_of_helm(ctx):
             ctx.logger.info(
                 'Directory {dir} doesn\'t exist,skipping'.format(
                     dir=dir_to_delete))
-
-
-def get_auth_token(ctx, token_from_shared_cluster):
-    authentication_property = ctx.node.properties.get(CLIENT_CONFIG, {}).get(
-        AUTHENTICATION, {})
-    token = token_from_shared_cluster or KubernetesApiAuthenticationVariants(
-        ctx.logger,
-        authentication_property,
-    ).get_token()
-    # If the user specify token so its in higher priority.
-    return ctx.node.properties.get(CLIENT_CONFIG, {}).get(
-        CONFIGURATION, {}).get(API_OPTIONS, {}).get(API_KEY) or token
 
 
 def prepare_aws_env(kubeconfig):

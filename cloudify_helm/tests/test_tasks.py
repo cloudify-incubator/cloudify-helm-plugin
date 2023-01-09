@@ -34,7 +34,6 @@ from ..tasks import (
     uninstall_release)
 from ..constants import (
     HOST,
-    API_KEY,
     API_OPTIONS,
     HELM_CONFIG,
     CONFIGURATION,
@@ -312,6 +311,8 @@ class TestTasks(TestBase):
                     additional_args={'max_sleep_time': 300})
 
     @mock.patch('cloudify_helm.decorators.Kubernetes')
+    @mock.patch(
+        'cloudify_kubernetes_sdk.connection.decorators.get_kubeconfig_file')
     @mock.patch('helm_sdk.Helm.execute')
     @mock.patch('helm_sdk.Helm.install')
     @mock.patch('cloudify_helm.utils.os.path.isfile')
@@ -323,6 +324,7 @@ class TestTasks(TestBase):
                                os_path_isfile,
                                fake_install,
                                mock_execute,
+                               kube_config,
                                *_):
         mock_execute.return_value = json.dumps(mock_install_response)
         os_path_exists.return_value = True
@@ -338,9 +340,8 @@ class TestTasks(TestBase):
             flags=[],
             set_values=properties[RESOURCE_CONFIG]["set_values"],
             values_file=None,
-            kubeconfig=None,
-            token=properties[CLIENT_CONFIG][CONFIGURATION][API_OPTIONS]
-            [API_KEY],
+            kubeconfig=kube_config(),
+            token='abcd',
             apiserver=properties[CLIENT_CONFIG][CONFIGURATION]
             [API_OPTIONS][HOST],
             ca_file=None,
@@ -348,6 +349,8 @@ class TestTasks(TestBase):
             additional_args={'max_sleep_time': 300})
 
     @mock.patch('cloudify_helm.decorators.Kubernetes')
+    @mock.patch(
+        'cloudify_kubernetes_sdk.connection.decorators.get_kubeconfig_file')
     @mock.patch('helm_sdk.Helm.execute')
     @mock.patch('helm_sdk.Helm.install')
     @mock.patch('cloudify_helm.utils.os.path.isfile')
@@ -359,6 +362,7 @@ class TestTasks(TestBase):
                              os_path_isfile,
                              fake_install,
                              mock_execute,
+                             kube_config,
                              *_):
         mock_execute.return_value = json.dumps(mock_install_response)
         os_path_exists.return_value = True
@@ -378,9 +382,8 @@ class TestTasks(TestBase):
             flags=[],
             set_values=properties[RESOURCE_CONFIG]["set_values"],
             values_file=None,
-            kubeconfig=None,
-            token=properties[CLIENT_CONFIG][CONFIGURATION][API_OPTIONS]
-            [API_KEY],
+            kubeconfig=kube_config(),
+            token='abcd',
             apiserver=properties[CLIENT_CONFIG][CONFIGURATION]
             [API_OPTIONS][HOST],
             ca_file=None,
@@ -452,6 +455,8 @@ class TestTasks(TestBase):
                 fake_uninstall.assert_called_once()
 
     @mock.patch('cloudify_helm.decorators.Kubernetes')
+    @mock.patch(
+        'cloudify_kubernetes_sdk.connection.decorators.get_kubeconfig_file')
     @mock.patch('helm_sdk.Helm.execute')
     @mock.patch('helm_sdk.Helm.upgrade')
     @mock.patch('cloudify_helm.utils.os.path.isfile')
@@ -463,6 +468,7 @@ class TestTasks(TestBase):
                              os_path_isfile,
                              fake_upgrade,
                              mock_execute,
+                             mock_kube,
                              *_):
         mock_execute.return_value = json.dumps(mock_install_response)
         os_path_exists.return_value = True
@@ -486,9 +492,8 @@ class TestTasks(TestBase):
             flags=[],
             set_values=[{"name": "x", "value": "y"}],
             values_file='upgrade/path/to/values/file',
-            kubeconfig=None,
-            token=properties[CLIENT_CONFIG][CONFIGURATION]
-            [API_OPTIONS][API_KEY],
+            kubeconfig=mock_kube(),
+            token='abcd',
             apiserver=properties[CLIENT_CONFIG][CONFIGURATION]
             [API_OPTIONS][HOST],
             ca_file=None,
