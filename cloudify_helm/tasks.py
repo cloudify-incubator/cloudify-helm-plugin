@@ -14,6 +14,7 @@
 #    * limitations under the License.
 
 import os
+import re
 from deepdiff import DeepDiff
 
 from urllib.parse import urlparse
@@ -36,7 +37,11 @@ from .utils import (
     get_helm_executable_path,
     use_existing_repo_on_helm,
     create_temporary_env_of_helm,
-    delete_temporary_env_of_helm)
+    delete_temporary_env_of_helm,
+    v1_equal_v2,
+    v1_bigger_v2,
+    get_repo_resource_config,
+    convert_string_to_dict)
 from .constants import (
     NAME_FIELD,
     FLAGS_FIELD,
@@ -165,6 +170,26 @@ def add_repo(ctx, helm, **kwargs):
     ctx.instance.runtime_properties['list_output'] = output
 
 
+def show_chart(helm, release_name, repo_url):
+    """
+    Execute helm show chart CHART_NAME --repo REPO_URL
+    :param helm:
+    :param release_name:
+    :param repo_url:
+    :return:
+    show the chart's definition in type string.
+    For example:
+    apiVersion: xx
+    appVersion: x.x.x
+    description: xxx
+    name: helm-chart-name
+    type: application
+    version: x.x.x
+    """
+    output = helm.show_chart(release_name, repo_url)
+    return convert_string_to_dict(output)
+
+
 @operation
 @with_helm()
 def repo_list(ctx, helm, **kwargs):
@@ -179,6 +204,7 @@ def repo_check_drift(ctx, helm, **kwargs):
     ctx.logger.info(
         'If you ran check status before check drift, the status is going to '
         'match the current status and no drift could be detected.')
+
     output = helm.repo_list()
     if 'list_output' not in ctx.instance.runtime_properties:
         ctx.instance.runtime_properties['list_output'] = output
@@ -412,9 +438,9 @@ def check_release_status(ctx,
         flags,
         ctx.node.properties.get('max_sleep_time')
     )
+    release_name = get_release_name(args_dict)
     helm_state = helm.status(
-        release_name=ctx.node.properties.get(
-            RESOURCE_CONFIG, {}).get(NAME_FIELD),
+        release_name=release_name,
         values_file=values_file,
         kubeconfig=kubeconfig,
         token=token,
@@ -429,6 +455,15 @@ def check_release_status(ctx,
             'Unexpected Helm Status. Expected "deployed", '
             'received: {}'.format(helm_state['info']['status']))
 
+    helm_list_output = helm.list(release_name,
+                                 kubeconfig=kubeconfig,
+                                 token=token,
+                                 apiserver=host,
+                                 additional_env=env_vars,
+                                 ca_file=ca_file
+                                 )
+    ctx.instance.runtime_properties['helm_list'] = helm_list_output
+
 
 @operation
 @decorators.with_connection_details
@@ -441,13 +476,12 @@ def check_release_drift(ctx,
                         kubeconfig=None,
                         values_file=None,
                         token=None,
-                        flags=None,
                         env_vars=None,
                         ca_file=None,
                         host=None,
                         **_):
     """
-    Execute helm status.
+    Execute helm release Drift.
     :param ctx: cloudify context.
     :param helm: helm client object.
     :param kubernetes: kubernetes client object.
@@ -496,3 +530,4 @@ def get_status(ctx_instance, helm_status):
 def get_diff(ctx_instance, kube_status):
     return DeepDiff(
         ctx_instance.runtime_properties['kubernetes_status'], kube_status)
+

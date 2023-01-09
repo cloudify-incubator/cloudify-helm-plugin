@@ -27,8 +27,8 @@
   - RD-5289-check-version-for-using-with-flag-wait for uninstall function
 0.3.0:
   - RD-3678 - shared cluster relationship.
-0.3.1:
+0.4.0:
   - RD-6054 - support check status command.
   - RD-5554 If JSON Decode Fails pass exception.
-0.3.2:
+  - RD-6055-helm-check-drift (repo_check_drift AND check_release_drift)
   - RD-6057 Deployment Update
