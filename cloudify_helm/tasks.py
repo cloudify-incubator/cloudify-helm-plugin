@@ -1,5 +1,5 @@
 ########
-# Copyright (c) 2019 Cloudify Platform Ltd. All rights reserved
+# Copyright (c) 2019 - 2023 Cloudify Platform Ltd. All rights reserved
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -20,27 +20,28 @@ from urllib.parse import urlparse
 from contextlib import contextmanager
 
 from cloudify_common_sdk.utils import get_deployment_dir
+from cloudify_kubernetes_sdk.connection import decorators
 
 from cloudify.decorators import operation
 from cloudify.exceptions import NonRecoverableError
 
-from .decorators import with_helm, prepare_aws
+from .decorators import (with_helm, with_kubernetes, prepare_aws)
 from .utils import (
     get_binary,
     copy_binary,
     helm_from_ctx,
+    get_release_name,
     is_using_existing,
     get_resource_config,
+    convert_string_to_dict,
     get_helm_executable_path,
     use_existing_repo_on_helm,
     create_temporary_env_of_helm,
     delete_temporary_env_of_helm)
 from .constants import (
-    NAME_FIELD,
     FLAGS_FIELD,
     VALUES_FILE,
     HELM_CONFIG,
-    RESOURCE_CONFIG,
     EXECUTABLE_PATH,
     HELM_ENV_VARS_LIST,
     USE_EXTERNAL_RESOURCE)
@@ -80,19 +81,29 @@ def install_binary(ctx, **_):
 
 @operation
 def uninstall_binary(ctx, **_):
-    executable_path = get_helm_executable_path(ctx.node.properties,
-                                               ctx.instance.runtime_properties)
-
+    executable_path = get_helm_executable_path(
+        ctx.node.properties, ctx.instance.runtime_properties)
     if os.path.isfile(executable_path) and not is_using_existing(ctx):
         ctx.logger.info("Removing executable: {0}".format(executable_path))
         os.remove(executable_path)
     delete_temporary_env_of_helm(ctx)
 
 
+@operation
+def check_status_binary(ctx, **_):
+    executable_path = get_helm_executable_path(
+        ctx.node.properties, ctx.instance.runtime_properties)
+    if os.path.isfile(executable_path):
+        return
+    raise RuntimeError('The executable file {} is missing.'.format(
+        executable_path))
+
+
 def prepare_args(resource_config, flags=None, max_sleep_time=None):
     """
     Prepare arguments dictionary to helm  sdk function(like:helm.install,
     helm.repo_add).
+    :resource_config dict: node props.
     :param ctx: cloudify context.
     :param flags: flags that user passed - unique for install operation.
     :return arguments dictionary for helm.install function
@@ -115,46 +126,6 @@ def prepare_args(resource_config, flags=None, max_sleep_time=None):
         }
         args_dict['additional_args'] = additional_args
     return args_dict
-
-
-@operation
-@with_helm()
-@prepare_aws
-def install_release(ctx,
-                    helm,
-                    kubeconfig=None,
-                    values_file=None,
-                    token=None,
-                    env_vars=None,
-                    ca_file=None,
-                    host=None,
-                    **kwargs):
-    """
-    Execute helm install.
-    :param ctx: cloudify context.
-    :param helm: helm client object.
-    :param kubeconfig: kubeconfig path
-    :param values_file: values file path
-    :return output of `helm install` command
-    """
-    resource_config = get_resource_config()
-    args_dict = prepare_args(
-        resource_config,
-        kwargs.get(FLAGS_FIELD),
-        ctx.node.properties.get('max_sleep_time')
-    )
-    url = urlparse(args_dict.get('chart', None))
-
-    with install_target(ctx, url, args_dict) as args_dict:
-        output = helm.install(
-            values_file=values_file,
-            kubeconfig=kubeconfig,
-            token=token,
-            apiserver=host,
-            additional_env=env_vars,
-            ca_file=ca_file,
-            **args_dict)
-        ctx.instance.runtime_properties['install_output'] = output
 
 
 @contextmanager
@@ -181,36 +152,6 @@ def install_target(ctx, url, args_dict):
 
 @operation
 @with_helm()
-@prepare_aws
-def uninstall_release(ctx,
-                      helm,
-                      kubeconfig=None,
-                      token=None,
-                      env_vars=None,
-                      ca_file=None,
-                      host=None,
-                      **kwargs):
-    resource_config = get_resource_config()
-    args_dict = prepare_args(
-        resource_config,
-        kwargs.get(FLAGS_FIELD),
-        ctx.node.properties.get('max_sleep_time')
-    )
-    if FLAGS_FIELD in args_dict:
-        for n in range(0, len(args_dict[FLAGS_FIELD])):
-            if args_dict[FLAGS_FIELD][n].get('name') == 'version':
-                del args_dict[FLAGS_FIELD][n]
-    helm.uninstall(
-        kubeconfig=kubeconfig,
-        token=token,
-        apiserver=host,
-        additional_env=env_vars,
-        ca_file=ca_file,
-        **args_dict)
-
-
-@operation
-@with_helm()
 def add_repo(ctx, helm, **kwargs):
     if not use_existing_repo_on_helm(ctx, helm):
         resource_config = get_resource_config()
@@ -220,13 +161,36 @@ def add_repo(ctx, helm, **kwargs):
             ctx.node.properties.get('max_sleep_time')
         )
         helm.repo_add(**args_dict)
+    output = helm.repo_list()
+    ctx.instance.runtime_properties['list_output'] = output
+
+
+def show_chart(helm, release_name, repo_url):
+    """
+    Execute helm show chart CHART_NAME --repo REPO_URL
+    :param helm:
+    :param release_name:
+    :param repo_url:
+    :return:
+    show the chart's definition in type string.
+    For example:
+    apiVersion: xx
+    appVersion: x.x.x
+    description: xxx
+    name: helm-chart-name
+    type: application
+    version: x.x.x
+    """
+    output = helm.show_chart(release_name, repo_url)
+    return convert_string_to_dict(output)
 
 
 @operation
 @with_helm()
 def repo_list(ctx, helm, **kwargs):
     output = helm.repo_list()
-    ctx.instance.runtime_properties['list_output'] = output
+    if output != ctx.instance.runtime_properties['list_output']:
+        raise RuntimeError('The repo list has changed: {}'.format(output))
 
 
 @operation
@@ -235,12 +199,13 @@ def repo_check_drift(ctx, helm, **kwargs):
     ctx.logger.info(
         'If you ran check status before check drift, the status is going to '
         'match the current status and no drift could be detected.')
+
     output = helm.repo_list()
     if 'list_output' not in ctx.instance.runtime_properties:
         ctx.instance.runtime_properties['list_output'] = output
-        return DeepDiff(output, output)
-    else:
-        return DeepDiff(ctx.instance.runtime_properties['list_output'], output)
+    diff = DeepDiff(ctx.instance.runtime_properties['list_output'], output)
+    if diff:
+        raise RuntimeError('The resource has drifted: {}'.format(diff))
 
 
 @operation
@@ -272,23 +237,128 @@ def inject_env_properties(ctx, **_):
 def update_repo(ctx, **kwargs):
     helm = helm_from_ctx(ctx)
     helm.repo_update(flags=kwargs.get(FLAGS_FIELD))
+    ctx.instance.runtime_properties['repo_list'] = helm.repo_list()
 
 
 @operation
-@with_helm(ignore_properties_values_file=True)
+@decorators.with_connection_details
+@with_helm()
+@with_kubernetes
 @prepare_aws
-def upgrade_release(ctx,
+def install_release(ctx,
                     helm,
-                    chart='',
+                    kubernetes,
                     kubeconfig=None,
                     values_file=None,
-                    set_values=None,
                     token=None,
-                    flags=None,
                     env_vars=None,
                     ca_file=None,
                     host=None,
-                    **_):
+                    **kwargs):
+    """
+    Execute helm install.
+    :param ctx: cloudify context.
+    :param helm: helm client object.
+    :param kubernetes: kubernetes client object.
+    :param kubeconfig: kubeconfig path
+    :param values_file: values file path
+    :return output of `helm install` command
+    """
+    resource_config = get_resource_config()
+    args_dict = prepare_args(
+        resource_config,
+        kwargs.get(FLAGS_FIELD),
+        ctx.node.properties.get('max_sleep_time')
+    )
+    url = urlparse(args_dict.get('chart', None))
+    release_name = get_release_name(args_dict)
+
+    with install_target(ctx, url, args_dict) as args_dict:
+        if ctx.workflow_id == 'update':
+            output = helm.upgrade(
+                release_name,
+                values_file=values_file,
+                kubeconfig=kubeconfig,
+                token=token,
+                apiserver=host,
+                additional_env=env_vars,
+                ca_file=ca_file,
+                **args_dict)
+        else:
+            output = helm.install(
+                release_name,
+                values_file=values_file,
+                kubeconfig=kubeconfig,
+                token=token,
+                apiserver=host,
+                additional_env=env_vars,
+                ca_file=ca_file,
+                **args_dict)
+        ctx.instance.runtime_properties['install_output'] = output
+        helm_state = helm.status(
+            release_name,
+            values_file=values_file,
+            kubeconfig=kubeconfig,
+            token=token,
+            apiserver=host,
+            additional_env=env_vars,
+            ca_file=ca_file,
+            **args_dict,
+        )
+        ctx.instance.runtime_properties['status_output'] = helm_state
+        k8s_state = kubernetes.multiple_resource_status(helm_state)
+        ctx.instance.runtime_properties['kubernetes_status'] = k8s_state
+
+
+@operation
+@decorators.with_connection_details
+@with_helm()
+@prepare_aws
+def uninstall_release(ctx,
+                      helm,
+                      kubeconfig=None,
+                      token=None,
+                      env_vars=None,
+                      ca_file=None,
+                      host=None,
+                      **kwargs):
+    resource_config = get_resource_config()
+    args_dict = prepare_args(
+        resource_config,
+        kwargs.get(FLAGS_FIELD),
+        ctx.node.properties.get('max_sleep_time')
+    )
+    if FLAGS_FIELD in args_dict:
+        for n in range(0, len(args_dict[FLAGS_FIELD])):
+            if args_dict[FLAGS_FIELD][n].get('name') == 'version':
+                del args_dict[FLAGS_FIELD][n]
+    release_name = get_release_name(args_dict)
+    helm.uninstall(
+        release_name,
+        kubeconfig=kubeconfig,
+        token=token,
+        apiserver=host,
+        additional_env=env_vars,
+        ca_file=ca_file,
+        **args_dict)
+
+
+@operation
+@decorators.with_connection_details
+@with_helm(ignore_properties_values_file=True)
+@with_kubernetes
+@prepare_aws
+def upgrade_release(ctx,
+                    helm,
+                    kubernetes,
+                    chart='',
+                    kubeconfig=None,
+                    values_file=None,
+                    token=None,
+                    env_vars=None,
+                    ca_file=None,
+                    host=None,
+                    **kwargs):
     """
     Execute helm upgrade.
     :param ctx: cloudify context.
@@ -304,28 +374,46 @@ def upgrade_release(ctx,
     if os.path.isfile(chart):
         ctx.logger.info("Local chart file: {path} found.".format(path=chart))
     resource_config = get_resource_config()
+    args_dict = prepare_args(
+        resource_config,
+        kwargs.get(FLAGS_FIELD),
+        ctx.node.properties.get('max_sleep_time')
+    )
+    release_name = get_release_name(args_dict)
     output = helm.upgrade(
-        release_name=resource_config.get(NAME_FIELD),
-        chart=chart,
-        flags=flags,
-        set_values=set_values,
+        release_name,
         values_file=values_file,
         kubeconfig=kubeconfig,
         token=token,
         apiserver=host,
         additional_env=env_vars,
         ca_file=ca_file,
+        **args_dict,
     )
     ctx.instance.runtime_properties['install_output'] = output
+    helm_state = helm.status(
+        release_name=release_name,
+        values_file=values_file,
+        kubeconfig=kubeconfig,
+        token=token,
+        apiserver=host,
+        additional_env=env_vars,
+        ca_file=ca_file,
+        **args_dict,
+    )
+    ctx.instance.runtime_properties['status_output'] = helm_state
+    k8s_state = kubernetes.multiple_resource_status(helm_state)
+    ctx.instance.runtime_properties['kubernetes_status'] = k8s_state
 
 
 @operation
+@decorators.with_connection_details
 @with_helm(ignore_properties_values_file=True)
 @prepare_aws
 def check_release_status(ctx,
                          helm,
                          kubeconfig=None,
-                         set_values=None,
+                         values_file=None,
                          token=None,
                          flags=None,
                          env_vars=None,
@@ -342,27 +430,40 @@ def check_release_status(ctx,
     ctx.logger.debug(
         "Checking if used local packaged chart file, If local file used and "
         "the command failed check file access permissions.")
-    output = helm.status(
-        release_name=ctx.node.properties.get(
-            RESOURCE_CONFIG, {}).get(NAME_FIELD),
-        flags=flags,
-        set_values=set_values,
+    resource_config = get_resource_config()
+    args_dict = prepare_args(
+        resource_config,
+        flags,
+        ctx.node.properties.get('max_sleep_time')
+    )
+    release_name = get_release_name(args_dict)
+    helm_state = helm.status(
+        release_name=release_name,
+        values_file=values_file,
         kubeconfig=kubeconfig,
         token=token,
         apiserver=host,
         additional_env=env_vars,
         ca_file=ca_file,
+        **args_dict,
     )
-    ctx.instance.runtime_properties['status_output'] = output
+    get_status(ctx.instance, helm_state)
+    if not 'deployed' == helm_state['info']['status']:
+        raise RuntimeError(
+            'Unexpected Helm Status. Expected "deployed", '
+            'received: {}'.format(helm_state['info']['status']))
 
 
 @operation
+@decorators.with_connection_details
 @with_helm(ignore_properties_values_file=True)
+@with_kubernetes
 @prepare_aws
 def check_release_drift(ctx,
                         helm,
+                        kubernetes,
                         kubeconfig=None,
-                        set_values=None,
+                        values_file=None,
                         token=None,
                         flags=None,
                         env_vars=None,
@@ -370,9 +471,10 @@ def check_release_drift(ctx,
                         host=None,
                         **_):
     """
-    Execute helm status.
+    Execute helm release Drift.
     :param ctx: cloudify context.
     :param helm: helm client object.
+    :param kubernetes: kubernetes client object.
     :param kubeconfig: kubeconfig path.
     :return output of `helm upgrade` command
     """
@@ -382,20 +484,34 @@ def check_release_drift(ctx,
     ctx.logger.debug(
         "Checking if used local packaged chart file, If local file used and "
         "the command failed check file access permissions.")
-    output = helm.status(
-        release_name=ctx.node.properties.get(
-            RESOURCE_CONFIG, {}).get(NAME_FIELD),
-        flags=flags,
-        set_values=set_values,
+    resource_config = get_resource_config()
+    args_dict = prepare_args(
+        resource_config,
+        flags,
+        ctx.node.properties.get('max_sleep_time')
+    )
+    release_name = get_release_name(args_dict)
+    helm_state = helm.status(
+        release_name=release_name,
+        values_file=values_file,
         kubeconfig=kubeconfig,
         token=token,
         apiserver=host,
         additional_env=env_vars,
         ca_file=ca_file,
+        **args_dict,
     )
-    if 'status_output' not in ctx.instance.runtime_properties:
-        ctx.instance.runtime_properties['status_output'] = output
-        return DeepDiff(output, output)
-    else:
-        return DeepDiff(ctx.instance.runtime_properties['status_output'],
-                        output)
+    diff = get_diff(ctx.instance,
+                    kubernetes.multiple_resource_status(helm_state))
+    if diff:
+        raise RuntimeError('Unexpected drift: {}'.format(diff))
+
+
+def get_status(ctx_instance, helm_status):
+    return DeepDiff(
+        ctx_instance.runtime_properties['status_output'], helm_status)
+
+
+def get_diff(ctx_instance, kube_status):
+    return DeepDiff(
+        ctx_instance.runtime_properties['kubernetes_status'], kube_status)

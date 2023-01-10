@@ -1,5 +1,4 @@
-########
-# Copyright (c) 2019 Cloudify Platform Ltd. All rights reserved
+# Copyright (c) 2019 - 2023 Cloudify Platform Ltd. All rights reserved
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -9,9 +8,10 @@
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
-#    * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#    * See the License for the specific language governing permissions and
-#    * limitations under the License.
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
 
 import sys
 from functools import wraps
@@ -20,14 +20,28 @@ from cloudify.exceptions import NonRecoverableError
 from cloudify.utils import exception_to_error_cause
 
 from helm_sdk._compat import text_type
+from helm_sdk.kubernetes import Kubernetes
+
 from .utils import (
     helm_from_ctx,
-    get_auth_token,
     get_values_file,
-    prepare_aws_env,
-    get_ssl_ca_file,
-    get_kubeconfig_file,
-    get_connection_details_from_shared_cluster)
+    prepare_aws_env)
+
+
+def with_kubernetes(fn):
+    def wrapper(**kwargs):
+        kwargs.update(
+            {
+                'kubernetes': Kubernetes(
+                    kwargs['ctx'].logger,
+                    kwargs.get('host'),
+                    kwargs.get('token'),
+                    kwargs.get('kubeconfig')
+                )
+            }
+        )
+        fn(**kwargs)
+    return wrapper
 
 
 def with_helm(ignore_properties_values_file=False):
@@ -44,33 +58,20 @@ def with_helm(ignore_properties_values_file=False):
         @wraps(func)
         def f(*args, **kwargs):
             ctx = kwargs['ctx']
-            endpoint_from_shared_cluster, \
-                token_from_shared_cluster, \
-                ssl_ca_cert_from_shared_cluster = \
-                get_connection_details_from_shared_cluster(
-                    ctx.node.properties)
-            with get_kubeconfig_file(ctx) as kubeconfig:
-                with get_values_file(
-                        ctx,
-                        ignore_properties_values_file,
-                        kwargs.get('values_file')) as values_file:
-                    with get_ssl_ca_file(ssl_ca_cert_from_shared_cluster) as \
-                            ssl_ca:
-                        helm = helm_from_ctx(ctx)
-                        kwargs['helm'] = helm
-                        kwargs['kubeconfig'] = kubeconfig
-                        kwargs['values_file'] = values_file
-                        kwargs['token'] = get_auth_token(
-                            ctx, token_from_shared_cluster)
-                        kwargs['ca_file'] = ssl_ca
-                        kwargs['host'] = endpoint_from_shared_cluster
-                        try:
-                            return func(*args, **kwargs)
-                        except Exception as e:
-                            _, _, tb = sys.exc_info()
-                            raise NonRecoverableError(
-                                '{0}'.format(text_type(e)),
-                                causes=[exception_to_error_cause(e, tb)])
+            with get_values_file(
+                    ctx,
+                    ignore_properties_values_file,
+                    kwargs.get('values_file')) as values_file:
+                helm = helm_from_ctx(ctx)
+                kwargs['helm'] = helm
+                kwargs['values_file'] = values_file
+                try:
+                    return func(*args, **kwargs)
+                except Exception as e:
+                    _, _, tb = sys.exc_info()
+                    raise NonRecoverableError(
+                        '{0}'.format(text_type(e)),
+                        causes=[exception_to_error_cause(e, tb)])
         return f
 
     return decorator
@@ -85,7 +86,8 @@ def prepare_aws(func):
     @wraps(func)
     def f(*args, **kwargs):
         kubeconfig = kwargs.get('kubeconfig')
-        kwargs['env_vars'] = prepare_aws_env(kubeconfig)
+        if isinstance(kubeconfig, (dict, str)):
+            kwargs['env_vars'] = prepare_aws_env(kubeconfig)
         try:
             return func(*args, **kwargs)
         except Exception as e:

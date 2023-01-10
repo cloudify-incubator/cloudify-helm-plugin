@@ -45,7 +45,7 @@ setup(
     install_requires=[
         "cloudify-common>=4.5.5",
         'deepdiff==3.3.0',
-        "cloudify-utilities-plugins-sdk>=0.0.82",
+        "cloudify-utilities-plugins-sdk>=0.0.98",
         'oauth2client'  # used in GCPServiceAccountAuthentication
     ],
     test_requires=[

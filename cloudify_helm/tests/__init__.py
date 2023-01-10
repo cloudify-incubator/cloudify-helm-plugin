@@ -1,5 +1,5 @@
 ########
-# Copyright (c) 2019 Cloudify Platform Ltd. All rights reserved
+# Copyright (c) 2019 - 2023 Cloudify Platform Ltd. All rights reserved
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,6 +15,7 @@
 
 import unittest
 
+from cloudify.state import current_ctx
 from cloudify.mocks import MockCloudifyContext
 
 
@@ -38,4 +39,5 @@ class TestBase(unittest.TestCase):
             properties=test_properties,
             runtime_properties=test_runtime_properties,
         )
+        current_ctx.set(ctx)
         return ctx

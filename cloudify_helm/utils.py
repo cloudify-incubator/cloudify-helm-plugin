@@ -1,5 +1,5 @@
 ########
-# Copyright (c) 2019 Cloudify Platform Ltd. All rights reserved
+# Copyright (c) 2019 - 2023 Cloudify Platform Ltd. All rights reserved
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -19,6 +19,7 @@ import yaml
 import shutil
 import tarfile
 import tempfile
+from packaging import version
 from contextlib import contextmanager
 from subprocess import CalledProcessError
 
@@ -28,16 +29,12 @@ from cloudify_common_sdk.resource_downloader import (unzip_archive,
                                                      untar_archive,
                                                      TAR_FILE_EXTENSTIONS)
 
-from cloudify_common_sdk.utils import get_ctx_instance, get_deployment_dir
+from cloudify_common_sdk.utils import get_deployment_dir
 from cloudify_common_sdk.secure_property_management import get_stored_property
 
 from helm_sdk import Helm
 from helm_sdk.utils import run_subprocess
-from .configuration import KubeConfigConfigurationVariants
-from .authentication import KubernetesApiAuthenticationVariants
 from .constants import (
-    HOST,
-    API_KEY,
     API_OPTIONS,
     HELM_CONFIG,
     SSL_CA_CERT,
@@ -54,6 +51,9 @@ from .constants import (
     HELM_ENV_VARS_LIST,
     AWS_CLI_TO_INSTALL,
     USE_EXTERNAL_RESOURCE)
+
+CLUSTER_TYPE = 'cloudify.kubernetes.resources.SharedCluster'
+CLUSTER_REL = 'cloudify.relationships.helm.connected_to_shared_cluster'
 
 
 def get_resource_config(target=False, force=None):
@@ -85,8 +85,8 @@ def create_source_path(source_tmp_path):
 
 def get_helm_executable_path(properties, runtime_properties):
     # Look for executable path in runtime property or in default place.
-    return runtime_properties.get(EXECUTABLE_PATH, "") or \
-           properties.get(HELM_CONFIG, {}).get(EXECUTABLE_PATH, "")
+    return runtime_properties.get(EXECUTABLE_PATH, '') or \
+           properties.get(HELM_CONFIG, {}).get(EXECUTABLE_PATH, '')
 
 
 def helm_from_ctx(ctx):
@@ -94,8 +94,8 @@ def helm_from_ctx(ctx):
                                                ctx.instance.runtime_properties)
     if not os.path.exists(executable_path):
         raise NonRecoverableError(
-            "Helm's executable not found in {0}. Please set the "
-            "'executable_path' property accordingly.".format(
+            'Helm\'s executable not found in {0}. Please set the '
+            '\'executable_path\' property accordingly.'.format(
                 executable_path))
     env_variables = get_helm_env_vars_dict(ctx)
     helm = Helm(
@@ -108,11 +108,11 @@ def helm_from_ctx(ctx):
 def get_helm_env_vars_dict(ctx):
     env_vars = {}
     for property_name in HELM_ENV_VARS_LIST:
-        env_var_value = ctx.instance.runtime_properties.get(property_name, "")
+        env_var_value = ctx.instance.runtime_properties.get(property_name, '')
         if not env_var_value:
             raise NonRecoverableError(
-                "ctx of node {node_id} must have helm env variables {name}!, "
-                "use run_on_host relationship.".format(
+                'ctx of node {node_id} must have helm env variables {name}!, '
+                'use run_on_host relationship.'.format(
                     node_id=ctx.node.id, name=property_name))
         env_vars[property_name] = ctx.instance.runtime_properties.get(
             property_name)
@@ -125,27 +125,6 @@ def is_using_existing(ctx):
 
 
 @contextmanager
-def get_kubeconfig_file(ctx):
-    """
-    This is contextmanager that responsible to handle kubeconfig file
-    resource.
-    :return Path of temporary file with kubeconfig, otherwise None.
-    """
-    configuration_property = ctx.node.properties.get(CLIENT_CONFIG, {}).get(
-        CONFIGURATION, {})
-
-    kubeconfig_file = KubeConfigConfigurationVariants(
-        ctx.logger,
-        configuration_property,
-        download_resource=ctx.download_resource).get_kubeconfig()
-    try:
-        yield kubeconfig_file
-    finally:
-        if kubeconfig_file is not None:
-            os.remove(kubeconfig_file)
-
-
-@contextmanager
 def get_values_file(ctx, ignore_properties_values_file, values_file=None):
 
     if ignore_properties_values_file:
@@ -154,7 +133,7 @@ def get_values_file(ctx, ignore_properties_values_file, values_file=None):
         resource_config = get_resource_config()
         values_file = resource_config.get('values_file')
 
-    ctx.logger.debug("values file path:{path}".format(path=values_file))
+    ctx.logger.debug('values file path:{path}'.format(path=values_file))
     if values_file and not ignore_properties_values_file:
         # It means we took values file path from resource_config
         with tempfile.NamedTemporaryFile(delete=False, suffix='.yaml') as f:
@@ -163,7 +142,7 @@ def get_values_file(ctx, ignore_properties_values_file, values_file=None):
                 values_file,
                 target_path=f.name)
             try:
-                ctx.logger.info("using values file:{file}".format(file=f.name))
+                ctx.logger.info('using values file:{file}'.format(file=f.name))
                 yield f.name
             finally:
                 os.remove(f.name)
@@ -171,8 +150,8 @@ def get_values_file(ctx, ignore_properties_values_file, values_file=None):
         # It means we have local values file.Check if cfyuser can access it.
         if not os.path.isfile(values_file):
             raise NonRecoverableError(
-                "Used local values file path but Cloudify user can`t locate "
-                "it, please check file permissions.")
+                'Used local values file path but Cloudify user can\'t locate '
+                'it, please check file permissions.')
         yield values_file
     else:
         yield
@@ -194,13 +173,13 @@ def get_ssl_ca_file(ca_from_shared_cluster=None):
                 target_path=f.name)
             try:
                 ctx.logger.info(
-                    "using CA file:{file}".format(file=f.name))
+                    'using CA file:{file}'.format(file=f.name))
                 yield f.name
             finally:
                 os.remove(f.name)
 
     elif current_value and os.path.isfile(current_value):
-        ctx.logger.info("using CA file located at: {path}".format(
+        ctx.logger.info('using CA file located at: {path}'.format(
             path=current_value))
         yield current_value
 
@@ -212,41 +191,13 @@ def get_ssl_ca_file(ca_from_shared_cluster=None):
         f.write(current_value)
         f.close()
         try:
-            ctx.logger.info("using CA content from the blueprint.")
+            ctx.logger.info('using CA content from the blueprint.')
             yield f.name
         finally:
             os.remove(f.name)
     else:
-        ctx.logger.info("CA file not found.")
+        ctx.logger.info('CA file not found.')
         yield
-
-
-def get_cluster_node_instance_from_rels(rels, rel_type=None, node_type=None):
-    CLUSTER_TYPE = 'cloudify.kubernetes.resources.SharedCluster'
-    CLUSTER_REL = 'cloudify.relationships.helm.connected_to_shared_cluster'
-
-    rel_type = rel_type or CLUSTER_REL
-    node_type = node_type or CLUSTER_TYPE
-    for x in rels:
-        if rel_type in x.type_hierarchy and \
-                node_type in x.target.node.type_hierarchy:
-            return x
-
-
-def get_connection_details_from_shared_cluster(props):
-    node_instance = get_ctx_instance(ctx)
-    x = get_cluster_node_instance_from_rels(node_instance.relationships)
-    if not x:
-        return props.get(CLIENT_CONFIG, {}).get(CONFIGURATION, {}).get(
-            API_OPTIONS, {}).get(HOST),\
-               props.get(CLIENT_CONFIG, {}).get(CONFIGURATION, {}).get(
-                   API_OPTIONS, {}).get('api_key'),\
-               props.get(CLIENT_CONFIG, {}).get(CONFIGURATION, {}).get(
-                   API_OPTIONS, {}).get('ssl_ca_cert')
-    endpoint = x.target.instance.runtime_properties['k8s-ip']
-    token = x.target.instance.runtime_properties['k8s-service-account-token']
-    ssl_ca_cert = x.target.instance.runtime_properties['k8s-cacert']
-    return endpoint, token, ssl_ca_cert
 
 
 def check_if_resource_inside_blueprint_folder(path):
@@ -258,9 +209,8 @@ def check_if_resource_inside_blueprint_folder(path):
                 target_path=f.name)
             return True
         except HttpException:
-            ctx.logger.debug("ssl_ca file not found inside blueprint package.")
+            ctx.logger.debug('ssl_ca file not found inside blueprint package.')
             return False
-    return False
 
 
 @contextmanager
@@ -268,20 +218,20 @@ def get_binary(ctx):
     installation_temp_dir = tempfile.mkdtemp()
     installation_source = \
         ctx.node.properties.get(
-            'installation_source', "")
+            'installation_source', '')
     if not installation_source:
         raise NonRecoverableError(
-            "invalid installation_source")
+            'invalid installation_source')
     installation_tar = \
         os.path.join(installation_temp_dir, 'helm.tar.gz')
 
-    ctx.logger.info("ctx.node.properties: {0}".format(ctx.node.properties))
+    ctx.logger.info('ctx.node.properties: {0}'.format(ctx.node.properties))
 
     additional_args = {
         'max_sleep_time': ctx.node.properties.get('max_sleep_time')
     }
     ctx.logger.info(
-        "Downloading Helm from {0} into {1}".format(
+        'Downloading Helm from {0} into {1}'.format(
             installation_source, installation_tar))
     run_subprocess(
         ['curl', '-o', installation_tar, installation_source],
@@ -300,13 +250,13 @@ def get_binary(ctx):
 
 
 def untar_and_set_permissions(ctx, tar_file, target_dir):
-    ctx.logger.info("Untarring into {0}".format(target_dir))
+    ctx.logger.info('Untarring into {0}'.format(target_dir))
     with tarfile.open(tar_file, 'r') as tar_ref:
         for name in tar_ref.getnames():
             tar_ref.extract(name, target_dir)
             target_file = os.path.join(target_dir, name)
             ctx.logger.info(
-                "Setting permission on {0}".format(target_file))
+                'Setting permission on {0}'.format(target_file))
             run_subprocess(
                 ['chmod', 'u+x', target_file],
                 ctx.logger
@@ -327,7 +277,7 @@ def copy_binary(source, dest):
         shutil.copy2(source, dest)
     except Exception as e:
         raise NonRecoverableError(
-            "failed to copy binary: {}".format(e))
+            'failed to copy binary: {}'.format(e))
 
 
 def use_existing_repo_on_helm(ctx, helm):
@@ -347,7 +297,7 @@ def use_existing_repo_on_helm(ctx, helm):
                     repo.get('url') == resource_config.get('repo_url'):
                 return True
         raise NonRecoverableError(
-            "cant find repository:{0} with url: {1} on helm client!".format(
+            'cant find repository:{0} with url: {1} on helm client!'.format(
                 resource_config.get('name'), resource_config.get('repo_url')))
 
 
@@ -370,26 +320,14 @@ def create_temporary_env_of_helm(ctx):
 def delete_temporary_env_of_helm(ctx):
     for dir_property_name in HELM_ENV_VARS_LIST:
         dir_to_delete = ctx.instance.runtime_properties.get(
-            dir_property_name, "")
+            dir_property_name, '')
         if os.path.isdir(dir_to_delete):
-            ctx.logger.info("Removing: {dir}".format(dir=dir_to_delete))
+            ctx.logger.info('Removing: {dir}'.format(dir=dir_to_delete))
             shutil.rmtree(dir_to_delete)
         else:
             ctx.logger.info(
-                "Directory {dir} doesn't exist,skipping".format(
+                'Directory {dir} doesn\'t exist,skipping'.format(
                     dir=dir_to_delete))
-
-
-def get_auth_token(ctx, token_from_shared_cluster):
-    authentication_property = ctx.node.properties.get(CLIENT_CONFIG, {}).get(
-        AUTHENTICATION, {})
-    token = token_from_shared_cluster or KubernetesApiAuthenticationVariants(
-        ctx.logger,
-        authentication_property,
-    ).get_token()
-    # If the user specify token so its in higher priority.
-    return ctx.node.properties.get(CLIENT_CONFIG, {}).get(
-        CONFIGURATION, {}).get(API_OPTIONS, {}).get(API_KEY) or token
 
 
 def prepare_aws_env(kubeconfig):
@@ -447,19 +385,18 @@ def install_aws_cli_if_needed(kubeconfig=None):
 def check_aws_cmd_in_kubeconfig(kubeconfig):
     with open(kubeconfig) as kube_file:
         kubeconfig_dict = yaml.safe_load(kube_file)
-    ctx.logger.debug("Trying to get users from kubeconfig")
     users = kubeconfig_dict.get('users', {})
     for user in users:
         command = user.get('user', {}).get('exec', {}).get('command', None)
         if command == 'aws':
             return True
         if command == 'aws-iam-authenticator':
-            ctx.logger.warning("Found kubeconfig user that uses "
-                               "aws-iam-authenticator command,if its the user "
-                               "of the current kubernetes context please use "
-                               "aws command See https://docs.aws.amazon.com/"
-                               "eks/latest/userguide/create-kubeconfig.html#"
-                               "create-kubeconfig-manually ")
+            ctx.logger.warning('Found kubeconfig user that uses '
+                               'aws-iam-authenticator command,if its the user '
+                               'of the current kubernetes context please use '
+                               'aws command See https://docs.aws.amazon.com/'
+                               'eks/latest/userguide/create-kubeconfig.html#'
+                               'create-kubeconfig-manually ')
     return False
 
 
@@ -483,7 +420,7 @@ def make_virtualenv(path):
     """
         Make a venv for installing aws cli inside.
     """
-    ctx.logger.debug("Creating virtualenv at: {path}".format(path=path))
+    ctx.logger.debug('Creating virtualenv at: {path}'.format(path=path))
     additional_args = {
         'max_sleep_time': ctx.node.properties.get('max_sleep_time')
     }
@@ -498,12 +435,12 @@ def install_packages_to_venv(venv, packages_list):
     # Force reinstall inside venv in order to make sure
     # packages being installed on specified environment .
     if packages_list:
-        ctx.logger.debug("venv = {path}".format(path=venv))
+        ctx.logger.debug('venv = {path}'.format(path=venv))
         command = [get_executable_path('pip', venv=venv), 'install',
                    '--force-reinstall', '--retries=2',
                    '--timeout=15'] + packages_list
-        ctx.logger.debug("cmd:{command}".format(command=command))
-        ctx.logger.info("Installing {packages} inside venv: {venv}.".format(
+        ctx.logger.debug('cmd:{command}'.format(command=command))
+        ctx.logger.info('Installing {packages} inside venv: {venv}.'.format(
             packages=packages_list,
             venv=venv))
         additional_args = {
@@ -518,9 +455,9 @@ def install_packages_to_venv(venv, packages_list):
                 additional_args=additional_args)
 
         except CalledProcessError as e:
-            raise NonRecoverableError("Failed install packages: {packages}"
-                                      " inside venv: {venv}. Error message: "
-                                      "{err}".format(packages=packages_list,
+            raise NonRecoverableError('Failed install packages: {packages}'
+                                      ' inside venv: {venv}. Error message: '
+                                      '{err}'.format(packages=packages_list,
                                                      venv=venv,
                                                      err=e))
 
@@ -531,3 +468,63 @@ def get_executable_path(executable, venv):
     :param venv: the venv to look for the executable in.
     """
     return '{0}/bin/{1}'.format(venv, executable) if venv else executable
+
+
+def get_release_name(args_dict):
+    release_name = None
+    if 'name' in args_dict:
+        release_name = args_dict.pop('name')
+    if 'release_name' in args_dict:
+        release_name = args_dict.pop('release_name')
+    if not release_name:
+        raise NonRecoverableError(
+            'The parameters "name" or "release_name" was not provided.')
+    return release_name
+
+
+def v1_equal_v2(v1, v2):
+    return version.parse(str(v1)) == version.parse(str(v2))
+
+
+def v1_bigger_v2(v1, v2):
+    return version.parse(str(v1)) > version.parse(str(v2))
+
+
+def find_rels_by_node_type(node_instance, node_type):
+    return [x for x in node_instance.relationships
+            if node_type in x.target.node.type_hierarchy]
+
+
+def convert_string_to_dict(txt):
+    """
+    :param txt: string type
+    :return: dict
+    """
+    output = {}
+    rows = txt.split('\n')
+    for row in rows:
+        words = row.split(':')
+        # Make sure it's not empty like ['']
+        if len(words) == 2:
+            output[words[0]] = words[1]
+    return output
+
+
+def find_repo_nodes():
+    rels = find_rels_by_node_type(ctx.instance, 'cloudify.nodes.helm.Repo')
+    nodes = []
+    for rel in rels:
+        nodes.append(rel.target.node)
+    if not nodes:
+        raise NonRecoverableError("Failed to run check_release_drift "
+                                  "because it did not find "
+                                  "'cloudify.nodes.helm.Repo'.")
+    return nodes
+
+
+def get_repo_resource_config(release_name):
+    for node in find_repo_nodes():
+        if 'resource_config' in node.properties and \
+                node.properties['resource_config'].get('name', None) == \
+                release_name:
+            return node.properties['resource_config']
