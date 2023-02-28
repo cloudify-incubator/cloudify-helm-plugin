@@ -23,7 +23,7 @@ from cloudify_common_sdk.utils import get_deployment_dir
 from cloudify_kubernetes_sdk.connection import decorators
 
 from cloudify.decorators import operation
-from cloudify.exceptions import NonRecoverableError
+from cloudify.exceptions import NonRecoverableError, OperationRetry
 
 from .decorators import (with_helm, with_kubernetes, prepare_aws)
 from .utils import (
@@ -409,9 +409,11 @@ def upgrade_release(ctx,
 @operation
 @decorators.with_connection_details
 @with_helm(ignore_properties_values_file=True)
+@with_kubernetes
 @prepare_aws
 def check_release_status(ctx,
                          helm,
+                         kubernetes,
                          kubeconfig=None,
                          values_file=None,
                          token=None,
@@ -427,32 +429,51 @@ def check_release_status(ctx,
     :param kubeconfig: kubeconfig path.
     :return output of `helm upgrade` command
     """
-    ctx.logger.debug(
-        "Checking if used local packaged chart file, If local file used and "
-        "the command failed check file access permissions.")
-    resource_config = get_resource_config()
-    args_dict = prepare_args(
-        resource_config,
-        flags,
-        ctx.node.properties.get('max_sleep_time')
-    )
-    release_name = get_release_name(args_dict)
-    helm_state = helm.status(
-        release_name=release_name,
-        values_file=values_file,
-        kubeconfig=kubeconfig,
-        token=token,
-        apiserver=host,
-        additional_env=env_vars,
-        ca_file=ca_file,
-        **args_dict,
-    )
-    get_status(ctx.instance, helm_state)
-    if not 'deployed' == helm_state['info']['status']:
-        raise RuntimeError(
-            'Unexpected Helm Status. Expected "deployed", '
-            'received: {}'.format(helm_state['info']['status']))
+    try:
+        ctx.logger.info('*** check_release_status ***')
+        ctx.logger.debug(
+            "Checking if used local packaged chart file, If local file used and "
+            "the command failed check file access permissions.")
+        resource_config = get_resource_config()
+        args_dict = prepare_args(
+            resource_config,
+            flags,
+            ctx.node.properties.get('max_sleep_time')
+        )
+        release_name = get_release_name(args_dict)
+        helm_state = helm.status(
+            release_name=release_name,
+            values_file=values_file,
+            kubeconfig=kubeconfig,
+            token=token,
+            apiserver=host,
+            additional_env=env_vars,
+            ca_file=ca_file,
+            **args_dict,
+        )
+        ctx.logger.info('*** helm_state: {}'.format(helm_state))
 
+        get_status(ctx.instance, helm_state)
+
+        if not 'deployed' == helm_state['info']['status']:
+            raise RuntimeError(
+                'Unexpected Helm Status. Expected "deployed", '
+                'received: {}'.format(helm_state['info']['status']))
+
+    except RuntimeError:
+        ctx.logger.info('*** HEAL *** ')
+
+        if ctx.workflow_id == 'heal' and \
+                ctx.operation.retry_number == 0 and \
+                'check_status' in ctx.operation.name:
+            install_release(ctx,
+                            helm,
+                            kubernetes,
+                            **_)
+            raise OperationRetry(
+                'Attempted to heal resource, retrying check status.')
+        else:
+            raise
 
 @operation
 @decorators.with_connection_details
