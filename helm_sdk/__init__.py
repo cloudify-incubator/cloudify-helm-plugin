@@ -18,13 +18,15 @@ import json
 import yaml
 from tempfile import NamedTemporaryFile
 
+from cloudify_common_sdk.utils import v1_gteq_v2
+
 from .exceptions import CloudifyHelmSDKError
 from helm_sdk.utils import (
     run_subprocess,
     prepare_parameter,
     prepare_set_parameters,
     validate_no_collisions_between_params_and_flags)
-from cloudify_common_sdk.utils import v1_gteq_v2
+
 
 # Helm cli flags names
 HELM_KUBECONFIG_FLAG = 'kubeconfig'
@@ -402,13 +404,8 @@ class Helm(object):
             return_output=True)
         loaded_output = json.loads(output)
         if 'manifest' in loaded_output:
-            manifest = loaded_output['manifest']
-            manifest = manifest.split('\n')
-            file = NamedTemporaryFile()
-            with open(file.name, 'w') as infile:
-                infile.writelines(line + '\n' for line in manifest)
-            with open(file.name, 'r') as outfile:
-                manifest_content = outfile.read()
+            manifest_content = self.format_manifest(
+                loaded_output['manifest'])
             manifests = manifest_content.split('---')
             manifest_jsons = {}
             for manifest in manifests:
@@ -420,6 +417,16 @@ class Helm(object):
                     manifest_content)
             loaded_output['manifest'] = manifest_jsons
         return loaded_output
+
+    @staticmethod
+    def format_manifest(manifest):
+        manifest = manifest.split('\n')
+        with NamedTemporaryFile() as file:
+            file.close()
+            with open(file.name, 'w') as infile:
+                infile.writelines(line + '\n' for line in manifest)
+            with open(file.name, 'r') as outfile:
+                return outfile.read()
 
     def load_json(self, output):
         if output:

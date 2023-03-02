@@ -29,7 +29,9 @@ from cloudify_common_sdk.resource_downloader import (unzip_archive,
                                                      untar_archive,
                                                      TAR_FILE_EXTENSTIONS)
 
-from cloudify_common_sdk.utils import get_deployment_dir
+from cloudify_common_sdk.utils import (
+    delete_debug,
+    get_deployment_dir)
 from cloudify_common_sdk.secure_property_management import get_stored_property
 
 from helm_sdk import Helm
@@ -145,7 +147,8 @@ def get_values_file(ctx, ignore_properties_values_file, values_file=None):
                 ctx.logger.info('using values file:{file}'.format(file=f.name))
                 yield f.name
             finally:
-                os.remove(f.name)
+                if delete_debug:
+                    os.remove(f.name)
     elif values_file:
         # It means we have local values file.Check if cfyuser can access it.
         if not os.path.isfile(values_file):
@@ -176,7 +179,8 @@ def get_ssl_ca_file(ca_from_shared_cluster=None):
                     'using CA file:{file}'.format(file=f.name))
                 yield f.name
             finally:
-                os.remove(f.name)
+                if delete_debug:
+                    os.remove(f.name)
 
     elif current_value and os.path.isfile(current_value):
         ctx.logger.info('using CA file located at: {path}'.format(
@@ -194,7 +198,8 @@ def get_ssl_ca_file(ca_from_shared_cluster=None):
             ctx.logger.info('using CA content from the blueprint.')
             yield f.name
         finally:
-            os.remove(f.name)
+            if delete_debug():
+                os.remove(f.name)
     else:
         ctx.logger.info('CA file not found.')
         yield
