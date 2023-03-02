@@ -460,19 +460,27 @@ def check_release_status(ctx,
                 'Unexpected Helm Status. Expected "deployed", '
                 'received: {}'.format(helm_state['info']['status']))
 
+        test =  kubernetes.multiple_resource_check_status(helm_state)
+        ctx.logger.info('*** test: {} '.format(test))
+
+           # raise RuntimeError('Unexpected Helm Status')
     except RuntimeError:
-        ctx.logger.info('*** HEAL *** ')
+        ctx.logger.info('*** 1 *** ')
 
         if ctx.workflow_id == 'heal' and \
                 ctx.operation.retry_number == 0 and \
                 'check_status' in ctx.operation.name:
-            install_release(ctx,
+            ctx.logger.info('*** HEAL *** ')
+            upgrade_release(ctx,
                             helm,
                             kubernetes,
                             **_)
+            ctx.logger.info('*** HEAL *** ')
+
             raise OperationRetry(
                 'Attempted to heal resource, retrying check status.')
         else:
+            ctx.logger.info('*** 3 *** ')
             raise
 
 @operation
