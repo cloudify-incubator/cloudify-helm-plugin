@@ -430,7 +430,6 @@ def check_release_status(ctx,
     :return output of `helm upgrade` command
     """
 
-    ctx.logger.info('*** check_release_status ***')
     ctx.logger.debug(
         "Checking if used local packaged chart file, If local file used and "
         "the command failed check file access permissions.")
@@ -440,6 +439,7 @@ def check_release_status(ctx,
         flags,
         ctx.node.properties.get('max_sleep_time')
     )
+
     release_name = get_release_name(args_dict)
     helm_state = helm.status(
         release_name=release_name,
@@ -451,38 +451,22 @@ def check_release_status(ctx,
         ca_file=ca_file,
         **args_dict,
     )
-    ctx.logger.info('*** helm_state: {}'.format(helm_state))
 
     get_status(ctx.instance, helm_state)
-
     if not 'deployed' == helm_state['info']['status']:
         raise RuntimeError(
             'Unexpected Helm Status. Expected "deployed", '
             'received: {}'.format(helm_state['info']['status']))
 
     test, errors =  kubernetes.multiple_resource_check_status(helm_state)
-    if errors:
+    if errors and ctx.workflow_id == 'heal' and ctx.operation.retry_number == 0 and 'check_status' in ctx.operation.name:
+        upgrade_release(ctx,
+                        helm,
+                        kubernetes,
+                        **_)
+        return ctx.operation.retry('Attempting to heal release...')
+    elif errors:
         raise RuntimeError('Some resources are missing: {}'.format(errors))
-
-           # raise RuntimeError('Unexpected Helm Status')
-    # except RuntimeError:
-    #     ctx.logger.info('*** 1 *** ')
-    #
-    #     if ctx.workflow_id == 'heal' and \
-    #             ctx.operation.retry_number == 0 and \
-    #             'check_status' in ctx.operation.name:
-    #         ctx.logger.info('*** HEAL *** ')
-    #         upgrade_release(ctx,
-    #                         helm,
-    #                         kubernetes,
-    #                         **_)
-    #         ctx.logger.info('*** HEAL *** ')
-    #
-    #         raise OperationRetry(
-    #             'Attempted to heal resource, retrying check status.')
-    #     else:
-    #         ctx.logger.info('*** 3 *** ')
-    #         raise
 
 @operation
 @decorators.with_connection_details

@@ -80,8 +80,6 @@ class Kubernetes(object):
                     resource['metadata']['name'], namespace, str(e)))
             return
 
-        self.logger.info('*** check_status resource_api_obj: {} '.format(resource_api_obj))
-
         state = Resource(resource_api_obj).check_status  # This is really just looking at status.
         return state
 
@@ -113,27 +111,23 @@ class Kubernetes(object):
         namespace = helm_status.get('namespace')
 
         for manifest, resource in helm_status['manifest'].items():
-            self.logger.info('**********************************************')
             self.logger.info('Looking for {}'.format(manifest))
             manifest = manifest.replace(
                 '/', '_').replace('.yaml', '').replace('-', '__')
             error = self.validate_resource_metadata(resource, namespace)
+            if error:
+                errors.append(error)
             state = self.check_status(resource, namespace)
             if not state:
                 errors.append(
                     'Unable to retrieve state for {} in namespace {}.'
                         .format(resource, namespace))
-
             status.update(
                 {
                     manifest: state
                 }
             )
-            if error:
-                errors.append(error)
-
-            self.report_errors(errors)
-
+        self.report_errors(errors)
         return status ,errors
 
 
