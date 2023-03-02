@@ -78,7 +78,7 @@ class Kubernetes(object):
             self.logger.error(
                 'There was an error fetching {} in namespace {}: {}'.format(
                     resource['metadata']['name'], namespace, str(e)))
-            resource_api_obj = {}
+            return
 
         self.logger.info('*** check_status resource_api_obj: {} '.format(resource_api_obj))
 
@@ -115,14 +115,14 @@ class Kubernetes(object):
         for manifest, resource in helm_status['manifest'].items():
             self.logger.info('**********************************************')
             self.logger.info('Looking for {}'.format(manifest))
-            self.logger.info('*** Looking for resource: {}'.format(resource))
             manifest = manifest.replace(
                 '/', '_').replace('.yaml', '').replace('-', '__')
             error = self.validate_resource_metadata(resource, namespace)
-            self.logger.info('*** 1errors: {}'.format(errors))
-
             state = self.check_status(resource, namespace)
-            self.logger.info('*** state: {}'.format(state))
+            if not state:
+                errors.append(
+                    'Unable to retrieve state for {} in namespace {}.'
+                        .format(resource, namespace))
 
             status.update(
                 {
@@ -133,10 +133,8 @@ class Kubernetes(object):
                 errors.append(error)
 
             self.report_errors(errors)
-            self.logger.info('*** 2errors: {}'.format(errors))
-            self.logger.info('*** multiple_resource_check_status-status: {}'.format(status))
 
-            return status
+        return status ,errors
 
 
     def validate_resource_metadata(self, resource, namespace):
