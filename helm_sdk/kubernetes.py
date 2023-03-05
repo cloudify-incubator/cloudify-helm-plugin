@@ -66,9 +66,7 @@ class Kubernetes(object):
 
 
     def check_status(self, resource, namespace):
-        api = client_resolver.get_kubernetes_api(
-        resource['apiVersion'])
-
+        api = client_resolver.get_kubernetes_api(resource['apiVersion'])
         fn_name = client_resolver.get_read_function_name(resource['kind'])
         callable = client_resolver.get_callable(fn_name, api(self.kubeconfig))
 
@@ -80,8 +78,7 @@ class Kubernetes(object):
                     resource['metadata']['name'], namespace, str(e)))
             return
 
-        state = Resource(resource_api_obj).check_status  # This is really just looking at status.
-        return state
+        return Resource(resource_api_obj).check_status()  # This is really just looking at status.
 
 
     def multiple_resource_status(self, helm_status):
