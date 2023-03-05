@@ -95,6 +95,8 @@ def check_status_binary(ctx, **_):
         ctx.node.properties, ctx.instance.runtime_properties)
     if os.path.isfile(executable_path):
         return
+    elif ctx.workflow_id == 'heal' and ctx.operation.retry_number == 0:
+        install_binary(ctx, **_)
     raise RuntimeError('The executable file {} is missing.'.format(
         executable_path))
 
@@ -459,7 +461,9 @@ def check_release_status(ctx,
             'received: {}'.format(helm_state['info']['status']))
 
     test, errors =  kubernetes.multiple_resource_check_status(helm_state)
-    if errors and ctx.workflow_id == 'heal' and ctx.operation.retry_number == 0 and 'check_status' in ctx.operation.name:
+    if errors and ctx.workflow_id == 'heal' \
+            and ctx.operation.retry_number == 0 \
+            and 'check_status' in ctx.operation.name:
         upgrade_release(ctx,
                         helm,
                         kubernetes,
