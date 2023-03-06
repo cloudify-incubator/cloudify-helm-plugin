@@ -66,13 +66,17 @@ class Kubernetes(object):
 
 
     def check_status(self, resource, namespace):
-        api = client_resolver.get_kubernetes_api(
-        resource['apiVersion'])
+        api = api = client_resolver.get_kubernetes_api(resource['apiVersion'])
 
         fn_name = client_resolver.get_read_function_name(resource['kind'])
+        self.logger.info('*** fn_name: {}'.format(fn_name))
+
         callable = client_resolver.get_callable(fn_name, api(self.kubeconfig))
+        self.logger.info('*** callable: {}'.format(callable))
 
         try:
+            self.logger.info('*** in try name: {}'.format(resource['metadata']['name']))
+            self.logger.info('*** in try namespace: {}'.format(namespace))
             resource_api_obj = callable(resource['metadata']['name'], namespace)
         except Exception as e:
             self.logger.error(
@@ -80,8 +84,7 @@ class Kubernetes(object):
                     resource['metadata']['name'], namespace, str(e)))
             return
 
-        state = Resource(resource_api_obj).check_status  # This is really just looking at status.
-        return state
+        return Resource(resource_api_obj).check_status()  # This is really just looking at status.
 
 
     def multiple_resource_status(self, helm_status):

@@ -1,1 +1,0 @@
-https://github.com/cloudify-incubator/cloudify-utilities-plugins-sdk/archive/refs/heads/RD-7029-helm-heal.zip
