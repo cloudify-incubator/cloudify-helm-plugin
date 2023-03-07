@@ -423,7 +423,7 @@ def check_release_status(ctx,
                          env_vars=None,
                          ca_file=None,
                          host=None,
-                         **_):
+                         **kwargs):
     """
     Execute helm status.
     :param ctx: cloudify context.
@@ -460,14 +460,24 @@ def check_release_status(ctx,
             'Unexpected Helm Status. Expected "deployed", '
             'received: {}'.format(helm_state['info']['status']))
 
-    test, errors =  kubernetes.multiple_resource_check_status(helm_state)
-    if errors and ctx.workflow_id == 'heal' \
+    status, errors =  kubernetes.multiple_resource_check_status(helm_state)
+    ctx.logger.info('Status: {}'.format(status))
+    ctx.logger.info('Errors: {}'.format(errors))
+    if errors and ctx.workflow_id == 'install':
+        return
+    elif errors and ctx.workflow_id == 'heal' \
             and ctx.operation.retry_number == 0 \
             and 'check_status' in ctx.operation.name:
-        upgrade_release(ctx,
-                        helm,
-                        kubernetes,
-                        **_)
+        helm.upgrade(
+            release_name,
+            values_file=values_file,
+            kubeconfig=kubeconfig,
+            token=token,
+            apiserver=host,
+            additional_env=env_vars,
+            ca_file=ca_file,
+            **args_dict,
+        )
         return ctx.operation.retry('Attempting to heal release...')
     elif errors:
         raise RuntimeError('Some resources are missing: {}'.format(errors))

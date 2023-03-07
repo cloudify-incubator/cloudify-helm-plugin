@@ -48,44 +48,34 @@ class Kubernetes(object):
                 host=self.host)
         return self._kubeconfig_obj
 
-    def status(self, resource, namespace):
+    def get_callable(self, resource, namespace):
         # TODO: This is more like "the entire object", not just status.
+        self.logger.info('Getting {} {}'.format(resource, namespace))
         api = client_resolver.get_kubernetes_api(resource['apiVersion'])
+        self.logger.info('Api: {}'.format(api))
         fn_name = client_resolver.get_read_function_name(resource['kind'])
+        self.logger.info('fn_name {}'.format(fn_name))
         callable = client_resolver.get_callable(fn_name, api(self.kubeconfig))
+        self.logger.info('callable {}'.format(callable))
         try:
-            resource_api_obj = callable(
+            return callable(
                 resource['metadata']['name'], namespace)
         except Exception as e:
             self.logger.error(
                 'There was an error fetching {} in namespace {}: {}'.format(
                     resource['metadata']['name'], namespace, str(e)))
-            resource_api_obj = {}
-        state = Resource(resource_api_obj).state
-        return state
+
+
+    def status(self, resource, namespace):
+        resource_api_obj = self.get_callable(resource, namespace)
+        return Resource(resource_api_obj).state
 
 
     def check_status(self, resource, namespace):
-        api = api = client_resolver.get_kubernetes_api(resource['apiVersion'])
-
-        fn_name = client_resolver.get_read_function_name(resource['kind'])
-        self.logger.info('*** fn_name: {}'.format(fn_name))
-
-        callable = client_resolver.get_callable(fn_name, api(self.kubeconfig))
-        self.logger.info('*** callable: {}'.format(callable))
-
-        try:
-            self.logger.info('*** in try name: {}'.format(resource['metadata']['name']))
-            self.logger.info('*** in try namespace: {}'.format(namespace))
-            resource_api_obj = callable(resource['metadata']['name'], namespace)
-        except Exception as e:
-            self.logger.error(
-                'There was an error fetching {} in namespace {}: {}'.format(
-                    resource['metadata']['name'], namespace, str(e)))
-            return
-
-        return Resource(resource_api_obj).check_status()  # This is really just looking at status.
-
+        resource_api_obj = self.get_callable(resource, namespace)
+        status = Resource(resource_api_obj).check_status()  # This is really just looking at status.
+        self.logger.info('Status: {}'.format(status))
+        return status
 
     def multiple_resource_status(self, helm_status):
         errors = []
