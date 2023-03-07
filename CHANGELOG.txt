@@ -32,3 +32,6 @@
   - RD-5554 If JSON Decode Fails pass exception.
   - RD-6055-helm-check-drift (repo_check_drift AND check_release_drift)
   - RD-6057 Deployment Update
+0.4.1:
+  - RD-7029 Heal workflow
+  - RD-6699 Debug Option
