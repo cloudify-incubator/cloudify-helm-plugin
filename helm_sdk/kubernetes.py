@@ -48,20 +48,32 @@ class Kubernetes(object):
                 host=self.host)
         return self._kubeconfig_obj
 
-    def status(self, resource, namespace):
+    def get_callable(self, resource, namespace):
+        # TODO: This is more like "the entire object", not just status.
+        self.logger.info('Getting {} {}'.format(resource, namespace))
         api = client_resolver.get_kubernetes_api(resource['apiVersion'])
+        self.logger.info('Api: {}'.format(api))
         fn_name = client_resolver.get_read_function_name(resource['kind'])
+        self.logger.info('fn_name {}'.format(fn_name))
         callable = client_resolver.get_callable(fn_name, api(self.kubeconfig))
+        self.logger.info('callable {}'.format(callable))
         try:
-            resource_api_obj = callable(
+            return callable(
                 resource['metadata']['name'], namespace)
         except Exception as e:
             self.logger.error(
                 'There was an error fetching {} in namespace {}: {}'.format(
                     resource['metadata']['name'], namespace, str(e)))
-            resource_api_obj = {}
-        state = Resource(resource_api_obj).state
-        return state
+
+    def status(self, resource, namespace):
+        resource_api_obj = self.get_callable(resource, namespace)
+        return Resource(resource_api_obj).state
+
+    def check_status(self, resource, namespace):
+        resource_api_obj = self.get_callable(resource, namespace)
+        status = Resource(resource_api_obj).check_status()
+        self.logger.info('Status: {}'.format(status))
+        return status
 
     def multiple_resource_status(self, helm_status):
         errors = []
@@ -82,6 +94,31 @@ class Kubernetes(object):
             )
         self.report_errors(errors)
         return status
+
+    def multiple_resource_check_status(self, helm_status):
+        errors = []
+        status = {}
+        namespace = helm_status.get('namespace')
+
+        for manifest, resource in helm_status['manifest'].items():
+            self.logger.info('Looking for {}'.format(manifest))
+            manifest = manifest.replace(
+                '/', '_').replace('.yaml', '').replace('-', '__')
+            error = self.validate_resource_metadata(resource, namespace)
+            if error:
+                errors.append(error)
+            state = self.check_status(resource, namespace)
+            if not state:
+                errors.append(
+                    'Unable to retrieve state for {} in namespace {}.'.format(
+                        resource, namespace))
+            status.update(
+                {
+                    manifest: state
+                }
+            )
+        self.report_errors(errors)
+        return status, errors
 
     def validate_resource_metadata(self, resource, namespace):
         api_version = resource.get('apiVersion')
