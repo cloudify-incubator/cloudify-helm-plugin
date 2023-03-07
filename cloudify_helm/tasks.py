@@ -95,6 +95,8 @@ def check_status_binary(ctx, **_):
         ctx.node.properties, ctx.instance.runtime_properties)
     if os.path.isfile(executable_path):
         return
+    elif ctx.workflow_id == 'heal' and ctx.operation.retry_number == 0:
+        install_binary(ctx, **_)
     raise RuntimeError('The executable file {} is missing.'.format(
         executable_path))
 
@@ -409,9 +411,11 @@ def upgrade_release(ctx,
 @operation
 @decorators.with_connection_details
 @with_helm(ignore_properties_values_file=True)
+@with_kubernetes
 @prepare_aws
 def check_release_status(ctx,
                          helm,
+                         kubernetes,
                          kubeconfig=None,
                          values_file=None,
                          token=None,
@@ -419,7 +423,7 @@ def check_release_status(ctx,
                          env_vars=None,
                          ca_file=None,
                          host=None,
-                         **_):
+                         **kwargs):
     """
     Execute helm status.
     :param ctx: cloudify context.
@@ -427,6 +431,7 @@ def check_release_status(ctx,
     :param kubeconfig: kubeconfig path.
     :return output of `helm upgrade` command
     """
+
     ctx.logger.debug(
         "Checking if used local packaged chart file, If local file used and "
         "the command failed check file access permissions.")
@@ -436,6 +441,7 @@ def check_release_status(ctx,
         flags,
         ctx.node.properties.get('max_sleep_time')
     )
+
     release_name = get_release_name(args_dict)
     helm_state = helm.status(
         release_name=release_name,
@@ -447,11 +453,34 @@ def check_release_status(ctx,
         ca_file=ca_file,
         **args_dict,
     )
+
     get_status(ctx.instance, helm_state)
     if not 'deployed' == helm_state['info']['status']:
         raise RuntimeError(
             'Unexpected Helm Status. Expected "deployed", '
             'received: {}'.format(helm_state['info']['status']))
+
+    status, errors = kubernetes.multiple_resource_check_status(helm_state)
+    ctx.logger.info('Status: {}'.format(status))
+    ctx.logger.info('Errors: {}'.format(errors))
+    if errors and ctx.workflow_id == 'install':
+        return
+    elif errors and ctx.workflow_id == 'heal' \
+            and ctx.operation.retry_number == 0 \
+            and 'check_status' in ctx.operation.name:
+        helm.upgrade(
+            release_name,
+            values_file=values_file,
+            kubeconfig=kubeconfig,
+            token=token,
+            apiserver=host,
+            additional_env=env_vars,
+            ca_file=ca_file,
+            **args_dict,
+        )
+        return ctx.operation.retry('Attempting to heal release...')
+    elif errors:
+        raise RuntimeError('Some resources are missing: {}'.format(errors))
 
 
 @operation
