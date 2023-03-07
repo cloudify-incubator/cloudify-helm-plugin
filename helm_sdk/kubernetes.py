@@ -65,15 +65,13 @@ class Kubernetes(object):
                 'There was an error fetching {} in namespace {}: {}'.format(
                     resource['metadata']['name'], namespace, str(e)))
 
-
     def status(self, resource, namespace):
         resource_api_obj = self.get_callable(resource, namespace)
         return Resource(resource_api_obj).state
 
-
     def check_status(self, resource, namespace):
         resource_api_obj = self.get_callable(resource, namespace)
-        status = Resource(resource_api_obj).check_status()  # This is really just looking at status.
+        status = Resource(resource_api_obj).check_status()
         self.logger.info('Status: {}'.format(status))
         return status
 
@@ -97,7 +95,6 @@ class Kubernetes(object):
         self.report_errors(errors)
         return status
 
-
     def multiple_resource_check_status(self, helm_status):
         errors = []
         status = {}
@@ -113,16 +110,15 @@ class Kubernetes(object):
             state = self.check_status(resource, namespace)
             if not state:
                 errors.append(
-                    'Unable to retrieve state for {} in namespace {}.'
-                        .format(resource, namespace))
+                    'Unable to retrieve state for {} in namespace {}.'.format(
+                        resource, namespace))
             status.update(
                 {
                     manifest: state
                 }
             )
         self.report_errors(errors)
-        return status ,errors
-
+        return status, errors
 
     def validate_resource_metadata(self, resource, namespace):
         api_version = resource.get('apiVersion')

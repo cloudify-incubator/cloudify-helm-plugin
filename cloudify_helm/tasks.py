@@ -23,7 +23,7 @@ from cloudify_common_sdk.utils import get_deployment_dir
 from cloudify_kubernetes_sdk.connection import decorators
 
 from cloudify.decorators import operation
-from cloudify.exceptions import NonRecoverableError, OperationRetry
+from cloudify.exceptions import NonRecoverableError
 
 from .decorators import (with_helm, with_kubernetes, prepare_aws)
 from .utils import (
@@ -460,7 +460,7 @@ def check_release_status(ctx,
             'Unexpected Helm Status. Expected "deployed", '
             'received: {}'.format(helm_state['info']['status']))
 
-    status, errors =  kubernetes.multiple_resource_check_status(helm_state)
+    status, errors = kubernetes.multiple_resource_check_status(helm_state)
     ctx.logger.info('Status: {}'.format(status))
     ctx.logger.info('Errors: {}'.format(errors))
     if errors and ctx.workflow_id == 'install':
@@ -481,6 +481,7 @@ def check_release_status(ctx,
         return ctx.operation.retry('Attempting to heal release...')
     elif errors:
         raise RuntimeError('Some resources are missing: {}'.format(errors))
+
 
 @operation
 @decorators.with_connection_details
