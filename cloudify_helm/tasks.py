@@ -192,7 +192,7 @@ def show_chart(helm, release_name, repo_url):
 def repo_list(ctx, helm, **kwargs):
     output = helm.repo_list()
     if output != ctx.instance.runtime_properties['list_output']:
-        raise RuntimeError('The repo list has changed: {}'.format(output))
+        return output
 
 
 @operation
@@ -207,7 +207,7 @@ def repo_check_drift(ctx, helm, **kwargs):
         ctx.instance.runtime_properties['list_output'] = output
     diff = DeepDiff(ctx.instance.runtime_properties['list_output'], output)
     if diff:
-        raise RuntimeError('The resource has drifted: {}'.format(diff))
+        return diff
 
 
 @operation
@@ -480,7 +480,7 @@ def check_release_status(ctx,
         )
         return ctx.operation.retry('Attempting to heal release...')
     elif errors:
-        raise RuntimeError('Some resources are missing: {}'.format(errors))
+        return errors
 
 
 @operation
@@ -533,7 +533,7 @@ def check_release_drift(ctx,
     diff = get_diff(ctx.instance,
                     kubernetes.multiple_resource_status(helm_state))
     if diff:
-        raise RuntimeError('Unexpected drift: {}'.format(diff))
+        return diff
 
 
 def get_status(ctx_instance, helm_status):
