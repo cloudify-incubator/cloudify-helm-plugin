@@ -35,4 +35,6 @@
 0.4.1:
   - RD-7029 Heal workflow
   - RD-6699 Debug Option
-0.4.2: add __version__.py file in cloudify_helm folder.
+0.4.2:
+  - Do not use exception to report diff.
+  - add __version__.py file in cloudify_helm folder.
