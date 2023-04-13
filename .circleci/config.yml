@@ -51,7 +51,7 @@ commands:
   run_eks_helm_test:
     steps:
       - run: git clone https://github.com/cloudify-community/blueprint-examples.git
-      - run: ecosystem-test local-blueprint-test -b blueprint-examples/helm-eks/blueprint.yaml -i eks_cluster_name=helm-plugin-test-$CIRCLE_BUILD_NUM --test-id=helm-eks --on-failure=uninstall-force --timeout=5400
+      - run: ecosystem-test local-blueprint-test -b blueprint-examples/kubernetes/helm-eks/blueprint.yaml -i eks_cluster_name=helm-plugin-test-$CIRCLE_BUILD_NUM --test-id=helm-eks --on-failure=uninstall-force --timeout=5400
 
 jobs:
   integration_tests_py3:
