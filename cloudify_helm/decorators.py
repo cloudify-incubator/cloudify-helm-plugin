@@ -40,7 +40,7 @@ def with_kubernetes(fn):
                 )
             }
         )
-        fn(**kwargs)
+        return fn(**kwargs)
     return wrapper
 
 
