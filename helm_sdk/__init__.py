@@ -25,6 +25,7 @@ from helm_sdk.utils import (
     run_subprocess,
     prepare_parameter,
     prepare_set_parameters,
+    validate_flags_for_status,
     validate_no_collisions_between_params_and_flags)
 
 
@@ -393,6 +394,7 @@ class Helm(object):
         self.handle_auth_params(cmd, kubeconfig, token, apiserver, ca_file)
         flags = flags or []
         validate_no_collisions_between_params_and_flags(flags)
+        validate_flags_for_status(flags)
         cmd.extend([prepare_parameter(flag) for flag in flags])
         set_arguments = set_values or []
         cmd.extend(prepare_set_parameters(set_arguments))
