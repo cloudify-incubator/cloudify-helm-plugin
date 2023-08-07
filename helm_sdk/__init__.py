@@ -14,6 +14,7 @@
 #    * limitations under the License.
 
 import re
+import os
 import json
 import yaml
 from tempfile import NamedTemporaryFile
@@ -139,14 +140,18 @@ class Helm(object):
         server.
         :return output of install command.
         """
+        flags = flags or []
+        validate_no_collisions_between_params_and_flags(flags)
+        for item in flags:
+            if 'repo' == item['name']:
+                chart = os.path.basename(chart)
         cmd = ['install', name, chart, '--wait', '--output=json']
         self.handle_auth_params(
             cmd, kubeconfig, token, apiserver, ca_file)
         if values_file:
             cmd.append(APPEND_FLAG_STRING.format(name=HELM_VALUES_FLAG,
                                                  value=values_file))
-        flags = flags or []
-        validate_no_collisions_between_params_and_flags(flags)
+
         cmd.extend([prepare_parameter(flag) for flag in flags])
         set_arguments = set_values or []
         cmd.extend(prepare_set_parameters(set_arguments))
@@ -179,6 +184,9 @@ class Helm(object):
             apiserver,
             ca_file)
         flags = flags or []
+        for item in flags:
+            if 'repo' == item['name']:
+                flags.remove(item)
         validate_no_collisions_between_params_and_flags(flags)
         cmd.extend([prepare_parameter(flag) for flag in flags])
         if additional_env:

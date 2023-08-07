@@ -22,9 +22,11 @@ from helm_sdk.exceptions import CloudifyHelmSDKError
 
 FLAGS_LIST_TO_VALIDATE = ['kube-apiserver', 'kube-token', 'kubeconfig']
 STATUS_FLAGS = ['kube-apiserver', 'kube-token', 'kubeconfig', 'burst-limit',
-'debug', 'kube-as-group', 'kube-as-user', 'kube-ca-file', 'kube-context',
-'kube-insecure-skip-tls-verify', 'kube-tls-server-name', 'namespace ',
-'registry-config', 'repository-cache', 'repository-config']
+                'debug', 'kube-as-group', 'kube-as-user', 'kube-ca-file',
+                'kube-context', 'kube-insecure-skip-tls-verify',
+                'kube-tls-server-name', 'namespace ', 'registry-config',
+                'repository-cache', 'repository-config']
+
 
 def run_subprocess(command,
                    logger,
