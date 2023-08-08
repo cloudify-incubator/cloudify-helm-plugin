@@ -14,7 +14,6 @@
 #    * limitations under the License.
 
 import re
-import os
 import json
 import yaml
 from tempfile import NamedTemporaryFile
@@ -143,8 +142,9 @@ class Helm(object):
         flags = flags or []
         validate_no_collisions_between_params_and_flags(flags)
         for item in flags:
-            if 'repo' == item['name']:
-                chart = os.path.basename(chart)
+            if 'repo' in item['name']:
+                if '/' in chart:
+                    chart = '/'.join(chart.split('/')[1:])
         cmd = ['install', name, chart, '--wait', '--output=json']
         self.handle_auth_params(
             cmd, kubeconfig, token, apiserver, ca_file)
@@ -185,7 +185,7 @@ class Helm(object):
             ca_file)
         flags = flags or []
         for item in flags:
-            if 'repo' == item['name']:
+            if 'repo' in item['name']:
                 flags.remove(item)
         validate_no_collisions_between_params_and_flags(flags)
         cmd.extend([prepare_parameter(flag) for flag in flags])
