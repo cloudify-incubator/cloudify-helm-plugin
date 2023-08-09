@@ -115,5 +115,5 @@ def validate_no_collisions_between_params_and_flags(flags):
 
 def validate_flags_for_status(flags):
     for flag in flags:
-        if flag['name'] not in STATUS_FLAGS:
+        if 'repo' in flag['name']:
             flags.remove(flag)
