@@ -141,8 +141,9 @@ class Helm(object):
         """
         flags = flags or []
         validate_no_collisions_between_params_and_flags(flags)
+
         for item in flags:
-            if 'repo' in item['name']:
+            if 'repo' == item['name']:
                 if '/' in chart:
                     chart = '/'.join(chart.split('/')[1:])
         cmd = ['install', name, chart, '--wait', '--output=json']
@@ -185,7 +186,7 @@ class Helm(object):
             ca_file)
         flags = flags or []
         for item in flags:
-            if 'repo' in item['name']:
+            if 'repo' == item['name']:
                 flags.remove(item)
         validate_no_collisions_between_params_and_flags(flags)
         cmd.extend([prepare_parameter(flag) for flag in flags])
@@ -403,6 +404,7 @@ class Helm(object):
         flags = flags or []
         validate_no_collisions_between_params_and_flags(flags)
         validate_flags_for_status(flags)
+
         cmd.extend([prepare_parameter(flag) for flag in flags])
         set_arguments = set_values or []
         cmd.extend(prepare_set_parameters(set_arguments))
