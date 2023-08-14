@@ -146,6 +146,7 @@ class Helm(object):
             if 'repo' == item['name']:
                 if '/' in chart:
                     chart = '/'.join(chart.split('/')[1:])
+                    break
         cmd = ['install', name, chart, '--wait', '--output=json']
         self.handle_auth_params(
             cmd, kubeconfig, token, apiserver, ca_file)
