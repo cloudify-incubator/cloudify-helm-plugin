@@ -189,6 +189,7 @@ class Helm(object):
         for item in flags:
             if 'repo' == item['name']:
                 flags.remove(item)
+                break
         validate_no_collisions_between_params_and_flags(flags)
         cmd.extend([prepare_parameter(flag) for flag in flags])
         if additional_env:
