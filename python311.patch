@@ -1,8 +1,13 @@
 diff --git a/setup.py b/setup.py
-index 2dba7b8..43b7c48 100644
+index 2dba7b8..2b0fa1b 100644
 --- a/setup.py
 +++ b/setup.py
-@@ -37,11 +37,11 @@ setup(
+@@ -33,15 +33,15 @@ setup(
+     author='Cloudify',
+     author_email='hello@cloudify.co',
+     description='Enables Cloudify support Helm',
+-    packages=['helm_sdk', 'cloudify_helm'],
++    packages=['helm_sdk', 'cloudify_helm', 'pydoc'],
      license='LICENSE',
      install_requires=[
          "cloudify-common>=4.5.5",
