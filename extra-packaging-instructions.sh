@@ -9,7 +9,6 @@ EOF
     mkdir -p ./webbrowser
     touch ./webbrowser/__init__.py
     cat <<EOF > ./webbrowser/__init__.py
-pass
 EOF
     git apply python311.patch
 fi
