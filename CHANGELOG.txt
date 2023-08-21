@@ -42,3 +42,4 @@
   - py311 wagon.
   - tests run on remote manager.
   - added circleci context.
+  - CYBL-2065 Bug fix in repo flag in functions Install status and uninstall.
