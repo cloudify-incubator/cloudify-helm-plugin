@@ -38,3 +38,8 @@
 0.4.2:
   - Do not use exception to report diff.
   - add __version__.py file in cloudify_helm folder.
+0.4.3:
+  - py311 wagon.
+  - tests run on remote manager.
+  - added circleci context.
+  - CYBL-2065 Bug fix in repo flag in functions Install status and uninstall.

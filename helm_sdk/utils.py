@@ -16,11 +16,17 @@
 import os
 import json
 import copy
+from cloudify import ctx
 from cloudify_common_sdk.filters import obfuscate_passwords
 from cloudify_common_sdk.processes import general_executor, process_execution
 from helm_sdk.exceptions import CloudifyHelmSDKError
 
 FLAGS_LIST_TO_VALIDATE = ['kube-apiserver', 'kube-token', 'kubeconfig']
+STATUS_FLAGS = ['kube-apiserver', 'kube-token', 'kubeconfig', 'burst-limit',
+                'debug', 'kube-as-group', 'kube-as-user', 'kube-ca-file',
+                'kube-context', 'kube-insecure-skip-tls-verify',
+                'kube-tls-server-name', 'namespace', 'registry-config',
+                'repository-cache', 'repository-config']
 
 
 def run_subprocess(command,
@@ -106,3 +112,11 @@ def validate_no_collisions_between_params_and_flags(flags):
             'Please do not pass {flags_list} under "flags" property,'
             'each of them has a known property.'.format(
                 flags_list=FLAGS_LIST_TO_VALIDATE))
+
+
+def validate_flags_for_status(flags):
+    for flag in list(flags):
+        if flag['name'] not in STATUS_FLAGS:
+            ctx.logger.error('Removing flag {} for status check. (This will'
+                             ' not affect install or update.)'.format(flag))
+            flags.remove(flag)
