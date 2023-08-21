@@ -75,7 +75,10 @@ commands:
   run_eks_helm_test:
     steps:
       - run: git clone https://github.com/cloudify-community/blueprint-examples.git
-      - run: ecosystem-test remote-blueprint-test -b blueprint-examples/kubernetes/helm-eks/blueprint.yaml -i eks_cluster_name=helm-plugin-test-$CIRCLE_BUILD_NUM --test-id=helm-eks-$CIRCLE_BUILD_NUM --on-failure=uninstall-force --timeout=5400
+      - run:
+          name: run_eks_helm_test
+          no_output_timeout: 60m
+          command: ecosystem-test remote-blueprint-test -b blueprint-examples/kubernetes/helm-eks/blueprint.yaml -i eks_cluster_name=helm-plugin-test-$CIRCLE_BUILD_NUM --test-id=helm-eks-$CIRCLE_BUILD_NUM --on-failure=uninstall-force --timeout=5400
 
 jobs:
   integration_tests_py3:
@@ -99,18 +102,14 @@ workflows:
           # <<: *unittest-post-steps
       - node/validate_version_job
       - node/validate_documentation_job
-
-      - wagonorb/wagon
-      - wagonorb/wagon_311
-
-      # - wagonorb/wagon:
-      #     filters:
-      #       branches:
-      #         only: /([0-9\.]*\-build|master|dev)/
-      # - wagonorb/wagon_311:
-      #     filters:
-      #       branches:
-      #         only: /([0-9\.]*\-build|master|dev)/
+      - wagonorb/wagon:
+          filters:
+            branches:
+              only: /([0-9\.]*\-build|master|dev)/
+      - wagonorb/wagon_311:
+          filters:
+            branches:
+              only: /([0-9\.]*\-build|master|dev)/
       - wagonorb/arch64_wagon:
           filters:
             branches:
@@ -127,11 +126,11 @@ workflows:
           requires:
             - wagonorb/wagon
             - wagonorb/wagon_311
-            # - wagonorb/rhel_wagon
-            # - wagonorb/arch64_wagon
-          # filters:
-          #   branches:
-          #     only: /([0-9\.]*\-build|master|dev)/
+            - wagonorb/rhel_wagon
+            - wagonorb/arch64_wagon
+          filters:
+            branches:
+              only: /([0-9\.]*\-build|master|dev)/
       - releaseorb/release:
           filters:
             branches:
