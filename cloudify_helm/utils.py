@@ -24,7 +24,11 @@ from contextlib import contextmanager
 from subprocess import CalledProcessError
 
 from cloudify import ctx
-from cloudify.exceptions import NonRecoverableError, HttpException
+from cloudify.exceptions import (
+    HttpException,
+    OperationRetry,
+    NonRecoverableError
+)
 from cloudify_common_sdk.resource_downloader import (unzip_archive,
                                                      untar_archive,
                                                      TAR_FILE_EXTENSTIONS)
@@ -85,20 +89,34 @@ def create_source_path(source_tmp_path):
     return source_tmp_path
 
 
+def handle_missing_executable(executable_path):
+    if os.path.exists(executable_path):
+        return executable_path
+
+    message = 'Helm\'s executable not found in {0}. '.format(executable_path)
+
+    if len(ctx.get_managers()) > 1 and ctx.operation.retry_number < 10:
+        message += 'Retrying to give the cluster ' \
+                   'time to sync the file.'
+        exception_type = OperationRetry
+    else:
+        message += 'Please set the \'executable_path\' ' \
+                   'property accordingly.'
+        exception_type = NonRecoverableError
+
+    raise exception_type(message)
+
+
 def get_helm_executable_path(properties, runtime_properties):
     # Look for executable path in runtime property or in default place.
-    return runtime_properties.get(EXECUTABLE_PATH, '') or \
+    executable_path = runtime_properties.get(EXECUTABLE_PATH, '') or \
            properties.get(HELM_CONFIG, {}).get(EXECUTABLE_PATH, '')
+    return handle_missing_executable(executable_path)
 
 
 def helm_from_ctx(ctx):
-    executable_path = get_helm_executable_path(ctx.node.properties,
-                                               ctx.instance.runtime_properties)
-    if not os.path.exists(executable_path):
-        raise NonRecoverableError(
-            'Helm\'s executable not found in {0}. Please set the '
-            '\'executable_path\' property accordingly.'.format(
-                executable_path))
+    executable_path = get_helm_executable_path(
+        ctx.node.properties, ctx.instance.runtime_properties)
     env_variables = get_helm_env_vars_dict(ctx)
     helm = Helm(
         ctx.logger,
