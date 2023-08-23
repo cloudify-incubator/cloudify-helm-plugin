@@ -381,7 +381,6 @@ class Helm(object):
     def status(self,
                release_name,
                flags=None,
-               set_values=None,
                kubeconfig=None,
                token=None,
                apiserver=None,
@@ -393,7 +392,6 @@ class Helm(object):
         Execute helm status command.
         :param release_name: name of the release to upgrade.
         :param flags: list of flags to add to the upgrade command.
-        :param set_values: list of variables and their values for --set.
         :param kubeconfig: path to kubeconfig file.
         :param token: bearer token used for authentication.
         :param apiserver: the address and the port for the Kubernetes API
@@ -408,8 +406,6 @@ class Helm(object):
         validate_flags_for_status(flags)
 
         cmd.extend([prepare_parameter(flag) for flag in flags])
-        set_arguments = set_values or []
-        cmd.extend(prepare_set_parameters(set_arguments))
         if additional_env:
             self.env.update(additional_env)
         output = self.execute(

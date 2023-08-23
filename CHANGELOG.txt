@@ -43,3 +43,5 @@
   - tests run on remote manager.
   - added circleci context.
   - CYBL-2065 Bug fix in repo flag in functions Install status and uninstall.
+0.4.4:
+  - fix Removal of set_value from the parameters to the helm.status function.
