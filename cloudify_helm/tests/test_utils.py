@@ -17,12 +17,16 @@ import os
 import mock
 
 from cloudify.state import current_ctx
-from cloudify.exceptions import NonRecoverableError
+from cloudify.exceptions import (
+    OperationRetry,
+    NonRecoverableError
+)
 
 from . import TestBase
 from ..utils import (create_venv,
                      get_ssl_ca_file,
                      install_aws_cli_if_needed,
+                     handle_missing_executable,
                      check_aws_cmd_in_kubeconfig)
 from ..constants import (API_OPTIONS,
                          SSL_CA_CERT,
@@ -148,3 +152,47 @@ class TestUtils(TestBase):
                         'blueprint_folder', return_value=False):
             with get_ssl_ca_file() as ca_file:
                 self.assertEqual(ca_file, None)
+
+    def test_handle_missing_executable(self):
+
+        def _setctx(cluster=True, retry_number=None):
+            retry_number = retry_number or 0
+            operation = {'retry_number': retry_number}
+            if cluster and retry_number < 10:
+                managers = [
+                    {'networks': {'foo': 'bar'}},
+                    {'networks': {'baz': 'qux'}},
+                ]
+                message = 'Helm\'s executable not found in foo. ' \
+                          'Retrying to give the cluster time to sync the ' \
+                          'file.'
+            else:
+                managers = [{'networks': {'foo': 'bar'}}]
+
+                message = 'Helm\'s executable not found in foo. ' \
+                          'Please set the \'executable_path\' property ' \
+                          'accordingly.'
+            current_ctx.set(
+                self.mock_ctx(
+                    test_managers=managers,
+                    test_operation=operation
+                )
+            )
+            return message
+
+        with mock.patch(
+                'cloudify_helm.utils.os.path.exists', return_value=False):
+            message = _setctx()
+            with self.assertRaisesRegex(OperationRetry, message):
+                handle_missing_executable('foo')
+            message = _setctx(False)
+            with self.assertRaisesRegex(NonRecoverableError, message):
+                handle_missing_executable('foo')
+            message = _setctx(retry_number=11)
+            with self.assertRaisesRegex(NonRecoverableError, message):
+                handle_missing_executable('foo')
+
+        with mock.patch(
+                'cloudify_helm.utils.os.path.exists', return_value=True):
+            result = handle_missing_executable('foo')
+            self.assertEqual(result, 'foo')
