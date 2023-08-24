@@ -28,15 +28,19 @@ class TestBase(unittest.TestCase):
         super(TestBase, self).tearDown()
 
     def mock_ctx(self,
-                 test_properties,
+                 test_properties=None,
                  test_runtime_properties=None,
-                 test_resources=None):
+                 test_resources=None,
+                 test_operation=None,
+                 test_managers=None):
         ctx = MockCloudifyContext(
             node_id="test_id",
             node_name="test_name",
             deployment_id='test_deployment',
+            managers=test_managers,
             resources=test_resources,
-            properties=test_properties,
+            operation=test_operation,
+            properties=test_properties or {},
             runtime_properties=test_runtime_properties,
         )
         current_ctx.set(ctx)
