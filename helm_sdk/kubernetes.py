@@ -50,14 +50,15 @@ class Kubernetes(object):
 
     def get_callable(self, resource, namespace):
         # TODO: This is more like "the entire object", not just status.
-        self.logger.info('Getting {} {}'.format(resource, namespace))
-        api = client_resolver.get_kubernetes_api(resource['apiVersion'])
-        self.logger.info('Api: {}'.format(api))
-        fn_name = client_resolver.get_read_function_name(resource['kind'])
-        self.logger.info('fn_name {}'.format(fn_name))
-        callable = client_resolver.get_callable(fn_name, api(self.kubeconfig))
-        self.logger.info('callable {}'.format(callable))
         try:
+            self.logger.info('Getting {} {}'.format(resource, namespace))
+            api = client_resolver.get_kubernetes_api(resource['apiVersion'])
+            self.logger.info('Api: {}'.format(api))
+            fn_name = client_resolver.get_read_function_name(resource['kind'])
+            self.logger.info('fn_name {}'.format(fn_name))
+            callable = client_resolver.get_callable(
+                fn_name, api(self.kubeconfig))
+            self.logger.info('callable {}'.format(callable))
             return callable(
                 resource['metadata']['name'], namespace)
         except Exception as e:
