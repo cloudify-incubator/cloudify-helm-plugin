@@ -18,7 +18,10 @@ import mock
 import json
 import shutil
 import tempfile
-from datetime import datetime
+from datetime import (
+    datetime,
+    timedelta
+)
 
 from cloudify.state import current_ctx
 from cloudify.exceptions import NonRecoverableError
@@ -26,6 +29,8 @@ from cloudify.exceptions import NonRecoverableError
 from . import TestBase
 from cloudify_helm.tasks import (
     add_repo,
+    pull_chart,
+    push_chart,
     handle_ecr,
     remove_repo,
     prepare_args,
@@ -33,6 +38,7 @@ from cloudify_helm.tasks import (
     registry_login,
     install_release,
     upgrade_release,
+    check_ecr_status,
     uninstall_binary,
     uninstall_release)
 from ..constants import (
@@ -580,8 +586,6 @@ class TestTasks(TestBase):
         os_path_exists.return_value = True
         os_path_isfile.return_value = True
         now = datetime.now()
-
-        now = datetime.now()
         mock_ecr = mock.Mock()
         mock_ecr.get_authorization_token.return_value = {
             'authorizationData': [
@@ -638,3 +642,118 @@ class TestTasks(TestBase):
             ],
             host='string'
         )
+
+    @mock.patch('cloudify_helm.tasks.ECRConnection')
+    @mock.patch('cloudify_helm.utils.get_stored_property')
+    def test_registry_token_refresh(self, get_stored_property, mock_ecr_conn):
+        now = datetime.now()
+        mock_ecr = mock.Mock()
+        one_hour = datetime.now() + timedelta(hours=1)
+        mock_ecr.get_authorization_token.return_value = {
+            'authorizationData': [
+                {
+                    'authorizationToken': 'string',
+                    'expiresAt': now.isoformat(),
+                    'proxyEndpoint': 'string'
+                },
+            ]
+        }
+        mock_ecr_conn.return_value = mock_ecr
+        key_id = mock.Mock()
+        secret_key = mock.Mock()
+        aws_config = {
+            'aws_access_key_id': key_id,
+            'aws_secret_access_key': secret_key,
+            'region_name': 'us-east-1'
+        }
+        properties = {
+            "helm_config": {
+                "executable_path": "/path/to/helm"
+            },
+            "resource_config": {
+                'host': '',
+                'ecr': {
+                    'registry_id': 'foo',
+                    'aws_config': aws_config
+                },
+                'flags': [],
+            }
+        }
+        runtime_properties = {
+            'ecr': {
+                'authorizationData': [
+                    {
+                        'authorizationToken': 'string',
+                        'expiresAt': one_hour.isoformat(),
+                        'proxyEndpoint': 'string'
+                    },
+                ]
+            }
+        }
+        get_stored_property.return_value = properties.get('resource_config')
+        ctx = self.mock_ctx(properties, runtime_properties)
+        kwargs = {'ctx': ctx}
+        self.assertIsNotNone(
+            check_ecr_status(**kwargs)
+        )
+        mock_ecr_conn.assert_called_once_with(
+            aws_config=aws_config)
+        mock_ecr.get_authorization_token.assert_not_called()
+        mock_ecr.token_needs_refresh.assert_called_once_with(
+            one_hour.isoformat())
+
+    @mock.patch('cloudify_helm.decorators.helm_from_ctx')
+    @mock.patch('cloudify_helm.utils.os.path.isfile')
+    @mock.patch('cloudify_helm.utils.os.path.exists')
+    @mock.patch('cloudify_helm.utils.get_stored_property')
+    def test_pull_chart(self,
+                        get_stored_property,
+                        os_path_exists,
+                        os_path_isfile,
+                        mock_helm_from_ctx):
+        os_path_exists.return_value = True
+        os_path_isfile.return_value = True
+        properties = self.mock_install_release_properties()
+        get_stored_property.return_value = properties.get('resource_config')
+        ctx = self.mock_ctx(
+            properties,
+            self.mock_runtime_properties())
+        kwargs = {
+            'ctx': ctx
+        }
+        current_ctx.set(ctx)
+        mock_helm = mock.Mock()
+        mock_helm_from_ctx.return_value = mock_helm
+        pull_chart(**kwargs)
+        mock_helm.pull.assert_called_once_with(
+            chart='my_chart',
+            flags=[],
+            additional_args={'max_sleep_time': 300})
+
+    @mock.patch('cloudify_helm.decorators.helm_from_ctx')
+    @mock.patch('cloudify_helm.utils.os.path.isfile')
+    @mock.patch('cloudify_helm.utils.os.path.exists')
+    @mock.patch('cloudify_helm.utils.get_stored_property')
+    def test_push_chart(self,
+                        get_stored_property,
+                        os_path_exists,
+                        os_path_isfile,
+                        mock_helm_from_ctx):
+        os_path_exists.return_value = True
+        os_path_isfile.return_value = True
+        properties = self.mock_install_release_properties()
+        get_stored_property.return_value = properties.get('resource_config')
+        ctx = self.mock_ctx(
+            properties,
+            self.mock_runtime_properties())
+        kwargs = {
+            'ctx': ctx
+        }
+        current_ctx.set(ctx)
+        mock_helm = mock.Mock()
+        mock_helm_from_ctx.return_value = mock_helm
+        push_chart(**kwargs)
+        mock_helm.push.assert_called_once_with(
+            chart='my_chart',
+            flags=[],
+            additional_args={'max_sleep_time': 300})

@@ -183,10 +183,10 @@ def handle_ecr(flags, resource_config):
         aws_config = ecr.get('aws_config', {})
         registry_id = ecr.get('registry_id')
         ecrconn = ECRConnection(aws_config=aws_config)
-        ctx_from_import.logger.info(ecrconn)
-        resp = ecrconn.get_authorization_token(
-            registryIds=[registry_id])
-        ctx_from_import.logger.info(resp)
+        resp = ctx_from_import.instance.runtime_properties.get('ecr', {})
+        if not resp or _check_ecr_status(ecrconn, resp):
+            resp = ecrconn.get_authorization_token(
+                registryIds=[registry_id])
         ctx_from_import.instance.runtime_properties['ecr'] = resp
         registry = resp['authorizationData'][0]
         password = registry['authorizationToken']
@@ -217,6 +217,32 @@ def registry_login(ctx, helm, **kwargs):
         ctx.node.properties.get('max_sleep_time')
     )
     helm.registry_login(**args_dict)
+
+
+def _check_ecr_status(ecrconn, previous):
+    auth_data = previous.get('authorizationData')
+    expired = []
+    if auth_data:
+        for token_data in auth_data:
+            if ecrconn.token_needs_refresh(token_data['expiresAt']):
+                expired.append(token_data['expiresAt'])
+    if expired:
+        return 'ECR registry tokens have expirations: {}'.format(expired)
+
+
+@operation
+def check_ecr_status(ctx, **_):
+    ctx.logger.info('Checking if ECR tokens require refresh.')
+    resource_config = get_resource_config()
+    ecr = resource_config.pop('ecr', {})
+    ctx.logger.info(ecr)
+    previous = ctx.instance.runtime_properties.get('ecr', {})
+    ctx.logger.info(previous)
+    if not ecr:
+        return
+    aws_config = ecr.get('aws_config', {})
+    ecrconn = ECRConnection(aws_config=aws_config)
+    return _check_ecr_status(ecrconn, previous)
 
 
 @operation
@@ -609,3 +635,39 @@ def get_status(ctx_instance, helm_status):
 def get_diff(ctx_instance, kube_status):
     return DeepDiff(
         ctx_instance.runtime_properties['kubernetes_status'], kube_status)
+
+
+@operation
+@with_helm()
+def pull_chart(ctx, helm, **kwargs):
+    resource_config = get_resource_config()
+    args_dict = prepare_args(
+        resource_config,
+        kwargs.get(FLAGS_FIELD),
+        ctx.node.properties.get('max_sleep_time')
+    )
+    url = urlparse(args_dict.get('chart', None))
+    with install_target(ctx, url, args_dict) as args_dict:
+        if 'name' in args_dict:
+            del args_dict['name']
+        if 'set_values' in args_dict:
+            del args_dict['set_values']
+        helm.pull(**args_dict)
+
+
+@operation
+@with_helm()
+def push_chart(ctx, helm, **kwargs):
+    resource_config = get_resource_config()
+    args_dict = prepare_args(
+        resource_config,
+        kwargs.get(FLAGS_FIELD),
+        ctx.node.properties.get('max_sleep_time')
+    )
+    url = urlparse(args_dict.get('chart', None))
+    with install_target(ctx, url, args_dict) as args_dict:
+        if 'name' in args_dict:
+            del args_dict['name']
+        if 'set_values' in args_dict:
+            del args_dict['set_values']
+        helm.push(**args_dict)
