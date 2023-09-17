@@ -18,16 +18,19 @@ import mock
 import json
 import shutil
 import tempfile
+from datetime import datetime
 
 from cloudify.state import current_ctx
 from cloudify.exceptions import NonRecoverableError
 
 from . import TestBase
-from ..tasks import (
+from cloudify_helm.tasks import (
     add_repo,
+    handle_ecr,
     remove_repo,
     prepare_args,
     install_binary,
+    registry_login,
     install_release,
     upgrade_release,
     uninstall_binary,
@@ -228,8 +231,9 @@ class TestTasks(TestBase):
             }
         }
 
-        ctx = self.mock_ctx(properties,
-                            self.mock_runtime_properties())
+        ctx = self.mock_ctx(
+            properties,
+            self.mock_runtime_properties())
         get_resource_config.return_value = properties['resource_config']
         current_ctx.set(ctx)
         kwargs = {
@@ -499,4 +503,138 @@ class TestTasks(TestBase):
             ca_file=None,
             additional_env=None,
             additional_args={'max_sleep_time': 300}
+        )
+
+    @mock.patch('cloudify_helm.tasks.ECRConnection')
+    def test_handle_ecr(self, mock_ecr_conn):
+        now = datetime.now()
+        mock_ecr = mock.Mock()
+        mock_ecr.get_authorization_token.return_value = {
+            'authorizationData': [
+                {
+                    'authorizationToken': 'string',
+                    'expiresAt': now.isoformat(),
+                    'proxyEndpoint': 'string'
+                },
+            ]
+        }
+        mock_ecr_conn.return_value = mock_ecr
+        key_id = mock.Mock()
+        secret_key = mock.Mock()
+        resource_config = {
+            'host': '',
+            'ecr': {
+                'registry_id': 'foo',
+                'aws_config': {
+                    'aws_access_key_id': key_id,
+                    'aws_secret_access_key': secret_key,
+                    'region_name': 'us-east-1'
+                }
+            }
+        }
+        flags = [
+            {
+                'name': 'foo',
+                'value': 'bar',
+            }
+        ]
+        handle_ecr(flags, resource_config)
+        self.assertEqual(
+            flags,
+            [
+                {
+                    'name': 'foo',
+                    'value': 'bar',
+                },
+                {
+                    'name': 'username',
+                    'value': 'AWS'
+                },
+                {
+                    'name': 'password',
+                    'value': 'string'
+                }
+            ]
+        )
+        self.assertEqual(
+            resource_config,
+            {
+                'host': 'string',
+            }
+        )
+        mock_ecr.get_authorization_token.assert_called_once_with(
+            registryIds=['foo']
+        )
+
+    @mock.patch('cloudify_helm.tasks.ECRConnection')
+    @mock.patch('cloudify_helm.decorators.helm_from_ctx')
+    @mock.patch('cloudify_helm.utils.os.path.isfile')
+    @mock.patch('cloudify_helm.utils.os.path.exists')
+    @mock.patch('cloudify_helm.utils.get_stored_property')
+    def test_registry_login(self,
+                            get_stored_property,
+                            os_path_exists,
+                            os_path_isfile,
+                            mock_helm_from_ctx,
+                            mock_ecr_conn):
+        os_path_exists.return_value = True
+        os_path_isfile.return_value = True
+        now = datetime.now()
+
+        now = datetime.now()
+        mock_ecr = mock.Mock()
+        mock_ecr.get_authorization_token.return_value = {
+            'authorizationData': [
+                {
+                    'authorizationToken': 'string',
+                    'expiresAt': now.isoformat(),
+                    'proxyEndpoint': 'string'
+                },
+            ]
+        }
+        mock_ecr_conn.return_value = mock_ecr
+
+        key_id = mock.Mock()
+        secret_key = mock.Mock()
+        properties = {
+            "helm_config": {
+                "executable_path": "/path/to/helm"
+            },
+            "resource_config": {
+                'host': '',
+                'ecr': {
+                    'registry_id': 'foo',
+                    'aws_config': {
+                        'aws_access_key_id': key_id,
+                        'aws_secret_access_key': secret_key,
+                        'region_name': 'us-east-1'
+                    }
+                },
+                'flags': [],
+            }
+        }
+        mock_helm = mock.Mock()
+        mock_helm_from_ctx.return_value = mock_helm
+        get_stored_property.return_value = properties.get('resource_config')
+        ctx = self.mock_ctx(properties)
+        kwargs = {
+            'ctx': ctx,
+            'flags': [{'name': 'username', 'value': 'foobar'}]
+        }
+        registry_login(**kwargs)
+        mock_helm.registry_login.assert_called_once_with(
+            additional_args={
+                'max_sleep_time': 300
+            },
+            flags=[
+                {
+                    'name': 'username',
+                    'value': 'AWS'
+                },
+                {
+                    'name': 'password',
+                    'value': 'string'
+                }
+            ],
+            host='string'
         )

@@ -36,6 +36,15 @@ HELM_KUBE_CA_FILE_FLAG = 'kube-ca-file'
 HELM_KUBE_API_SERVER_FLAG = 'kube-apiserver'
 HELM_VALUES_FLAG = 'values'
 APPEND_FLAG_STRING = '--{name}={value}'
+REGISTRY_LOGIN_FLAGS = [
+    'ca-file',
+    'cert-file',
+    'insecure',
+    'key-file',
+    'password',
+    'password-stdin',
+    'username'
+]
 
 
 class Helm(object):
@@ -445,3 +454,28 @@ class Helm(object):
             except json.decoder.JSONDecodeError:
                 self.logger.error('Failed to load output as JSON.')
         return output
+
+    def registry_login(self,
+                       host,
+                       flags=None,
+                       additional_args=None,
+                       **_):
+        cmd = ['registry', 'login', host]
+        flags = flags or []
+        cmd.extend([prepare_parameter(flag) for flag in flags])
+        self.execute(self._helm_command(cmd), additional_args=additional_args)
+
+    def registry_logout(self,
+                        host,
+                        flags=None,
+                        additional_args=None,
+                        **_):
+        cmd = ['registry', 'logout', host]
+        flags = flags or []
+        for f in flags:
+            if f in REGISTRY_LOGIN_FLAGS:
+                self.logger.debug(
+                    'Removing unsupported logout flag: {}'.format(f))
+                flags.remove(f)
+        cmd.extend([prepare_parameter(flag) for flag in flags])
+        self.execute(self._helm_command(cmd), additional_args=additional_args)
