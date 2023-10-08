@@ -18,10 +18,6 @@ import mock
 import json
 import shutil
 import tempfile
-from datetime import (
-    datetime,
-    timedelta
-)
 
 from cloudify.state import current_ctx
 from cloudify.exceptions import NonRecoverableError
@@ -509,7 +505,6 @@ class TestTasks(TestBase):
             additional_args={'max_sleep_time': 300}
         )
 
-
     @mock.patch('cloudify_helm.decorators.helm_from_ctx')
     @mock.patch('cloudify_helm.utils.os.path.isfile')
     @mock.patch('cloudify_helm.utils.os.path.exists')
@@ -521,10 +516,6 @@ class TestTasks(TestBase):
                             mock_helm_from_ctx):
         os_path_exists.return_value = True
         os_path_isfile.return_value = True
-        now = datetime.now()
-
-        key_id = mock.Mock()
-        secret_key = mock.Mock()
         properties = {
             "helm_config": {
                 "executable_path": "/path/to/helm"
@@ -559,31 +550,6 @@ class TestTasks(TestBase):
             ],
             host='string'
         )
-
-    @mock.patch('cloudify_helm.utils.get_stored_property')
-    def test_registry_token_refresh(self, get_stored_property):
-        now = datetime.now()
-        one_hour = datetime.now() + timedelta(hours=1)
-        key_id = mock.Mock()
-        secret_key = mock.Mock()
-        aws_config = {
-            'aws_access_key_id': key_id,
-            'aws_secret_access_key': secret_key,
-            'region_name': 'us-east-1'
-        }
-        properties = {
-            "helm_config": {
-                "executable_path": "/path/to/helm"
-            },
-            "resource_config": {
-                'host': '',
-                'flags': [],
-            }
-        }
-        runtime_properties = {}
-        get_stored_property.return_value = properties.get('resource_config')
-        ctx = self.mock_ctx(properties, runtime_properties)
-        kwargs = {'ctx': ctx}
 
     @mock.patch('cloudify_helm.decorators.helm_from_ctx')
     @mock.patch('cloudify_helm.utils.os.path.isfile')

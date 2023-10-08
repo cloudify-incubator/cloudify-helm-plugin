@@ -19,7 +19,6 @@ from deepdiff import DeepDiff
 from urllib.parse import urlparse
 from contextlib import contextmanager
 
-from cloudify import ctx as ctx_from_import
 from cloudify_common_sdk.utils import get_deployment_dir
 from cloudify_kubernetes_sdk.connection import decorators
 
