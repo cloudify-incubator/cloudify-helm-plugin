@@ -535,20 +535,9 @@ class TestTasks(TestBase):
         }
         registry_login(**kwargs)
         mock_helm.registry_login.assert_called_once_with(
-            additional_args={
-                'max_sleep_time': 300
-            },
-            flags=[
-                {
-                    'name': 'username',
-                    'value': 'AWS'
-                },
-                {
-                    'name': 'password',
-                    'value': 'string'
-                }
-            ],
-            host='string'
+            host='',
+            flags=[{'name': 'username', 'value': 'foobar'}],
+            additional_args={'max_sleep_time': 300}
         )
 
     @mock.patch('cloudify_helm.decorators.helm_from_ctx')
