@@ -47,3 +47,6 @@
   - fix Removal of set_value from the parameters to the helm.status function.
   - CYBL-2061-multiple-lifecycle-cluster-operations-fails
 0.4.5: Skip status for unhandled apis.
+0.4.6:
+  - Add Helm Registry
+  - Add plugin 1.5 DSL.

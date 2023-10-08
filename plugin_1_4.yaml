@@ -2,7 +2,7 @@ plugins:
   helm:
     executor: central_deployment_agent
     package_name: cloudify-helm-plugin
-    package_version: '0.4.5'
+    package_version: '0.4.6'
 
 dsl_definitions:
 
@@ -200,19 +200,6 @@ data_types:
         type: string
         required: false
         description: The host argument for the helm registry login command.
-      ecr:
-        type: dict
-        required: false
-        default: {}
-        description: |
-          AWS config to initialize boto3 for generating ecr login password.
-          For example:
-            ecr:
-              aws_config:
-                aws_access_key_id: foo
-                aws_secret_access_key: bar
-                aws_default_region: baz
-              registry_id: qux
       flags:
         description: List of flags to add to "helm registry login". The logout command only takes the host parameter and inherited "flags".
 
@@ -374,9 +361,6 @@ node_types:
         type: integer
         default: 300
     interfaces:
-      cloudify.interfaces.validation:
-        check_status:
-          implementation: helm.cloudify_helm.tasks.check_ecr_status
       cloudify.interfaces.lifecycle:
         create:
           implementation: helm.cloudify_helm.tasks.registry_login

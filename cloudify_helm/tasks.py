@@ -19,10 +19,9 @@ from deepdiff import DeepDiff
 from urllib.parse import urlparse
 from contextlib import contextmanager
 
-from cloudify import ctx as ctx_from_import
 from cloudify_common_sdk.utils import get_deployment_dir
 from cloudify_kubernetes_sdk.connection import decorators
-from cloudify_aws_sdk.client import ECRConnection
+
 from cloudify.decorators import operation
 from cloudify.exceptions import NonRecoverableError
 
@@ -168,49 +167,11 @@ def add_repo(ctx, helm, **kwargs):
     ctx.instance.runtime_properties['list_output'] = output
 
 
-def handle_ecr(flags, resource_config):
-    ecr = resource_config.pop('ecr', {})
-    if ecr:
-        for f in flags:
-            if f.get('name') in ['username',
-                                 'password',
-                                 'password-stdin']:
-                ctx_from_import.logger.debug(
-                    'Unable to use provided {} and ecr, '
-                    'replacing values.'.format(f.get('name')))
-                flags.remove(f)
-        ctx_from_import.logger.debug('Connecting to AWS ECR for login...')
-        aws_config = ecr.get('aws_config', {})
-        registry_id = ecr.get('registry_id')
-        ecrconn = ECRConnection(aws_config=aws_config)
-        resp = ctx_from_import.instance.runtime_properties.get('ecr', {})
-        if not resp or _check_ecr_status(ecrconn, resp):
-            resp = ecrconn.get_authorization_token(
-                registryIds=[registry_id])
-        ctx_from_import.instance.runtime_properties['ecr'] = resp
-        registry = resp['authorizationData'][0]
-        password = registry['authorizationToken']
-        flags.extend(
-            [
-                {
-                    'name': 'username',
-                    'value': 'AWS'
-                },
-                {
-                    'name': 'password',
-                    'value': password
-                }
-            ]
-        )
-        resource_config['host'] = registry['proxyEndpoint']
-
-
 @operation
 @with_helm()
 def registry_login(ctx, helm, **kwargs):
     resource_config = get_resource_config()
     flags = kwargs.get(FLAGS_FIELD, [])
-    handle_ecr(flags, resource_config)
     args_dict = prepare_args(
         resource_config,
         flags,
@@ -219,37 +180,10 @@ def registry_login(ctx, helm, **kwargs):
     helm.registry_login(**args_dict)
 
 
-def _check_ecr_status(ecrconn, previous):
-    auth_data = previous.get('authorizationData')
-    expired = []
-    if auth_data:
-        for token_data in auth_data:
-            if ecrconn.token_needs_refresh(token_data['expiresAt']):
-                expired.append(token_data['expiresAt'])
-    if expired:
-        return 'ECR registry tokens have expirations: {}'.format(expired)
-
-
-@operation
-def check_ecr_status(ctx, **_):
-    ctx.logger.info('Checking if ECR tokens require refresh.')
-    resource_config = get_resource_config()
-    ecr = resource_config.pop('ecr', {})
-    ctx.logger.info(ecr)
-    previous = ctx.instance.runtime_properties.get('ecr', {})
-    ctx.logger.info(previous)
-    if not ecr:
-        return
-    aws_config = ecr.get('aws_config', {})
-    ecrconn = ECRConnection(aws_config=aws_config)
-    return _check_ecr_status(ecrconn, previous)
-
-
 @operation
 @with_helm()
 def registry_logout(ctx, helm, **kwargs):
     resource_config = get_resource_config()
-    resource_config.pop('ecr', {})
     args_dict = prepare_args(
         resource_config,
         kwargs.get(FLAGS_FIELD),
