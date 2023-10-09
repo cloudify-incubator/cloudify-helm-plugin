@@ -530,7 +530,7 @@ class Helm(object):
         for f in flags:
             if f not in PULL_FLAGS + PARENT_FLAGS:
                 self.logger.debug(
-                    'Removing unsupported logout flag: {}'.format(f))
+                    'Removing unsupported pull flag: {}'.format(f))
                 flags.remove(f)
         cmd.extend([prepare_parameter(flag) for flag in flags])
         self.execute(self._helm_command(cmd), additional_args=additional_args)
@@ -548,7 +548,7 @@ class Helm(object):
         for f in flags:
             if f not in PUSH_FLAGS + PARENT_FLAGS:
                 self.logger.debug(
-                    'Removing unsupported logout flag: {}'.format(f))
+                    'Removing unsupported push flag: {}'.format(f))
                 flags.remove(f)
         cmd.extend([prepare_parameter(flag) for flag in flags])
         self.execute(self._helm_command(cmd), additional_args=additional_args)
