@@ -3,6 +3,7 @@ plugins:
     executor: central_deployment_agent
     package_name: cloudify-helm-plugin
     package_version: 0.4.6
+
 dsl_definitions:
   helm_configuration:
     helm_config: &id001
@@ -13,6 +14,7 @@ dsl_definitions:
     use_external_resource: &id002
       type: boolean
       default: false
+
 data_types:
   cloudify.types.helm.HelmConfig:
     properties:
@@ -100,6 +102,14 @@ data_types:
         required: true
       flags:
         default: []
+  cloudify.types.helm.RegistryConfig:
+    description: Login and logout of a helm registry in the deployment directory.
+    properties:
+      host:
+        type: string
+        required: false
+      flags: {}
+
 node_types:
   cloudify.nodes.helm.Binary:
     derived_from: cloudify.nodes.SoftwareComponent
@@ -175,6 +185,18 @@ node_types:
             values_file:
               type: string
               default: ''
+        pull:
+          implementation: helm.cloudify_helm.tasks.pull_chart
+          inputs:
+            chart: &id005
+              default: ''
+            flags: &id006
+              default: *id003
+        push:
+          implementation: helm.cloudify_helm.tasks.push_chart
+          inputs:
+            chart: *id005
+            flags: *id006
   cloudify.nodes.helm.Repo:
     derived_from: cloudify.nodes.Root
     properties:
@@ -211,6 +233,29 @@ node_types:
           inputs:
             flags:
               default: *id003
+  cloudify.nodes.helm.Registry:
+    derived_from: cloudify.nodes.Root
+    properties:
+      helm_config: *id001
+      resource_config:
+        type: cloudify.types.helm.RegistryConfig
+        required: true
+      max_sleep_time:
+        type: integer
+        default: 300
+    interfaces:
+      cloudify.interfaces.lifecycle:
+        create:
+          implementation: helm.cloudify_helm.tasks.registry_login
+          inputs:
+            flags:
+              default: []
+        delete:
+          implementation: helm.cloudify_helm.tasks.registry_logout
+          inputs:
+            flags:
+              default: *id003
+
 relationships:
   cloudify.helm.relationships.run_on_host:
     derived_from: cloudify.relationships.connected_to
@@ -220,6 +265,7 @@ relationships:
           implementation: helm.cloudify_helm.tasks.inject_env_properties
   cloudify.relationships.helm.connected_to_shared_cluster:
     derived_from: cloudify.relationships.connected_to
+
 workflows:
   update_repositories:
     mapping: helm.cloudify_helm.workflows.update_repositories
@@ -243,11 +289,14 @@ workflows:
       values_file:
         type: string
         default: ''
+
 blueprint_labels:
   obj-type:
     values:
       - helm
+
 labels:
   obj-type:
     values:
       - helm
+
