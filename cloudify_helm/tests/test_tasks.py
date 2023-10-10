@@ -23,11 +23,14 @@ from cloudify.state import current_ctx
 from cloudify.exceptions import NonRecoverableError
 
 from . import TestBase
-from ..tasks import (
+from cloudify_helm.tasks import (
     add_repo,
+    pull_chart,
+    push_chart,
     remove_repo,
     prepare_args,
     install_binary,
+    registry_login,
     install_release,
     upgrade_release,
     uninstall_binary,
@@ -228,8 +231,9 @@ class TestTasks(TestBase):
             }
         }
 
-        ctx = self.mock_ctx(properties,
-                            self.mock_runtime_properties())
+        ctx = self.mock_ctx(
+            properties,
+            self.mock_runtime_properties())
         get_resource_config.return_value = properties['resource_config']
         current_ctx.set(ctx)
         kwargs = {
@@ -500,3 +504,94 @@ class TestTasks(TestBase):
             additional_env=None,
             additional_args={'max_sleep_time': 300}
         )
+
+    @mock.patch('cloudify_helm.decorators.helm_from_ctx')
+    @mock.patch('cloudify_helm.utils.os.path.isfile')
+    @mock.patch('cloudify_helm.utils.os.path.exists')
+    @mock.patch('cloudify_helm.utils.get_stored_property')
+    def test_registry_login(self,
+                            get_stored_property,
+                            os_path_exists,
+                            os_path_isfile,
+                            mock_helm_from_ctx):
+        os_path_exists.return_value = True
+        os_path_isfile.return_value = True
+        properties = {
+            "helm_config": {
+                "executable_path": "/path/to/helm"
+            },
+            "resource_config": {
+                'host': '',
+                'flags': [],
+            }
+        }
+        mock_helm = mock.Mock()
+        mock_helm_from_ctx.return_value = mock_helm
+        get_stored_property.return_value = properties.get('resource_config')
+        ctx = self.mock_ctx(properties)
+        kwargs = {
+            'ctx': ctx,
+            'flags': [{'name': 'username', 'value': 'foobar'}]
+        }
+        registry_login(**kwargs)
+        mock_helm.registry_login.assert_called_once_with(
+            host='',
+            flags=[{'name': 'username', 'value': 'foobar'}],
+            additional_args={'max_sleep_time': 300}
+        )
+
+    @mock.patch('cloudify_helm.decorators.helm_from_ctx')
+    @mock.patch('cloudify_helm.utils.os.path.isfile')
+    @mock.patch('cloudify_helm.utils.os.path.exists')
+    @mock.patch('cloudify_helm.utils.get_stored_property')
+    def test_pull_chart(self,
+                        get_stored_property,
+                        os_path_exists,
+                        os_path_isfile,
+                        mock_helm_from_ctx):
+        os_path_exists.return_value = True
+        os_path_isfile.return_value = True
+        properties = self.mock_install_release_properties()
+        get_stored_property.return_value = properties.get('resource_config')
+        ctx = self.mock_ctx(
+            properties,
+            self.mock_runtime_properties())
+        kwargs = {
+            'ctx': ctx
+        }
+        current_ctx.set(ctx)
+        mock_helm = mock.Mock()
+        mock_helm_from_ctx.return_value = mock_helm
+        pull_chart(**kwargs)
+        mock_helm.pull.assert_called_once_with(
+            chart='my_chart',
+            flags=[],
+            additional_args={'max_sleep_time': 300})
+
+    @mock.patch('cloudify_helm.decorators.helm_from_ctx')
+    @mock.patch('cloudify_helm.utils.os.path.isfile')
+    @mock.patch('cloudify_helm.utils.os.path.exists')
+    @mock.patch('cloudify_helm.utils.get_stored_property')
+    def test_push_chart(self,
+                        get_stored_property,
+                        os_path_exists,
+                        os_path_isfile,
+                        mock_helm_from_ctx):
+        os_path_exists.return_value = True
+        os_path_isfile.return_value = True
+        properties = self.mock_install_release_properties()
+        get_stored_property.return_value = properties.get('resource_config')
+        ctx = self.mock_ctx(
+            properties,
+            self.mock_runtime_properties())
+        kwargs = {
+            'ctx': ctx
+        }
+        current_ctx.set(ctx)
+        mock_helm = mock.Mock()
+        mock_helm_from_ctx.return_value = mock_helm
+        push_chart(**kwargs)
+        mock_helm.push.assert_called_once_with(
+            chart='my_chart',
+            flags=[],
+            additional_args={'max_sleep_time': 300})

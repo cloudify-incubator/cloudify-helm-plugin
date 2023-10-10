@@ -38,7 +38,7 @@ setup(
     install_requires=[
         "cloudify-common>=4.5.5",
         'deepdiff==3.3.0',
-        "cloudify-utilities-plugins-sdk>=0.0.107",
+        "cloudify-utilities-plugins-sdk>=0.0.127",
     ],
     test_requires=[
         "cloudify-common>=4.5.5",

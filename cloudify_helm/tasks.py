@@ -167,6 +167,31 @@ def add_repo(ctx, helm, **kwargs):
     ctx.instance.runtime_properties['list_output'] = output
 
 
+@operation
+@with_helm()
+def registry_login(ctx, helm, **kwargs):
+    resource_config = get_resource_config()
+    flags = kwargs.get(FLAGS_FIELD, [])
+    args_dict = prepare_args(
+        resource_config,
+        flags,
+        ctx.node.properties.get('max_sleep_time')
+    )
+    helm.registry_login(**args_dict)
+
+
+@operation
+@with_helm()
+def registry_logout(ctx, helm, **kwargs):
+    resource_config = get_resource_config()
+    args_dict = prepare_args(
+        resource_config,
+        kwargs.get(FLAGS_FIELD),
+        ctx.node.properties.get('max_sleep_time')
+    )
+    helm.registry_logout(**args_dict)
+
+
 def show_chart(helm, release_name, repo_url):
     """
     Execute helm show chart CHART_NAME --repo REPO_URL
@@ -544,3 +569,39 @@ def get_status(ctx_instance, helm_status):
 def get_diff(ctx_instance, kube_status):
     return DeepDiff(
         ctx_instance.runtime_properties['kubernetes_status'], kube_status)
+
+
+@operation
+@with_helm()
+def pull_chart(ctx, helm, **kwargs):
+    resource_config = get_resource_config()
+    args_dict = prepare_args(
+        resource_config,
+        kwargs.get(FLAGS_FIELD),
+        ctx.node.properties.get('max_sleep_time')
+    )
+    url = urlparse(args_dict.get('chart', None))
+    with install_target(ctx, url, args_dict) as args_dict:
+        if 'name' in args_dict:
+            del args_dict['name']
+        if 'set_values' in args_dict:
+            del args_dict['set_values']
+        helm.pull(**args_dict)
+
+
+@operation
+@with_helm()
+def push_chart(ctx, helm, **kwargs):
+    resource_config = get_resource_config()
+    args_dict = prepare_args(
+        resource_config,
+        kwargs.get(FLAGS_FIELD),
+        ctx.node.properties.get('max_sleep_time')
+    )
+    url = urlparse(args_dict.get('chart', None))
+    with install_target(ctx, url, args_dict) as args_dict:
+        if 'name' in args_dict:
+            del args_dict['name']
+        if 'set_values' in args_dict:
+            del args_dict['set_values']
+        helm.push(**args_dict)

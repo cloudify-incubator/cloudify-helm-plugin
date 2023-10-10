@@ -36,6 +36,55 @@ HELM_KUBE_CA_FILE_FLAG = 'kube-ca-file'
 HELM_KUBE_API_SERVER_FLAG = 'kube-apiserver'
 HELM_VALUES_FLAG = 'values'
 APPEND_FLAG_STRING = '--{name}={value}'
+REGISTRY_LOGIN_FLAGS = [
+    'ca-file',
+    'cert-file',
+    'insecure',
+    'key-file',
+    'password',
+    'password-stdin',
+    'username'
+]
+PARENT_FLAGS = [
+    'debug',
+    'namespace',
+    'burst-limit',
+    'kube-as-user',
+    'kube-context',
+    'kube-as-group',
+    'registry-config',
+    'repository-cache',
+    'repository-config',
+    'kube-tls-server-name',
+    'kube-insecure-skip-tls-verify',
+    HELM_KUBECONFIG_FLAG,
+    HELM_KUBE_TOKEN_FLAG,
+    HELM_KUBE_CA_FILE_FLAG,
+    HELM_KUBE_API_SERVER_FLAG,
+]
+PUSH_FLAGS = [
+    'ca-file',
+    'key-file',
+    'cert-file',
+    'insecure-skip-tls-verify'
+]
+PULL_FLAGS = [
+    'prov',
+    'repo',
+    'untar',
+    'devel',
+    'verify',
+    'ca-file',
+    'keyring',
+    'key-file',
+    'password',
+    'untardir',
+    'username',
+    'cert-file',
+    'destination',
+    'pass-credentials',
+    'insecure-skip-tls-verify'
+]
 
 
 class Helm(object):
@@ -445,3 +494,61 @@ class Helm(object):
             except json.decoder.JSONDecodeError:
                 self.logger.error('Failed to load output as JSON.')
         return output
+
+    def registry_login(self,
+                       host,
+                       flags=None,
+                       additional_args=None,
+                       **_):
+        cmd = ['registry', 'login', host]
+        flags = flags or []
+        cmd.extend([prepare_parameter(flag) for flag in flags])
+        self.execute(self._helm_command(cmd), additional_args=additional_args)
+
+    def registry_logout(self,
+                        host,
+                        flags=None,
+                        additional_args=None,
+                        **_):
+        cmd = ['registry', 'logout', host]
+        flags = flags or []
+        for f in flags:
+            if f in REGISTRY_LOGIN_FLAGS:
+                self.logger.debug(
+                    'Removing unsupported logout flag: {}'.format(f))
+                flags.remove(f)
+        cmd.extend([prepare_parameter(flag) for flag in flags])
+        self.execute(self._helm_command(cmd), additional_args=additional_args)
+
+    def pull(self,
+             chart,
+             flags=None,
+             additional_args=None,
+             **_):
+        cmd = ['pull', chart]
+        flags = flags or []
+        for f in flags:
+            if f not in PULL_FLAGS + PARENT_FLAGS:
+                self.logger.debug(
+                    'Removing unsupported pull flag: {}'.format(f))
+                flags.remove(f)
+        cmd.extend([prepare_parameter(flag) for flag in flags])
+        self.execute(self._helm_command(cmd), additional_args=additional_args)
+
+    def push(self,
+             chart,
+             remote=None,
+             flags=None,
+             additional_args=None,
+             **_):
+        cmd = ['push', chart]
+        if remote:
+            cmd.append(remote)
+        flags = flags or []
+        for f in flags:
+            if f not in PUSH_FLAGS + PARENT_FLAGS:
+                self.logger.debug(
+                    'Removing unsupported push flag: {}'.format(f))
+                flags.remove(f)
+        cmd.extend([prepare_parameter(flag) for flag in flags])
+        self.execute(self._helm_command(cmd), additional_args=additional_args)
