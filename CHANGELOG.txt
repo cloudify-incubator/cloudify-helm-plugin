@@ -50,3 +50,4 @@
 0.4.6:
   - Add Helm Registry
   - Add plugin 1.5 DSL.
+0.4.7: Better handle for virtualenv creation.

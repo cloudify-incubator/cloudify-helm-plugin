@@ -23,7 +23,7 @@ from packaging import version
 from contextlib import contextmanager
 from subprocess import CalledProcessError
 
-from cloudify import ctx
+from cloudify import ctx, exceptions
 from cloudify.exceptions import (
     HttpException,
     OperationRetry,
@@ -442,15 +442,49 @@ def make_virtualenv(path):
     """
         Make a venv for installing aws cli inside.
     """
+    if hasattr(exceptions, 'CommandExecutionException') and \
+            hasattr(exceptions, 'CommandExecutionError'):
+        exception = (exceptions.CommandExecutionException,
+                     exceptions.CommandExecutionError)
+    elif hasattr(exceptions, 'CommandExecutionException'):
+        exception = exceptions.CommandExecutionException
+    elif hasattr(exceptions, 'CommandExecutionError'):
+        exception = exceptions.CommandExecutionError
+    else:
+        exception = Exception
     ctx.logger.debug('Creating virtualenv at: {path}'.format(path=path))
     additional_args = {
         'max_sleep_time': ctx.node.properties.get('max_sleep_time')
     }
-    run_subprocess(
-        [sys.executable, '-m', 'virtualenv', path],
-        ctx.logger,
-        additional_args=additional_args
-    )
+    try:
+        run_subprocess(
+            [sys.executable, '-m', 'virtualenv', path],
+            ctx.logger,
+            additional_args=additional_args
+        )
+    except exception:
+        try:
+            run_subprocess(
+                [sys.executable, '-m', 'pip', 'install', 'virtualenv'],
+                ctx.logger,
+                additional_args=additional_args
+            )
+            run_subprocess(
+                [sys.executable, '-m', 'virtualenv', path],
+                ctx.logger,
+                additional_args=additional_args
+            )
+        except exception:
+            run_subprocess(
+                [sys.executable, '-m', 'pip', 'install', 'venv'],
+                ctx.logger,
+                additional_args=additional_args
+            )
+            run_subprocess(
+                [sys.executable, '-m', 'venv', path],
+                ctx.logger,
+                additional_args=additional_args
+            )
 
 
 def install_packages_to_venv(venv, packages_list):
