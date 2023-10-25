@@ -13,6 +13,7 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 
+import os
 import re
 import json
 import yaml
@@ -114,6 +115,8 @@ class Helm(object):
             return_output=return_output)
 
     def _helm_command(self, args):
+        if not os.access(self.binary_path, os.X_OK):
+            self.execute(['chmod', 'u+x', self.binary_path])
         cmd = [self.binary_path]
         cmd.extend(args)
         return cmd
