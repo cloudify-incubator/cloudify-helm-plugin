@@ -1,5 +1,43 @@
+diff --git a/constraints.txt b/constraints.txt
+index e03b0f3..e69de29 100644
+--- a/constraints.txt
++++ b/constraints.txt
+@@ -1,3 +0,0 @@
+-cryptography==3.3.2
+-rsa==4.5
+-smmap==3.0.5
+diff --git a/python311.patch b/python311.patch
+index 610980c..e69de29 100644
+--- a/python311.patch
++++ b/python311.patch
+@@ -1,25 +0,0 @@
+-diff --git a/setup.py b/setup.py
+-index c9c8f73..ee404f1 100644
+---- a/setup.py
+-+++ b/setup.py
+-@@ -33,15 +33,15 @@ setup(
+-     author='Cloudify',
+-     author_email='hello@cloudify.co',
+-     description='Enables Cloudify support Helm',
+--    packages=['helm_sdk', 'cloudify_helm'],
+-+    packages=['helm_sdk', 'cloudify_helm', 'pydoc', 'webbrowser'],
+-     license='LICENSE',
+-     install_requires=[
+--        "cloudify-common>=4.5.5",
+--        'deepdiff==3.3.0',
+-+        "cloudify-common>=7.0.0",
+-+        'deepdiff==5.7.0',
+-         "cloudify-utilities-plugins-sdk>=0.0.127",
+-     ],
+-     test_requires=[
+--        "cloudify-common>=4.5.5",
+--        'deepdiff==3.3.0',
+-+        "cloudify-common>=7.0.0",
+-+        'deepdiff==5.7.0',
+-     ]
+- )
 diff --git a/setup.py b/setup.py
-index c9c8f73..ee404f1 100644
+index c9c8f73..e2c8366 100644
 --- a/setup.py
 +++ b/setup.py
 @@ -33,15 +33,15 @@ setup(
@@ -12,14 +50,15 @@ index c9c8f73..ee404f1 100644
      install_requires=[
 -        "cloudify-common>=4.5.5",
 -        'deepdiff==3.3.0',
-+        "cloudify-common>=7.0.0",
+-        "cloudify-utilities-plugins-sdk>=0.0.127",
++        "fusion-common",
 +        'deepdiff==5.7.0',
-         "cloudify-utilities-plugins-sdk>=0.0.127",
++        "cloudify-utilities-plugins-sdk",
      ],
      test_requires=[
 -        "cloudify-common>=4.5.5",
 -        'deepdiff==3.3.0',
-+        "cloudify-common>=7.0.0",
++        "fusion-common",
 +        'deepdiff==5.7.0',
      ]
  )
