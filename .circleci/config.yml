@@ -67,7 +67,7 @@ commands:
 
   prepare_test_manager:
     steps:
-      - run: ecosystem-test prepare-remote-test-manager -es aws_access_key_id=${aws_access_key_id} -es aws_secret_access_key=${aws_secret_access_key} -es kubernetes_token=$null_value -es kubernetes_config=$null_value -p $(find ~/project/workspace/build/ -name *manylinux-py311-none-linux_x86_64.wgn*)  ~/project/plugin_1_5.yaml
+      - run: ecosystem-test prepare-remote-test-manager -es aws_access_key_id=${aws_access_key_id} -es aws_secret_access_key=${aws_secret_access_key} -p $(find ~/project/workspace/build/ -name *manylinux-py311-none-linux_x86_64.wgn*) ~/project/plugin_1_5.yaml
       - run: ecosystem-test remote-upload-plugin -PN kubernetes --wagon-type manylinux
       - run: ecosystem-test remote-upload-plugin -PN helm --wagon-type manylinux
       - run: ecosystem-test remote-upload-plugin -PN aws --wagon-type manylinux
@@ -75,11 +75,10 @@ commands:
 
   run_eks_helm_test:
     steps:
-      - run: git clone https://github.com/cloudify-community/blueprint-examples.git
       - run:
           name: run_eks_helm_test
           no_output_timeout: 60m
-          command: ecosystem-test remote-blueprint-test -b blueprint-examples/kubernetes/helm-eks/blueprint.yaml -i eks_cluster_name=helm-plugin-test-$CIRCLE_BUILD_NUM --test-id=helm-eks-$CIRCLE_BUILD_NUM --on-failure=uninstall-force --timeout=5400
+          command: ecosystem-test remote-blueprint-test -b .circleci/blueprint.yaml --test-id=helm-$CIRCLE_BUILD_NUM --on-failure=uninstall-force --timeout=5400
 
 jobs:
   integration_tests_py3:
