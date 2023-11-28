@@ -5,7 +5,9 @@
 #    pip-compile --no-emit-index-url --output-file=requirements.txt requirements.in setup.py
 #
 -e cloudify-utilities-plugins-sdk
-    # via -r requirements.in
+    # via
+    #   -r requirements.in
+    #   cloudify-helm-plugin (setup.py)
 -e fusion-agent
     # via
     #   -r requirements.in

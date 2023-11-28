@@ -40,7 +40,8 @@ if sys.version_info.major == 3 and sys.version_info.minor == 6:
 else:
     packages = find_packages()
     install_requires += [
-        'fusion-mgmtworker[mgmtworker]',
+        'fusion-mgmtworker',
+        'cloudify-utilities-plugins-sdk',
         'fusion-common',
         'deepdiff==5.7.0'
     ]
