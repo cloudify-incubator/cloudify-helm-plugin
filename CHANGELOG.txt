@@ -53,3 +53,4 @@
 0.4.7: Better handle for virtualenv creation.
 0.4.8: Handle issue with permissions.
 0.4.9: Rerelease for manylinux.
+0.4.10: Rerelease without cfylint.
