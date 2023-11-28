@@ -171,3 +171,8 @@ local-storage/
 
 # Wagons
 **/*.wgn
+python-version
+fusion-agent
+fusion-common
+fusion-manager
+cloudify-utilities-plugins-sdk
