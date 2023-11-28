@@ -1,3 +1,0 @@
-cryptography==3.3.2
-rsa==4.5
-smmap==3.0.5
