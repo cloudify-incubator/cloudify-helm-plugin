@@ -2,7 +2,7 @@ plugins:
   helm:
     executor: central_deployment_agent
     package_name: cloudify-helm-plugin
-    package_version: 0.4.10
+    package_version: 0.4.11
 
 dsl_definitions:
   helm_configuration:
