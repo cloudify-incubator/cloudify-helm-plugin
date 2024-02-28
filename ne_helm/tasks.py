@@ -1,17 +1,4 @@
-########
-# Copyright (c) 2019 - 2023 Cloudify Platform Ltd. All rights reserved
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#        http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-#    * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#    * See the License for the specific language governing permissions and
-#    * limitations under the License.
+# Copyright © 2024 Dell Inc. or its subsidiaries. All Rights Reserved.
 
 import os
 from deepdiff import DeepDiff
@@ -19,11 +6,11 @@ from deepdiff import DeepDiff
 from urllib.parse import urlparse
 from contextlib import contextmanager
 
-from cloudify_common_sdk.utils import get_deployment_dir
-from cloudify_kubernetes_sdk.connection import decorators
+from nativeedge_common_sdk.utils import get_deployment_dir
+from nativeedge_kubernetes_sdk.connection import decorators
 
-from cloudify.decorators import operation
-from cloudify.exceptions import NonRecoverableError
+from nativeedge.decorators import operation
+from nativeedge.exceptions import NonRecoverableError
 
 from .decorators import (with_helm, with_kubernetes, prepare_aws)
 from .utils import (
@@ -106,7 +93,7 @@ def prepare_args(resource_config, flags=None, max_sleep_time=None):
     Prepare arguments dictionary to helm  sdk function(like:helm.install,
     helm.repo_add).
     :resource_config dict: node props.
-    :param ctx: cloudify context.
+    :param ctx: nativeedge context.
     :param flags: flags that user passed - unique for install operation.
     :return arguments dictionary for helm.install function
     """
@@ -284,7 +271,7 @@ def install_release(ctx,
                     **kwargs):
     """
     Execute helm install.
-    :param ctx: cloudify context.
+    :param ctx: nativeedge context.
     :param helm: helm client object.
     :param kubernetes: kubernetes client object.
     :param kubeconfig: kubeconfig path
@@ -388,7 +375,7 @@ def upgrade_release(ctx,
                     **kwargs):
     """
     Execute helm upgrade.
-    :param ctx: cloudify context.
+    :param ctx: nativeedge context.
     :param helm: helm client object.
     :param chart: The chart to upgrade the release with.
     :param kubeconfig: kubeconfig path.
@@ -451,7 +438,7 @@ def check_release_status(ctx,
                          **kwargs):
     """
     Execute helm status.
-    :param ctx: cloudify context.
+    :param ctx: nativeedge context.
     :param helm: helm client object.
     :param kubeconfig: kubeconfig path.
     :return output of `helm upgrade` command
@@ -526,7 +513,7 @@ def check_release_drift(ctx,
                         **_):
     """
     Execute helm release Drift.
-    :param ctx: cloudify context.
+    :param ctx: nativeedge context.
     :param helm: helm client object.
     :param kubernetes: kubernetes client object.
     :param kubeconfig: kubeconfig path.

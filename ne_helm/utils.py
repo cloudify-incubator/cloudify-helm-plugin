@@ -1,17 +1,4 @@
-########
-# Copyright (c) 2019 - 2023 Cloudify Platform Ltd. All rights reserved
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#        http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-#    * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#    * See the License for the specific language governing permissions and
-#    * limitations under the License.
+# Copyright © 2024 Dell Inc. or its subsidiaries. All Rights Reserved.
 
 import os
 import sys
@@ -23,20 +10,20 @@ from packaging import version
 from contextlib import contextmanager
 from subprocess import CalledProcessError
 
-from cloudify import ctx, exceptions
-from cloudify.exceptions import (
+from nativeedge import ctx, exceptions
+from nativeedge.exceptions import (
     HttpException,
     OperationRetry,
     NonRecoverableError
 )
-from cloudify_common_sdk.resource_downloader import (unzip_archive,
+from nativeedge_common_sdk.resource_downloader import (unzip_archive,
                                                      untar_archive,
                                                      TAR_FILE_EXTENSTIONS)
 
-from cloudify_common_sdk.utils import (
+from nativeedge_common_sdk.utils import (
     delete_debug,
     get_deployment_dir)
-from cloudify_common_sdk.secure_property_management import get_stored_property
+from nativeedge_common_sdk.secure_property_management import get_stored_property
 
 from helm_sdk import Helm
 from helm_sdk.utils import run_subprocess
@@ -58,12 +45,12 @@ from .constants import (
     AWS_CLI_TO_INSTALL,
     USE_EXTERNAL_RESOURCE)
 
-CLUSTER_TYPE = 'cloudify.kubernetes.resources.SharedCluster'
-CLUSTER_REL = 'cloudify.relationships.helm.connected_to_shared_cluster'
+CLUSTER_TYPE = 'nativeedge.kubernetes.resources.SharedCluster'
+CLUSTER_REL = 'nativeedge.relationships.helm.connected_to_shared_cluster'
 
 
 def get_resource_config(target=False, force=None):
-    """Get the cloudify.nodes.terraform.Module resource_config"""
+    """Get the nativeedge.nodes.terraform.Module resource_config"""
     return get_stored_property(ctx, RESOURCE_CONFIG, target, force)
 
 
@@ -171,7 +158,7 @@ def get_values_file(ctx, ignore_properties_values_file, values_file=None):
         # It means we have local values file.Check if cfyuser can access it.
         if not os.path.isfile(values_file):
             raise NonRecoverableError(
-                'Used local values file path but Cloudify user can\'t locate '
+                'Used local values file path but nativeedge user can\'t locate '
                 'it, please check file permissions.')
         yield values_file
     else:
@@ -306,7 +293,7 @@ def use_existing_repo_on_helm(ctx, helm):
     """
     Check if a repo that user asked for in resource_config exists on helm
     client.
-    :param ctx: cloudify context.
+    :param ctx: nativeedge context.
     :param helm: helm client object.
     :return Nothing, raises NonRecoverableError exception if repository
     doesen't exist.
@@ -327,7 +314,7 @@ def create_temporary_env_of_helm(ctx):
     """
     Create temporary directories for helm cache,data and configuration files
     and inject their paths to runtime properties.
-    :param ctx: cloudify context.
+    :param ctx: nativeedge context.
 
     """
     deployment_dir = get_deployment_dir(ctx.deployment.id)
@@ -567,14 +554,14 @@ def convert_string_to_dict(txt):
 
 
 def find_repo_nodes():
-    rels = find_rels_by_node_type(ctx.instance, 'cloudify.nodes.helm.Repo')
+    rels = find_rels_by_node_type(ctx.instance, 'nativeedge.nodes.helm.Repo')
     nodes = []
     for rel in rels:
         nodes.append(rel.target.node)
     if not nodes:
         raise NonRecoverableError("Failed to run check_release_drift "
                                   "because it did not find "
-                                  "'cloudify.nodes.helm.Repo'.")
+                                  "'nativeedge.nodes.helm.Repo'.")
     return nodes
 
 

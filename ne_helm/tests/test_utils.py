@@ -1,23 +1,10 @@
-########
-# Copyright (c) 2019 - 2023 Cloudify Platform Ltd. All rights reserved
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#        http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-#    * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#    * See the License for the specific language governing permissions and
-#    * limitations under the License.
+# Copyright © 2024 Dell Inc. or its subsidiaries. All Rights Reserved.
 
 import os
 import mock
 
-from cloudify.state import current_ctx
-from cloudify.exceptions import (
+from nativeedge.state import current_ctx
+from nativeedge.exceptions import (
     OperationRetry,
     NonRecoverableError
 )
@@ -107,10 +94,10 @@ class TestUtils(TestBase):
                                            'deployments',
                                            'default-tenant',
                                            'test-deployment')
-        with mock.patch('cloudify_helm.utils.get_deployment_dir'):
-            with mock.patch('cloudify_helm.utils.tempfile.mkdtemp',
+        with mock.patch('ne_helm.utils.get_deployment_dir'):
+            with mock.patch('ne_helm.utils.tempfile.mkdtemp',
                             return_value=fake_deployment_dir):
-                with mock.patch('cloudify_helm.utils.run_subprocess'):
+                with mock.patch('ne_helm.utils.run_subprocess'):
                     ctx = self.mock_ctx(test_properties={})
                     current_ctx.set(ctx)
                     create_venv()
@@ -124,7 +111,7 @@ class TestUtils(TestBase):
         properties[CLIENT_CONFIG][CONFIGURATION][API_OPTIONS][
             SSL_CA_CERT] = ca_content
         current_ctx.set(self.mock_ctx(test_properties=properties))
-        with mock.patch('cloudify_helm.utils.check_if_resource_inside_'
+        with mock.patch('ne_helm.utils.check_if_resource_inside_'
                         'blueprint_folder', return_value=False):
             with get_ssl_ca_file() as ca_file:
                 with open(ca_file, 'r') as temp_ca_file:
@@ -138,7 +125,7 @@ class TestUtils(TestBase):
         properties[CLIENT_CONFIG][CONFIGURATION][API_OPTIONS][
             SSL_CA_CERT] = ca_file_path
         current_ctx.set(self.mock_ctx(test_properties=properties))
-        with mock.patch('cloudify_helm.utils.check_if_resource_inside_'
+        with mock.patch('ne_helm.utils.check_if_resource_inside_'
                         'blueprint_folder', return_value=False):
             with get_ssl_ca_file() as ca_file:
                 self.assertEqual(os.path.abspath(ca_file), ca_file_path)
@@ -148,7 +135,7 @@ class TestUtils(TestBase):
         properties[CLIENT_CONFIG][CONFIGURATION][API_OPTIONS][
             SSL_CA_CERT] = ''
         current_ctx.set(self.mock_ctx(test_properties=properties))
-        with mock.patch('cloudify_helm.utils.check_if_resource_inside_'
+        with mock.patch('ne_helm.utils.check_if_resource_inside_'
                         'blueprint_folder', return_value=False):
             with get_ssl_ca_file() as ca_file:
                 self.assertEqual(ca_file, None)
@@ -181,7 +168,7 @@ class TestUtils(TestBase):
             return message
 
         with mock.patch(
-                'cloudify_helm.utils.os.path.exists', return_value=False):
+                'ne_helm.utils.os.path.exists', return_value=False):
             message = _setctx()
             with self.assertRaisesRegex(OperationRetry, message):
                 handle_missing_executable('foo')
@@ -193,6 +180,6 @@ class TestUtils(TestBase):
                 handle_missing_executable('foo')
 
         with mock.patch(
-                'cloudify_helm.utils.os.path.exists', return_value=True):
+                'ne_helm.utils.os.path.exists', return_value=True):
             result = handle_missing_executable('foo')
             self.assertEqual(result, 'foo')
