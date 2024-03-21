@@ -55,3 +55,4 @@
 0.4.9: Rerelease for manylinux.
 0.4.10: Rerelease without cfylint.
 0.4.11: add .drp folder for trufflehog.
+0.4.12: blackduck.
