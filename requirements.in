@@ -1,5 +1,5 @@
-cryptography>=41.0.4
 -e fusion-common
 -e fusion-agent
 -e fusion-manager/mgmtworker
 -e cloudify-utilities-plugins-sdk
+cryptography>=42.0.5
